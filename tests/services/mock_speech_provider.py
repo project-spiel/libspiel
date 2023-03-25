@@ -1,0 +1,201 @@
+#!/usr/bin/env python
+
+from gi.repository import GLib
+
+import dbus
+import dbus.service
+import dbus.mainloop.glib
+import re
+from os import getcwd
+from sys import argv
+
+NAME = argv[-1] if len(argv) > 1 else "Mock"
+
+AUTOEXIT = NAME == "Mock3"
+
+VOICES = {
+    "Mock": [
+        {
+            "name": "Chinese (Cantonese)",
+            "identifier": "sit/yue",
+            "languages": ["yue", "zh-yue", "zh"],
+        },
+        {
+            "name": "Armenian (East Armenia)",
+            "identifier": "ine/hy",
+            "languages": ["hy", "hy-arevela"],
+        },
+    ],
+    "Mock2": [
+        {
+            "name": "Armenian (West Armenia)",
+            "identifier": "ine/hyw",
+            "languages": ["hyw", "hy-arevmda", "hy"],
+        }
+    ],
+    "Mock3": [
+        {
+            "name": "English (Great Britain)",
+            "identifier": "gmw/en",
+            "languages": ["en-gb", "en"],
+        },
+    ],
+}
+
+
+class SomeObject(dbus.service.Object):
+    def __init__(self, *args):
+        self._last_speak_args = [0, "", "", 0, 0, 0]
+        self._auto_step = not AUTOEXIT
+        self._tasks = []
+        self._voices = VOICES[NAME][:]
+        dbus.service.Object.__init__(self, *args)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.Provider",
+        in_signature="tssddd",
+        out_signature="",
+    )
+    def Speak(self, task_id, utterance, voice_id, pitch, rate, volume):
+        self._last_speak_args = (task_id, utterance, voice_id, pitch, rate, volume)
+        word_count = len(list(re.finditer(r"\S\b", utterance, re.MULTILINE)))
+        self._tasks.append([task_id, word_count])
+        GLib.idle_add(lambda: self.SpeechStart(task_id))
+        if self._auto_step:
+            GLib.idle_add(self._do_step_until_done)
+
+    def _do_step_until_done(self):
+        if self._do_step():
+            GLib.idle_add(self._do_step_until_done)
+
+    def _do_step(self):
+        tasks = self._tasks
+        self._tasks = []
+        for task in tasks:
+            if task[1]:
+                task[1] -= 1
+                self.SpeechWord(task[0])
+                self._tasks.append(task)
+            else:
+                self.SpeechEnd(task[0])
+        return bool(self._tasks)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.Provider",
+        in_signature="t",
+        out_signature="",
+    )
+    def Pause(self, task_id):
+        return
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.Provider",
+        in_signature="t",
+        out_signature="",
+    )
+    def Resume(self, task_id):
+        return
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.Provider",
+        in_signature="t",
+        out_signature="",
+    )
+    def Cancel(self, task_id):
+        self._tasks = []
+        if AUTOEXIT:
+            GLib.idle_add(self.byebye)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.Provider",
+        in_signature="",
+        out_signature="a(ssas)",
+    )
+    def GetVoices(self):
+        if AUTOEXIT:
+            GLib.idle_add(self.byebye)
+        return [(v["name"], v["identifier"], v["languages"]) for v in self._voices]
+
+    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider", signature="t")
+    def SpeechStart(self, task_id):
+        pass
+
+    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider", signature="t")
+    def SpeechWord(self, task_id):
+        pass
+
+    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider", signature="t")
+    def SpeechEnd(self, task_id):
+        if AUTOEXIT:
+            GLib.idle_add(self.byebye)
+
+    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider")
+    def VoicesChanged(self):
+        pass
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        in_signature="",
+        out_signature="tssddd",
+    )
+    def GetLastSpeakArguments(self):
+        return self._last_speak_args
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        in_signature="",
+        out_signature="",
+    )
+    def FlushTasks(self):
+        self._last_speak_args = [0, "", "", 0, 0, 0]
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        in_signature="b",
+        out_signature="",
+    )
+    def SetAutoStep(self, val):
+        self._auto_step = val
+        if self._auto_step:
+            GLib.idle_add(self._do_step_until_done)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        in_signature="",
+        out_signature="",
+    )
+    def Step(self):
+        self._do_step()
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        in_signature="ssas",
+        out_signature="",
+    )
+    def AddVoice(self, name, identifier, languages):
+        self._voices.append(
+            {"name": name, "identifier": identifier, "languages": languages}
+        )
+        GLib.idle_add(self.VoicesChanged)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        in_signature="s",
+        out_signature="",
+    )
+    def RemoveVoice(self, identifier):
+        self._voices = [v for v in self._voices if v["identifier"] != identifier]
+        GLib.idle_add(self.VoicesChanged)
+
+    def byebye(self):
+        exit()
+
+
+if __name__ == "__main__":
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    session_bus = dbus.SessionBus()
+    name = dbus.service.BusName(f"org.freedesktop.Speech.Synthesis.{NAME}", session_bus)
+    obj = SomeObject(session_bus, f"/org/freedesktop/Speech/Synthesis/{NAME}")
+
+    mainloop = GLib.MainLoop()
+    mainloop.run()

@@ -1,0 +1,78 @@
+
+#pragma once
+
+#if !defined(SPIEL_INSIDE) && !defined(SPIEL_COMPILATION)
+#error "Only <libspiel.h> can be included directly."
+#endif
+
+/**
+ * SECTION:spielversion
+ * @short_description: spiel version checking
+ *
+ * spiel provides macros to check the version of the library
+ * at compile-time
+ */
+
+/**
+ * SPIEL_MAJOR_VERSION:
+ *
+ * spiel major version component (e.g. 1 if %SPIEL_VERSION is 1.2.3)
+ */
+#define SPIEL_MAJOR_VERSION (@MAJOR_VERSION @)
+
+/**
+ * SPIEL_MINOR_VERSION:
+ *
+ * spiel minor version component (e.g. 2 if %SPIEL_VERSION is 1.2.3)
+ */
+#define SPIEL_MINOR_VERSION (@MINOR_VERSION @)
+
+/**
+ * SPIEL_MICRO_VERSION:
+ *
+ * spiel micro version component (e.g. 3 if %SPIEL_VERSION is 1.2.3)
+ */
+#define SPIEL_MICRO_VERSION (@MICRO_VERSION @)
+
+/**
+ * SPIEL_VERSION
+ *
+ * spiel version.
+ */
+#define SPIEL_VERSION (@VERSION @)
+
+/**
+ * SPIEL_VERSION_S:
+ *
+ * spiel version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define SPIEL_VERSION_S "@VERSION@"
+
+#define SPIEL_ENCODE_VERSION(major, minor, micro)                              \
+  ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * SPIEL_VERSION_HEX:
+ *
+ * spiel version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define SPIEL_VERSION_HEX                                                      \
+  (SPIEL_ENCODE_VERSION (SPIEL_MAJOR_VERSION, SPIEL_MINOR_VERSION,             \
+                         SPIEL_MICRO_VERSION))
+
+/**
+ * SPIEL_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of spiel is greater than the required one.
+ */
+#define SPIEL_CHECK_VERSION(major, minor, micro)                               \
+  (SPIEL_MAJOR_VERSION > (major) ||                                            \
+   (SPIEL_MAJOR_VERSION == (major) && SPIEL_MINOR_VERSION > (minor)) ||        \
+   (SPIEL_MAJOR_VERSION == (major) && SPIEL_MINOR_VERSION == (minor) &&        \
+    SPIEL_MICRO_VERSION >= (micro)))

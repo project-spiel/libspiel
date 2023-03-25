@@ -1,0 +1,37 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.freedesktop.Speech.Synthesis.Provider">
+    <method name="Speak">
+      <arg direction="in"  type="t" name="task_id" />
+      <arg direction="in"  type="s" name="utterance" />
+      <arg direction="in"  type="s" name="voice_id" />
+      <arg direction="in"  type="d" name="pitch" />
+      <arg direction="in"  type="d" name="rate" />
+      <arg direction="in"  type="d" name="volume" />
+    </method>
+    <method name="Pause">
+      <arg direction="in"  type="t" name="task_id" />
+    </method>
+    <method name="Resume">
+      <arg direction="in"  type="t" name="task_id" />
+    </method>
+    <method name="Cancel">
+      <arg direction="in"  type="t" name="task_id" />
+    </method>
+    <method name="GetVoices">
+      <arg direction="out" type="a(ssas)" />
+    </method>
+    <signal name="SpeechStart">
+      <arg type="t" name="task_id" />
+    </signal>
+    <signal name="SpeechWord">
+      <arg type="t" name="task_id" />
+    </signal>
+    <signal name="SpeechEnd">
+      <arg type="t" name="task_id" />
+    </signal>
+    <signal name="VoicesChanged">
+    </signal>
+  </interface>
+</node>
