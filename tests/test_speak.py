@@ -270,20 +270,20 @@ class TestSpeak(BaseSpielTest):
     def test_speak_with_voice_sync(self):
         speechSynthesis = Spiel.Speaker.new_sync(None)
         self._test_speak_with_voice(
-            speechSynthesis, "org.freedesktop.Speech.Synthesis.Mock", "sit/yue"
+            speechSynthesis, "org.mock.Speech.Provider", "sit/yue"
         )
 
     def test_speak_with_voice_sync_autoexit(self):
         speechSynthesis = Spiel.Speaker.new_sync(None)
-        self.wait_for_provider_to_go_away("org.freedesktop.Speech.Synthesis.Mock3")
+        self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
         self._test_speak_with_voice(
-            speechSynthesis, "org.freedesktop.Speech.Synthesis.Mock3", "gmw/en"
+            speechSynthesis, "org.mock3.Speech.Provider", "gmw/en"
         )
 
     def test_speak_with_voice_async(self):
         speechSynthesis = self.wait_for_async_speaker_init()
         self._test_speak_with_voice(
-            speechSynthesis, "org.freedesktop.Speech.Synthesis.Mock", "sit/yue"
+            speechSynthesis, "org.mock.Speech.Provider", "sit/yue"
         )
 
 

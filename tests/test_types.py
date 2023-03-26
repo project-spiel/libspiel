@@ -21,14 +21,12 @@ class TestTypes(BaseSpielTest):
             name="English",
             identifier="en",
             languages=["en", "es", "he"],
-            provider_name="org.freedesktop.Speech.Synthesis.Mock2",
+            provider_name="org.mock2.Speech.Provider",
         )
         self.assertEqual(voice.props.name, "English")
         self.assertEqual(voice.props.identifier, "en")
         self.assertEqual(voice.props.languages, ["en", "es", "he"])
-        self.assertEqual(
-            voice.props.provider_name, "org.freedesktop.Speech.Synthesis.Mock2"
-        )
+        self.assertEqual(voice.props.provider_name, "org.mock2.Speech.Provider")
 
     def test_utterance(self):
         utterance = Spiel.Utterance(text="bye")

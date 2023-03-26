@@ -1,5 +1,6 @@
 from _common import *
 
+
 class TestVoices(BaseSpielTest):
     def test_get_async_voices(self):
         speechSynthesis = self.wait_for_async_speaker_init()
@@ -30,12 +31,13 @@ class TestVoices(BaseSpielTest):
         self.wait_for_voices_changed(speechSynthesis)
         self._test_get_voices(
             speechSynthesis,
-            STANDARD_VOICES + [
+            STANDARD_VOICES
+            + [
                 [
                     "Hebrew",
                     "he",
                     ["he", "he-il"],
-                    "org.freedesktop.Speech.Synthesis.Mock",
+                    "org.mock.Speech.Provider",
                 ]
             ],
         )
@@ -45,8 +47,8 @@ class TestVoices(BaseSpielTest):
 
     def test_add_voice_from_inactive(self):
         speechSynthesis = self.wait_for_async_speaker_init()
-        self.wait_for_provider_to_go_away("org.freedesktop.Speech.Synthesis.Mock3")
-        self.mock_iface("org.freedesktop.Speech.Synthesis.Mock3").AddVoice(
+        self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
+        self.mock_iface("org.mock3.Speech.Provider").AddVoice(
             "Arabic", "ar", ["ar", "ar-ps", "ar-eg"]
         )
         self.wait_for_voices_changed(speechSynthesis)
@@ -58,13 +60,12 @@ class TestVoices(BaseSpielTest):
                     "Arabic",
                     "ar",
                     ["ar", "ar-ps", "ar-eg"],
-                    "org.freedesktop.Speech.Synthesis.Mock3",
+                    "org.mock3.Speech.Provider",
                 ]
             ],
         )
-        self.wait_for_provider_to_go_away("org.freedesktop.Speech.Synthesis.Mock3")
-        mock = self.mock_iface("org.freedesktop.Speech.Synthesis.Mock3")
-        self.mock_iface("org.freedesktop.Speech.Synthesis.Mock3").RemoveVoice("ar")
+        self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
+        self.mock_iface("org.mock3.Speech.Provider").RemoveVoice("ar")
         self.wait_for_voices_changed(speechSynthesis)
         self._test_get_voices(speechSynthesis)
 

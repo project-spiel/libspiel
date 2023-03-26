@@ -22,7 +22,7 @@
 
 #include <gio/gio.h>
 
-#define PROVIDER_PREFIX "org.freedesktop.Speech.Synthesis."
+#define PROVIDER_SUFFIX ".Speech.Provider"
 
 struct _SpielRegistry
 {
@@ -341,7 +341,7 @@ _collect_provider_names (GObject *source,
   while ((service = g_variant_iter_next_value (&iter)))
     {
       const char *service_name = g_variant_get_string (service, NULL);
-      if (!g_str_has_prefix (service_name, PROVIDER_PREFIX))
+      if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX))
         {
           continue;
         }
@@ -588,7 +588,7 @@ _add_provider (SpielRegistry *self, const char *service_name)
   GError *err = NULL;
   GVariant *voices = NULL;
 
-  if (!g_str_has_prefix (service_name, PROVIDER_PREFIX))
+  if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX))
     {
       return;
     }

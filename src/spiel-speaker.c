@@ -25,7 +25,6 @@
 #include "spieldbusgenerated.h"
 #include <gio/gio.h>
 
-#define PROVIDER_PREFIX "org.freedesktop.Speech.Synthesis."
 struct _SpielSpeaker
 {
   GObject parent_instance;

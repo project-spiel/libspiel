@@ -1,4 +1,4 @@
 [D-BUS Service]
-Name=org.freedesktop.Speech.Synthesis.@service_name@
+Name=org.@service_name@.Speech.Provider
 Exec=@service_exec_dir@/mock_speech_provider.py @service_name@
 SystemdService=tracker-store.service

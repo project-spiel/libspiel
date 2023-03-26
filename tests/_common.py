@@ -14,32 +14,32 @@ STANDARD_VOICES = [
         "English (Great Britain)",
         "gmw/en",
         ["en-gb", "en"],
-        "org.freedesktop.Speech.Synthesis.Mock3",
+        "org.mock3.Speech.Provider",
     ],
     [
         "Armenian (East Armenia)",
         "ine/hy",
         ["hy", "hy-arevela"],
-        "org.freedesktop.Speech.Synthesis.Mock",
+        "org.mock.Speech.Provider",
     ],
     [
         "Armenian (West Armenia)",
         "ine/hyw",
         ["hyw", "hy-arevmda", "hy"],
-        "org.freedesktop.Speech.Synthesis.Mock2",
+        "org.mock2.Speech.Provider",
     ],
     [
         "Chinese (Cantonese)",
         "sit/yue",
         ["yue", "zh-yue", "zh"],
-        "org.freedesktop.Speech.Synthesis.Mock",
+        "org.mock.Speech.Provider",
     ],
 ]
 
-    
+
 class BaseSpielTest(unittest.TestCase):
     def __init__(self, *args):
-        self.mock_service = self.mock_iface("org.freedesktop.Speech.Synthesis.Mock")
+        self.mock_service = self.mock_iface("org.mock.Speech.Provider")
         super().__init__(*args)
 
     def setUp(self):
@@ -61,7 +61,7 @@ class BaseSpielTest(unittest.TestCase):
             f"/{'/'.join(provider_name.split('.'))}",
         )
         return dbus.Interface(
-            proxy, dbus_interface="org.freedesktop.Speech.Synthesis.MockSpeaker"
+            proxy, dbus_interface="org.freedesktop.Speech.MockProvider"
         )
 
     def kill_provider(self, provider_name):
@@ -71,19 +71,13 @@ class BaseSpielTest(unittest.TestCase):
             pass
 
     def list_active_providers(self):
-        def _cb(*args):
-            pass
-
         session_bus = dbus.SessionBus()
         bus_obj = session_bus.get_object(
             "org.freedesktop.DBus", "/org/freedesktop/DBus"
         )
         iface = dbus.Interface(bus_obj, "org.freedesktop.DBus")
-        iface.connect_to_signal(
-            "NameOwnerChanged", _cb, arg0="org.freedesktop.Speech.Synthesis.Mock3"
-        )
         speech_providers = filter(
-            lambda s: s.startswith("org.freedesktop.Speech.Synthesis."),
+            lambda s: s.endswith(".Speech.Provider"),
             iface.ListNames(),
         )
         return [str(s) for s in speech_providers]

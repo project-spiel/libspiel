@@ -11,10 +11,10 @@ from sys import argv
 
 NAME = argv[-1] if len(argv) > 1 else "Mock"
 
-AUTOEXIT = NAME == "Mock3"
+AUTOEXIT = NAME == "mock3"
 
 VOICES = {
-    "Mock": [
+    "mock": [
         {
             "name": "Chinese (Cantonese)",
             "identifier": "sit/yue",
@@ -26,14 +26,14 @@ VOICES = {
             "languages": ["hy", "hy-arevela"],
         },
     ],
-    "Mock2": [
+    "mock2": [
         {
             "name": "Armenian (West Armenia)",
             "identifier": "ine/hyw",
             "languages": ["hyw", "hy-arevmda", "hy"],
         }
     ],
-    "Mock3": [
+    "mock3": [
         {
             "name": "English (Great Britain)",
             "identifier": "gmw/en",
@@ -52,7 +52,7 @@ class SomeObject(dbus.service.Object):
         dbus.service.Object.__init__(self, *args)
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.Provider",
+        "org.freedesktop.Speech.Provider",
         in_signature="tssddd",
         out_signature="",
     )
@@ -81,7 +81,7 @@ class SomeObject(dbus.service.Object):
         return bool(self._tasks)
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.Provider",
+        "org.freedesktop.Speech.Provider",
         in_signature="t",
         out_signature="",
     )
@@ -89,7 +89,7 @@ class SomeObject(dbus.service.Object):
         return
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.Provider",
+        "org.freedesktop.Speech.Provider",
         in_signature="t",
         out_signature="",
     )
@@ -97,7 +97,7 @@ class SomeObject(dbus.service.Object):
         return
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.Provider",
+        "org.freedesktop.Speech.Provider",
         in_signature="t",
         out_signature="",
     )
@@ -107,7 +107,7 @@ class SomeObject(dbus.service.Object):
             GLib.idle_add(self.byebye)
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.Provider",
+        "org.freedesktop.Speech.Provider",
         in_signature="",
         out_signature="a(ssas)",
     )
@@ -116,25 +116,25 @@ class SomeObject(dbus.service.Object):
             GLib.idle_add(self.byebye)
         return [(v["name"], v["identifier"], v["languages"]) for v in self._voices]
 
-    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider", signature="t")
+    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
     def SpeechStart(self, task_id):
         pass
 
-    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider", signature="t")
+    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
     def SpeechWord(self, task_id):
         pass
 
-    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider", signature="t")
+    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
     def SpeechEnd(self, task_id):
         if AUTOEXIT:
             GLib.idle_add(self.byebye)
 
-    @dbus.service.signal("org.freedesktop.Speech.Synthesis.Provider")
+    @dbus.service.signal("org.freedesktop.Speech.Provider")
     def VoicesChanged(self):
         pass
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        "org.freedesktop.Speech.MockProvider",
         in_signature="",
         out_signature="tssddd",
     )
@@ -142,7 +142,7 @@ class SomeObject(dbus.service.Object):
         return self._last_speak_args
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        "org.freedesktop.Speech.MockProvider",
         in_signature="",
         out_signature="",
     )
@@ -150,7 +150,7 @@ class SomeObject(dbus.service.Object):
         self._last_speak_args = [0, "", "", 0, 0, 0]
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        "org.freedesktop.Speech.MockProvider",
         in_signature="b",
         out_signature="",
     )
@@ -160,7 +160,7 @@ class SomeObject(dbus.service.Object):
             GLib.idle_add(self._do_step_until_done)
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        "org.freedesktop.Speech.MockProvider",
         in_signature="",
         out_signature="",
     )
@@ -168,7 +168,7 @@ class SomeObject(dbus.service.Object):
         self._do_step()
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        "org.freedesktop.Speech.MockProvider",
         in_signature="ssas",
         out_signature="",
     )
@@ -179,7 +179,7 @@ class SomeObject(dbus.service.Object):
         GLib.idle_add(self.VoicesChanged)
 
     @dbus.service.method(
-        "org.freedesktop.Speech.Synthesis.MockSpeaker",
+        "org.freedesktop.Speech.MockProvider",
         in_signature="s",
         out_signature="",
     )
@@ -194,8 +194,8 @@ class SomeObject(dbus.service.Object):
 if __name__ == "__main__":
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     session_bus = dbus.SessionBus()
-    name = dbus.service.BusName(f"org.freedesktop.Speech.Synthesis.{NAME}", session_bus)
-    obj = SomeObject(session_bus, f"/org/freedesktop/Speech/Synthesis/{NAME}")
+    name = dbus.service.BusName(f"org.{NAME}.Speech.Provider", session_bus)
+    obj = SomeObject(session_bus, f"/org/{NAME}/Speech/Provider")
 
     mainloop = GLib.MainLoop()
     mainloop.run()
