@@ -1,4 +1,4 @@
-/* spiel-provider-registry.c
+/* spiel-registry.c
  *
  * Copyright (C) 2023 Eitan Isaacson <eitan@monotonous.org>
  *
@@ -18,13 +18,13 @@
 
 #include "libspiel.h"
 
-#include "spiel-provider-registry.h"
+#include "spiel-registry.h"
 
 #include <gio/gio.h>
 
 #define PROVIDER_PREFIX "org.freedesktop.Speech.Synthesis."
 
-struct _SpielProviderRegistry
+struct _SpielRegistry
 {
   GObject parent_instance;
 };
@@ -34,22 +34,22 @@ typedef struct
   GDBusConnection *connection;
   guint subscription_ids[2];
   GHashTable *providers;
-} SpielProviderRegistryPrivate;
+} SpielRegistryPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
 static void
 async_initable_iface_init (GAsyncInitableIface *async_initable_iface);
 
 G_DEFINE_FINAL_TYPE_WITH_CODE (
-    SpielProviderRegistry,
-    spiel_provider_registry,
+    SpielRegistry,
+    spiel_registry,
     G_TYPE_OBJECT,
-    G_ADD_PRIVATE (SpielProviderRegistry)
+    G_ADD_PRIVATE (SpielRegistry)
         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init)
             G_IMPLEMENT_INTERFACE (G_TYPE_ASYNC_INITABLE,
                                    async_initable_iface_init))
 
-static SpielProviderRegistry *sRegistry = NULL;
+static SpielRegistry *sRegistry = NULL;
 
 enum
 {
@@ -61,7 +61,7 @@ enum
   LAST_SIGNAL
 };
 
-static guint provider_registry_signals[LAST_SIGNAL] = { 0 };
+static guint registry_signals[LAST_SIGNAL] = { 0 };
 
 typedef struct
 {
@@ -121,12 +121,11 @@ _provider_entry_destroy (gpointer data)
 static void _update_next_provider (GTask *task);
 
 static gboolean
-_add_provider_with_voices (SpielProviderRegistry *self,
+_add_provider_with_voices (SpielRegistry *self,
                            SpielProvider *provider,
                            GVariant *voices)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   char *provider_name = NULL;
   _ProviderEntry *provider_entry = g_slice_new0 (_ProviderEntry);
 
@@ -164,7 +163,7 @@ _on_get_voices (GObject *source, GAsyncResult *result, gpointer user_data)
 {
   GTask *task = user_data;
   _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielProviderRegistry *self = g_task_get_source_object (task);
+  SpielRegistry *self = g_task_get_source_object (task);
   GSList *next_provider = closure->provider_names;
   SpielProvider *provider = SPIEL_PROVIDER (source);
   GVariant *voices = NULL;
@@ -219,9 +218,8 @@ static void
 _update_next_provider (GTask *task)
 {
   _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielProviderRegistry *self = g_task_get_source_object (task);
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistry *self = g_task_get_source_object (task);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   GSList *next_provider = closure->provider_names;
   char *service_name = NULL;
   char **split_name = NULL;
@@ -262,7 +260,7 @@ _update_next_provider (GTask *task)
 static gboolean
 update_providers_finished (GObject *source, GAsyncResult *res, GError **error);
 
-static void update_providers (SpielProviderRegistry *self,
+static void update_providers (SpielRegistry *self,
                               GCancellable *cancellable,
                               GAsyncReadyCallback callback,
                               gpointer user_data);
@@ -270,7 +268,7 @@ static void update_providers (SpielProviderRegistry *self,
 static void
 _on_providers_updated (GObject *source, GAsyncResult *res, gpointer user_data)
 {
-  SpielProviderRegistry *self = SPIEL_PROVIDER_REGISTRY (source);
+  SpielRegistry *self = SPIEL_REGISTRY (source);
   GError *err = NULL;
   gboolean changed = update_providers_finished (source, res, &err);
   if (err != NULL)
@@ -281,7 +279,7 @@ _on_providers_updated (GObject *source, GAsyncResult *res, gpointer user_data)
 
   if (changed)
     {
-      g_signal_emit (self, provider_registry_signals[VOICES_CHANGED], 0);
+      g_signal_emit (self, registry_signals[VOICES_CHANGED], 0);
     }
 }
 
@@ -294,16 +292,15 @@ _providers_maybe_changed (GDBusConnection *connection,
                           GVariant *parameters,
                           gpointer user_data)
 {
-  SpielProviderRegistry *self = user_data;
+  SpielRegistry *self = user_data;
   update_providers (self, NULL, _on_providers_updated, NULL);
 }
 
 static void
-_subscribe_to_activatable_services_changed (SpielProviderRegistry *self,
+_subscribe_to_activatable_services_changed (SpielRegistry *self,
                                             GDBusConnection *connection)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   priv->connection = g_object_ref (connection);
   priv->subscription_ids[0] = g_dbus_connection_signal_subscribe (
       connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
@@ -372,9 +369,8 @@ _update_providers_on_list_names (GObject *source,
 {
   GTask *task = user_data;
   _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielProviderRegistry *self = g_task_get_source_object (task);
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistry *self = g_task_get_source_object (task);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   _collect_provider_names (source, result, user_data);
   closure->removed_count = g_hash_table_foreach_remove (
@@ -390,9 +386,8 @@ _update_providers_on_list_activatable_names (GObject *source,
 {
   GTask *task = user_data;
   _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielProviderRegistry *self = g_task_get_source_object (task);
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistry *self = g_task_get_source_object (task);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   _collect_provider_names (source, result, user_data);
 
@@ -403,14 +398,13 @@ _update_providers_on_list_activatable_names (GObject *source,
 }
 
 static void
-update_providers (SpielProviderRegistry *self,
+update_providers (SpielRegistry *self,
                   GCancellable *cancellable,
                   GAsyncReadyCallback callback,
                   gpointer user_data)
 {
   GTask *task = g_task_new (self, cancellable, callback, user_data);
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   _UpdateProvidersClosure *closure = g_slice_new0 (_UpdateProvidersClosure);
 
   closure->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
@@ -452,7 +446,7 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
 {
   GTask *task = user_data;
   GCancellable *cancellable = g_task_get_task_data (task);
-  SpielProviderRegistry *self = g_task_get_source_object (task);
+  SpielRegistry *self = g_task_get_source_object (task);
 
   GError *error = NULL;
   GDBusConnection *bus = g_bus_get_finish (result, &error);
@@ -469,9 +463,9 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
 }
 
 void
-spiel_provider_registry_get (GCancellable *cancellable,
-                             GAsyncReadyCallback callback,
-                             gpointer user_data)
+spiel_registry_get (GCancellable *cancellable,
+                    GAsyncReadyCallback callback,
+                    gpointer user_data)
 {
   if (sRegistry != NULL)
     {
@@ -482,14 +476,13 @@ spiel_provider_registry_get (GCancellable *cancellable,
     }
   else
     {
-      g_async_initable_new_async (SPIEL_TYPE_PROVIDER_REGISTRY,
-                                  G_PRIORITY_DEFAULT, cancellable, callback,
-                                  user_data, NULL);
+      g_async_initable_new_async (SPIEL_TYPE_REGISTRY, G_PRIORITY_DEFAULT,
+                                  cancellable, callback, user_data, NULL);
     }
 }
 
-SpielProviderRegistry *
-spiel_provider_registry_get_finish (GAsyncResult *result, GError **error)
+SpielRegistry *
+spiel_registry_get_finish (GAsyncResult *result, GError **error)
 {
   GObject *object;
   GObject *source_object;
@@ -505,10 +498,10 @@ spiel_provider_registry_get_finish (GAsyncResult *result, GError **error)
     {
       if (sRegistry == NULL)
         {
-          sRegistry = SPIEL_PROVIDER_REGISTRY (object);
+          sRegistry = SPIEL_REGISTRY (object);
         }
-      g_assert (sRegistry == SPIEL_PROVIDER_REGISTRY (object));
-      return SPIEL_PROVIDER_REGISTRY (object);
+      g_assert (sRegistry == SPIEL_REGISTRY (object));
+      return SPIEL_REGISTRY (object);
     }
   else
     {
@@ -516,13 +509,13 @@ spiel_provider_registry_get_finish (GAsyncResult *result, GError **error)
     }
 }
 
-SpielProviderRegistry *
-spiel_provider_registry_get_sync (GCancellable *cancellable, GError **error)
+SpielRegistry *
+spiel_registry_get_sync (GCancellable *cancellable, GError **error)
 {
   if (sRegistry == NULL)
     {
-      sRegistry = g_initable_new (SPIEL_TYPE_PROVIDER_REGISTRY, cancellable,
-                                  error, NULL);
+      sRegistry =
+          g_initable_new (SPIEL_TYPE_REGISTRY, cancellable, error, NULL);
     }
   else
     {
@@ -540,9 +533,8 @@ async_initable_init_async (GAsyncInitable *initable,
                            gpointer user_data)
 {
   GTask *task = g_task_new (initable, cancellable, callback, user_data);
-  SpielProviderRegistry *self = SPIEL_PROVIDER_REGISTRY (initable);
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistry *self = SPIEL_REGISTRY (initable);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
@@ -565,11 +557,10 @@ async_initable_init_finish (GAsyncInitable *initable,
 }
 
 static void
-spiel_provider_registry_finalize (GObject *object)
+spiel_registry_finalize (GObject *object)
 {
-  SpielProviderRegistry *self = (SpielProviderRegistry *) object;
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistry *self = (SpielRegistry *) object;
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   g_hash_table_unref (priv->providers);
   if (priv->connection)
@@ -581,16 +572,15 @@ spiel_provider_registry_finalize (GObject *object)
       g_object_unref (priv->connection);
     }
 
-  G_OBJECT_CLASS (spiel_provider_registry_parent_class)->finalize (object);
+  G_OBJECT_CLASS (spiel_registry_parent_class)->finalize (object);
   g_assert (object == G_OBJECT (sRegistry));
   sRegistry = NULL;
 }
 
 static void
-_add_provider (SpielProviderRegistry *self, const char *service_name)
+_add_provider (SpielRegistry *self, const char *service_name)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   SpielProvider *provider = NULL;
   char **split_name = NULL;
   char *partial_path = NULL;
@@ -636,7 +626,7 @@ _add_provider (SpielProviderRegistry *self, const char *service_name)
 static gboolean
 initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
-  SpielProviderRegistry *self = SPIEL_PROVIDER_REGISTRY (initable);
+  SpielRegistry *self = SPIEL_REGISTRY (initable);
   GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
   const char *list_name_methods[] = { "ListActivatableNames", "ListNames",
                                       NULL };
@@ -674,38 +664,37 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 }
 
 static void
-spiel_provider_registry_init (SpielProviderRegistry *self)
+spiel_registry_init (SpielRegistry *self)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
 }
 
 static void
-spiel_provider_registry_class_init (SpielProviderRegistryClass *klass)
+spiel_registry_class_init (SpielRegistryClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = spiel_provider_registry_finalize;
+  object_class->finalize = spiel_registry_finalize;
 
-  provider_registry_signals[STARTED] =
+  registry_signals[STARTED] =
       g_signal_new ("started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
                     NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  provider_registry_signals[WORD_REACHED] = g_signal_new (
+  registry_signals[WORD_REACHED] = g_signal_new (
       "word-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  provider_registry_signals[FINISHED] =
+  registry_signals[FINISHED] =
       g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
                     0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  provider_registry_signals[CANCELED] =
+  registry_signals[CANCELED] =
       g_signal_new ("canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
                     0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  provider_registry_signals[VOICES_CHANGED] =
+  registry_signals[VOICES_CHANGED] =
       g_signal_new ("voices-changed", G_TYPE_FROM_CLASS (klass),
                     G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 0);
 }
@@ -730,8 +719,8 @@ handle_speech_start (SpielProvider *provider,
                      guint64 task_id,
                      gpointer user_data)
 {
-  SpielProviderRegistry *self = user_data;
-  g_signal_emit (self, provider_registry_signals[STARTED], 0, task_id);
+  SpielRegistry *self = user_data;
+  g_signal_emit (self, registry_signals[STARTED], 0, task_id);
   return TRUE;
 }
 
@@ -740,16 +729,16 @@ handle_speech_word (SpielProvider *provider,
                     guint64 task_id,
                     gpointer user_data)
 {
-  SpielProviderRegistry *self = user_data;
-  g_signal_emit (self, provider_registry_signals[WORD_REACHED], 0, task_id);
+  SpielRegistry *self = user_data;
+  g_signal_emit (self, registry_signals[WORD_REACHED], 0, task_id);
   return TRUE;
 }
 
 static gboolean
 handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
 {
-  SpielProviderRegistry *self = user_data;
-  g_signal_emit (self, provider_registry_signals[FINISHED], 0, task_id);
+  SpielRegistry *self = user_data;
+  g_signal_emit (self, registry_signals[FINISHED], 0, task_id);
   return TRUE;
 }
 
@@ -758,7 +747,7 @@ _on_get_voices_maybe_changed (GObject *source,
                               GAsyncResult *result,
                               gpointer user_data)
 {
-  SpielProviderRegistry *self = user_data;
+  SpielRegistry *self = user_data;
   SpielProvider *provider = SPIEL_PROVIDER (source);
   GVariant *voices = NULL;
   GError *error = NULL;
@@ -773,13 +762,13 @@ _on_get_voices_maybe_changed (GObject *source,
     }
 
   _add_provider_with_voices (self, provider, voices);
-  g_signal_emit (self, provider_registry_signals[VOICES_CHANGED], 0);
+  g_signal_emit (self, registry_signals[VOICES_CHANGED], 0);
 }
 
 static gboolean
 handle_voices_changed (SpielProvider *provider, gpointer user_data)
 {
-  SpielProviderRegistry *self = user_data;
+  SpielRegistry *self = user_data;
 
   spiel_provider_call_get_voices (provider, NULL, _on_get_voices_maybe_changed,
                                   self);
@@ -790,11 +779,9 @@ handle_voices_changed (SpielProvider *provider, gpointer user_data)
 /* Public API */
 
 SpielProvider *
-spiel_provider_registry_get_provider_for_voice (SpielProviderRegistry *self,
-                                                SpielVoice *voice)
+spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   _ProviderEntry *provider_entry = g_hash_table_lookup (
       priv->providers, spiel_voice_get_provider_name (voice));
@@ -809,11 +796,10 @@ spiel_provider_registry_get_provider_for_voice (SpielProviderRegistry *self,
 }
 
 SpielVoice *
-spiel_provider_registry_get_voice_for_utterance (SpielProviderRegistry *self,
-                                                 SpielUtterance *utterance)
+spiel_registry_get_voice_for_utterance (SpielRegistry *self,
+                                        SpielUtterance *utterance)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   SpielVoice *voice = NULL;
   g_object_get (utterance, "voice", &voice, NULL);
 
@@ -839,10 +825,9 @@ _collate_voices (gpointer key, gpointer value, gpointer user_data)
 }
 
 GListStore *
-spiel_provider_registry_get_voices (SpielProviderRegistry *self)
+spiel_registry_get_voices (SpielRegistry *self)
 {
-  SpielProviderRegistryPrivate *priv =
-      spiel_provider_registry_get_instance_private (self);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   GListStore *voices = g_list_store_new (SPIEL_TYPE_VOICE);
   g_hash_table_foreach (priv->providers, _collate_voices, voices);
   return voices;

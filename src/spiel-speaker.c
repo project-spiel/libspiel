@@ -20,7 +20,7 @@
 
 #include "spiel-speaker.h"
 
-#include "spiel-provider-registry.h"
+#include "spiel-registry.h"
 #include "spiel-voice.h"
 #include "spieldbusgenerated.h"
 #include <gio/gio.h>
@@ -35,7 +35,7 @@ typedef struct
 {
   gboolean speaking;
   gboolean paused;
-  SpielProviderRegistry *registry;
+  SpielRegistry *registry;
   GSList *queue;
 } SpielSpeakerPrivate;
 
@@ -194,10 +194,10 @@ static SpielProvider *
 _get_utterance_provider_or_default (SpielSpeakerPrivate *priv,
                                     SpielUtterance *utterance)
 {
-  SpielVoice *voice = spiel_provider_registry_get_voice_for_utterance (
-      priv->registry, utterance);
+  SpielVoice *voice =
+      spiel_registry_get_voice_for_utterance (priv->registry, utterance);
 
-  return spiel_provider_registry_get_provider_for_voice (priv->registry, voice);
+  return spiel_registry_get_provider_for_voice (priv->registry, voice);
 }
 
 static void
@@ -470,8 +470,7 @@ spiel_speaker_get_property (GObject *object,
       break;
     case PROP_VOICES:
       {
-        GListStore *voices =
-            spiel_provider_registry_get_voices (priv->registry);
+        GListStore *voices = spiel_registry_get_voices (priv->registry);
         g_value_set_object (value, voices);
         g_object_unref (voices);
         break;
@@ -540,7 +539,7 @@ _on_registry_get (GObject *source, GAsyncResult *result, gpointer user_data)
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   GError *error = NULL;
 
-  priv->registry = spiel_provider_registry_get_finish (result, &error);
+  priv->registry = spiel_registry_get_finish (result, &error);
   if (error != NULL)
     {
       g_task_return_error (task, error);
@@ -570,7 +569,7 @@ async_initable_init_async (GAsyncInitable *initable,
   priv->queue = NULL;
 
   g_task_set_task_data (task, g_object_ref (self), g_object_unref);
-  spiel_provider_registry_get (cancellable, _on_registry_get, task);
+  spiel_registry_get (cancellable, _on_registry_get, task);
 }
 
 static gboolean
@@ -595,7 +594,7 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
   SpielSpeaker *self = SPIEL_SPEAKER (initable);
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  priv->registry = spiel_provider_registry_get_sync (cancellable, error);
+  priv->registry = spiel_registry_get_sync (cancellable, error);
   if (*error)
     {
       g_warning ("Error initializing speaker: %s\n", (*error)->message);

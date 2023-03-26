@@ -8,7 +8,7 @@ spiel_public_sources = [
 
 spiel_sources = [
   spiel_public_sources,
-  'spiel-provider-registry.c',
+  'spiel-registry.c',
   spiel_iface_sources,
 ]
 
@@ -21,7 +21,7 @@ spiel_public_headers = [
 
 spiel_headers = [
   spiel_public_headers,
-  'spiel-provider-registry.h',
+  'spiel-registry.h',
 ]
 
 version_split = meson.project_version().split('.')
