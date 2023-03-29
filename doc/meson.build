@@ -15,8 +15,8 @@ endif
 # docs_dir = datadir / 'doc'
 
 source_toml = configure_file(
-  input: 'Jsonrpc.toml.in',
-  output: 'Jsonrpc.toml',
+  input: 'Spiel.toml.in',
+  output: 'Spiel.toml',
   configuration: toml_conf,
   # install: true,
   # install_dir: docs_dir / 'libspiel',
