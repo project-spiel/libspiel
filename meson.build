@@ -85,3 +85,4 @@ test_env_vars = {
 subdir('interface')
 subdir('src')
 subdir('tests')
+subdir('doc')
