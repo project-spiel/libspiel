@@ -4,7 +4,7 @@
 
 	"features": {
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-        "packages": "meson,gi-docgen,libgirepository1.0-dev,dbus,python3-dbus,python3-tap"
+        "packages": "meson,gi-docgen,libgirepository1.0-dev,dbus,python3-dbus,python3-tap,python3-gi"
     }
 	}
 }
