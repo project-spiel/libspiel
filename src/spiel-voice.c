@@ -48,17 +48,6 @@ enum
 
 static GParamSpec *properties[N_PROPS];
 
-SpielVoice *
-spiel_voice_new (const char *name,
-                 const char *identifier,
-                 const char **languages,
-                 const char *provider_name)
-{
-  return g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier", identifier,
-                       "languages", languages, "provider-name", provider_name,
-                       NULL);
-}
-
 const char *
 spiel_voice_get_identifier (SpielVoice *self)
 {

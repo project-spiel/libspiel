@@ -142,8 +142,9 @@ _add_provider_with_voices (SpielRegistry *self,
 
       g_variant_get_child (voices, i, "(&s&s^a&s)", &name, &identifier,
                            &languages);
-      provider_entry->voices[i] =
-          spiel_voice_new (name, identifier, languages, provider_name);
+      provider_entry->voices[i] = g_object_new (
+          SPIEL_TYPE_VOICE, "name", name, "identifier", identifier, "languages",
+          languages, "provider-name", provider_name, NULL);
 
       g_free (languages);
     }
