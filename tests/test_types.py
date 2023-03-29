@@ -11,10 +11,10 @@ class TestTypes(BaseSpielTest):
         self.assertFalse(speechSynthesis.props.paused)
         speechSynthesis.connect("notify::speaking", _cb)
         speechSynthesis.connect("notify::paused", _cb)
-        speechSynthesis.connect("started", _cb)
+        speechSynthesis.connect("utterance-started", _cb)
         speechSynthesis.connect("word-reached", _cb)
-        speechSynthesis.connect("finished", _cb)
-        speechSynthesis.connect("canceled", _cb)
+        speechSynthesis.connect("utterance-finished", _cb)
+        speechSynthesis.connect("utterance-canceled", _cb)
 
     def test_voice(self):
         voice = Spiel.Voice(

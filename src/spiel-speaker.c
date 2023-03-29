@@ -53,10 +53,10 @@ G_DEFINE_FINAL_TYPE_WITH_CODE (
 
 enum
 {
-  STARTED,
+  UTTURANCE_STARTED,
   WORD_REACHED,
-  FINISHED,
-  CANCELED,
+  UTTERANCE_FINISHED,
+  UTTERANCE_CANCELED,
   LAST_SIGNAL
 };
 
@@ -380,7 +380,7 @@ handle_speech_start (SpielProvider *provider,
       return TRUE;
     }
 
-  g_signal_emit (self, speaker_signals[STARTED], 0, entry->utterance);
+  g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0, entry->utterance);
   return TRUE;
 }
 
@@ -412,7 +412,7 @@ handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
       return TRUE;
     }
 
-  g_signal_emit (self, speaker_signals[FINISHED], 0, entry->utterance);
+  g_signal_emit (self, speaker_signals[UTTERANCE_FINISHED], 0, entry->utterance);
 
   if (!priv->queue->next)
     {
@@ -501,20 +501,20 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   g_object_class_install_properties (object_class, N_PROPS, properties);
 
-  speaker_signals[STARTED] =
-      g_signal_new ("started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
+  speaker_signals[UTTURANCE_STARTED] =
+      g_signal_new ("utterance-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
                     NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
   speaker_signals[WORD_REACHED] = g_signal_new (
       "word-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
-  speaker_signals[FINISHED] =
-      g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
+  speaker_signals[UTTERANCE_FINISHED] =
+      g_signal_new ("utterance-finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
                     0, NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
-  speaker_signals[CANCELED] =
-      g_signal_new ("canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
+  speaker_signals[UTTERANCE_CANCELED] =
+      g_signal_new ("utterance-canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
                     0, NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 }
 

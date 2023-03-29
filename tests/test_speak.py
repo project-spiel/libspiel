@@ -10,7 +10,7 @@ class TestSpeak(BaseSpielTest):
                 loop.quit()
 
         def _started_cb(synth, utt):
-            actual_events.append("started")
+            actual_events.append("utterance-started")
             self.assertEqual(utt, utterance)
 
         def _reached_word_cb(synth, utt):
@@ -18,18 +18,18 @@ class TestSpeak(BaseSpielTest):
             self.assertEqual(utt, utterance)
 
         def _finished_cb(synth, utt):
-            actual_events.append("finished")
+            actual_events.append("utterance-finished")
             self.assertEqual(utt, utterance)
 
         expected_events = [
             "notify:speaking=True",
-            "started",
+            "utterance-started",
             "word-reached",
             "word-reached",
             "word-reached",
             "word-reached",
             "word-reached",
-            "finished",
+            "utterance-finished",
             "notify:speaking=False",
         ]
 
@@ -39,9 +39,9 @@ class TestSpeak(BaseSpielTest):
         self.assertFalse(speechSynthesis.props.speaking)
         self.assertFalse(speechSynthesis.props.paused)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("started", _started_cb)
+        speechSynthesis.connect("utterance-started", _started_cb)
         speechSynthesis.connect("word-reached", _reached_word_cb)
-        speechSynthesis.connect("finished", _finished_cb)
+        speechSynthesis.connect("utterance-finished", _finished_cb)
         utterance = Spiel.Utterance(text="hello world, how are you?")
         speechSynthesis.speak(utterance)
 
@@ -78,8 +78,8 @@ class TestSpeak(BaseSpielTest):
 
         speechSynthesis = Spiel.Speaker.new_sync(None)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("started", _started_cb)
-        speechSynthesis.connect("finished", _finished_cb)
+        speechSynthesis.connect("utterance-started", _started_cb)
+        speechSynthesis.connect("utterance-finished", _finished_cb)
 
         for text in ["one", "two", "three"]:
             utterance = Spiel.Utterance(text=text)
@@ -89,7 +89,7 @@ class TestSpeak(BaseSpielTest):
 
     def test_pause(self):
         def _started_cb(synth, utt):
-            actual_events.append("started")
+            actual_events.append("utterance-started")
             self.assertFalse(speechSynthesis.props.paused)
             synth.pause()
 
@@ -101,11 +101,11 @@ class TestSpeak(BaseSpielTest):
                 self.mock_service.SetAutoStep(True)
 
         def _finished_cb(synth, utt):
-            actual_events.append("finished")
+            actual_events.append("utterance-finished")
             self.assertFalse(speechSynthesis.props.paused)
             self.assertEqual(
                 actual_events,
-                ["started", "notify:paused=True", "notify:paused=False", "finished"],
+                ["utterance-started", "notify:paused=True", "notify:paused=False", "utterance-finished"],
             )
             loop.quit()
 
@@ -113,9 +113,9 @@ class TestSpeak(BaseSpielTest):
 
         self.mock_service.SetAutoStep(False)
         speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("started", _started_cb)
+        speechSynthesis.connect("utterance-started", _started_cb)
         speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("finished", _finished_cb)
+        speechSynthesis.connect("utterance-finished", _finished_cb)
         utterance = Spiel.Utterance(text="hello world, how are you?")
         speechSynthesis.speak(utterance)
 
@@ -150,8 +150,8 @@ class TestSpeak(BaseSpielTest):
         self.mock_service.SetAutoStep(False)
         speechSynthesis = Spiel.Speaker.new_sync(None)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("started", _started_cb)
-        speechSynthesis.connect("canceled", _canceled_cb)
+        speechSynthesis.connect("utterance-started", _started_cb)
+        speechSynthesis.connect("utterance-canceled", _canceled_cb)
 
         for text in ["one", "two", "three"]:
             utterance = Spiel.Utterance(text=text)
@@ -167,16 +167,16 @@ class TestSpeak(BaseSpielTest):
                     actual_events,
                     [
                         "notify:speaking=True",
-                        "started",
+                        "utterance-started",
                         "notify:paused=True",
-                        "canceled",
+                        "utterance-canceled",
                         "notify:speaking=False",
                     ],
                 )
                 loop.quit()
 
         def _started_cb(synth, utt):
-            actual_events.append("started")
+            actual_events.append("utterance-started")
             self.assertFalse(speechSynthesis.props.paused)
             synth.pause()
 
@@ -185,7 +185,7 @@ class TestSpeak(BaseSpielTest):
             synth.cancel()
 
         def _canceled_cb(synth, utt):
-            actual_events.append("canceled")
+            actual_events.append("utterance-canceled")
             self.assertTrue(speechSynthesis.props.paused)
             loop.quit()
 
@@ -193,10 +193,10 @@ class TestSpeak(BaseSpielTest):
 
         self.mock_service.SetAutoStep(False)
         speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("started", _started_cb)
+        speechSynthesis.connect("utterance-started", _started_cb)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
         speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("canceled", _canceled_cb)
+        speechSynthesis.connect("utterance-canceled", _canceled_cb)
         utterance = Spiel.Utterance(text="hello world, how are you?")
         speechSynthesis.speak(utterance)
 
@@ -213,8 +213,8 @@ class TestSpeak(BaseSpielTest):
                         "notify:paused=True",
                         "notify:paused=False",
                         "notify:speaking=True",
-                        "started",
-                        "finished",
+                        "utterance-started",
+                        "utterance-finished",
                         "notify:speaking=False",
                     ],
                 )
@@ -226,12 +226,12 @@ class TestSpeak(BaseSpielTest):
                 synth.resume()
 
         def _started_cb(synth, utt):
-            actual_events.append("started")
+            actual_events.append("utterance-started")
             self.assertEqual(utt, utterance)
             self.assertTrue(speechSynthesis.props.speaking)
 
         def _finished_cb(synth, utt):
-            actual_events.append("finished")
+            actual_events.append("utterance-finished")
             self.assertEqual(utt, utterance)
 
         actual_events = []
@@ -239,8 +239,8 @@ class TestSpeak(BaseSpielTest):
         speechSynthesis = Spiel.Speaker.new_sync(None)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
         speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("started", _started_cb)
-        speechSynthesis.connect("finished", _finished_cb)
+        speechSynthesis.connect("utterance-started", _started_cb)
+        speechSynthesis.connect("utterance-finished", _finished_cb)
         speechSynthesis.pause()
         utterance = Spiel.Utterance(text="hello world, how are you?")
         speechSynthesis.speak(utterance)

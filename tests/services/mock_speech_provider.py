@@ -9,7 +9,7 @@ import re
 from os import getcwd
 from sys import argv
 
-NAME = argv[-1] if len(argv) > 1 else "Mock"
+NAME = argv[-1] if len(argv) > 1 else "mock"
 
 AUTOEXIT = NAME == "mock3"
 
