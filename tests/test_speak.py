@@ -258,6 +258,7 @@ class TestSpeak(BaseSpielTest):
                 voice = v
 
         utterance = Spiel.Utterance(text="hello world, how are you?", voice=voice)
+        self.mock_iface(provider_name).SetAutoStep(False)
         self.wait_for_speaking_changed(
             speechSynthesis, lambda: speechSynthesis.speak(utterance)
         )
