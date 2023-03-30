@@ -3,7 +3,7 @@ version = "@version@"
 browse_url = "https://github.com/eeejay/libspiel"
 repository_url = "https://github.com/eeejay/libspiel.git"
 website_url = "https://github.com/eeejay/libspiel"
-docs_url = "https://github.com/eeejay/libspiel"
+docs_url = "https://eeejay.github.io/libspiel/"
 authors = "Eitan Isaacson"
 license = "LGPL-2.1"
 description = "A library that interfaces with D-Bus speech synthesis providers."
@@ -32,7 +32,7 @@ show_index_summary = true
 show_class_hierarchy = true
 
 [source-location]
-base_url = "https://github.com/eeejay/libspiel"
+base_url = "https://github.com/eeejay/libspiel/blob/main/"
 
 [extra]
 urlmap_file = "urlmap.js"
