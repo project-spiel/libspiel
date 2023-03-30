@@ -21,6 +21,17 @@
 #include "spiel-voice.h"
 #include "spieldbusgenerated.h"
 
+/**
+ * SpielVoice:
+ *
+ * Represents a voice implemented by a speech provider.
+ *
+ * A DBus speech provider advertises a list of voices that it implements.
+ * Each voice will have human-readable name, a unique identifier, and a list
+ * of languages supported by the voice.
+ *
+ */
+
 struct _SpielVoice
 {
   GObject parent_instance;
@@ -48,6 +59,31 @@ enum
 
 static GParamSpec *properties[N_PROPS];
 
+/**
+ * spiel_voice_get_name: (get-property name)
+ * @self: a `SpielVoice`
+ *
+ * Fetches the name.
+ *
+ * Returns: the name text. This string is
+ *   owned by the voice and must not be modified or freed.
+ */
+const char *
+spiel_voice_get_name (SpielVoice *self)
+{
+  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  return priv->name;
+}
+
+/**
+ * spiel_voice_get_identifier: (get-property identifier)
+ * @self: a `SpielVoice`
+ *
+ * Fetches the identifier.
+ *
+ * Returns: the identifier text. This string is
+ *   owned by the voice and must not be modified or freed.
+ */
 const char *
 spiel_voice_get_identifier (SpielVoice *self)
 {
@@ -55,11 +91,36 @@ spiel_voice_get_identifier (SpielVoice *self)
   return priv->identifier;
 }
 
+/**
+ * spiel_voice_get_provider_name: (get-property provider-name)
+ * @self: a `SpielVoice`
+ *
+ * Fetches the provider name in the form of a unique DBus name.
+ *
+ * Returns: the provider name. This string is
+ *   owned by the voice and must not be modified or freed.
+ */
 const char *
 spiel_voice_get_provider_name (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
   return priv->provider_name;
+}
+
+/**
+ * spiel_voice_get_languages: (get-property languages)
+ * @self: a `SpielVoice`
+ *
+ * Fetches the list of supported languages
+ *
+ * Returns: the list of supported languages. This list is
+ *   owned by the voice and must not be modified or freed.
+ */
+const char *const *
+spiel_voice_get_languages (SpielVoice *self)
+{
+  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  return (const char *const *) priv->languages;
 }
 
 static void
@@ -148,18 +209,45 @@ spiel_voice_class_init (SpielVoiceClass *klass)
   object_class->get_property = spiel_voice_get_property;
   object_class->set_property = spiel_voice_set_property;
 
+  /**
+   * SpielVoice:name: (getter get_name)
+   *
+   * A human readable name for the voice. Not guaranteed to be unique.
+   * May, or may not, be localized by the speech provider.
+   *
+   */
   properties[PROP_NAME] = g_param_spec_string (
       "name", NULL, NULL, NULL /* default value */,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielVoice:identifier: (getter get_identifier)
+   *
+   * A unique identifier of the voice. The uniqueness should be considered
+   * in the scope of the provider (ie. two providers can use the same
+   * identifier).
+   *
+   */
   properties[PROP_IDENTIFIER] = g_param_spec_string (
       "identifier", NULL, NULL, NULL /* default value */,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielVoice:languages: (getter get_languages)
+   *
+   * A list of supported languages encoded as BCP 47 tags.
+   *
+   */
   properties[PROP_LANGUAGES] = g_param_spec_boxed (
       "languages", NULL, NULL, G_TYPE_STRV,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielVoice:provider-name: (getter get_provider_name)
+   *
+   * The speech provider that implements this voice's DBus name.
+   *
+   */
   properties[PROP_PROVIDER_NAME] = g_param_spec_string (
       "provider-name", NULL, NULL, NULL /* default value */,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);

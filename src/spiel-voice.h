@@ -26,8 +26,12 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (SpielVoice, spiel_voice, SPIEL, VOICE, GObject)
 
+const char *spiel_voice_get_name (SpielVoice *self);
+
 const char *spiel_voice_get_identifier (SpielVoice *self);
 
 const char *spiel_voice_get_provider_name (SpielVoice *self);
+
+const char *const *spiel_voice_get_languages (SpielVoice *self);
 
 G_END_DECLS
