@@ -61,11 +61,11 @@ static GParamSpec *properties[N_PROPS];
 
 /**
  * spiel_voice_get_name: (get-property name)
- * @self: a `SpielVoice`
+ * @self: a #SpielVoice
  *
  * Fetches the name.
  *
- * Returns: the name text. This string is
+ * Returns: (transfer none): the name text. This string is
  *   owned by the voice and must not be modified or freed.
  */
 const char *
@@ -77,7 +77,7 @@ spiel_voice_get_name (SpielVoice *self)
 
 /**
  * spiel_voice_get_identifier: (get-property identifier)
- * @self: a `SpielVoice`
+ * @self: a #SpielVoice
  *
  * Fetches the identifier.
  *
@@ -93,7 +93,7 @@ spiel_voice_get_identifier (SpielVoice *self)
 
 /**
  * spiel_voice_get_provider_name: (get-property provider-name)
- * @self: a `SpielVoice`
+ * @self: a #SpielVoice
  *
  * Fetches the provider name in the form of a unique DBus name.
  *
@@ -109,7 +109,7 @@ spiel_voice_get_provider_name (SpielVoice *self)
 
 /**
  * spiel_voice_get_languages: (get-property languages)
- * @self: a `SpielVoice`
+ * @self: a #SpielVoice
  *
  * Fetches the list of supported languages
  *

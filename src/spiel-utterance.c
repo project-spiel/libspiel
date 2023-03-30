@@ -19,7 +19,16 @@
 #include "libspiel.h"
 
 #include "spiel-utterance.h"
-#include "spiel-voice.h"
+
+/**
+ * SpielUtterance:
+ *
+ * Represents an utterance to be spoken by a #SpielSpeaker.
+ *
+ * An utterance consists of the text to be spoken and other properties that
+ * affect the speech, like rate, pitch or voice used.
+ *
+ */
 
 struct _SpielUtterance
 {
@@ -66,6 +75,169 @@ spiel_utterance_new (const char *text)
   return g_object_new (SPIEL_TYPE_UTTERANCE, "text", text, NULL);
 }
 
+/**
+ * spiel_utterance_get_text: (get-property text)
+ * @self: a #SpielUtterance
+ *
+ * Fetches the text spoken in this utterance
+ *
+ * Returns: (transfer none): the text.
+ */
+const char *
+spiel_utterance_get_text (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  return priv->text;
+}
+
+/**
+ * spiel_utterance_set_text: (set-property text)
+ * @self: a #SpielUtterance
+ * @text: the text to assign to this utterance
+ *
+ * Sets the text to be spoken by this utterance
+ *
+ */
+void
+spiel_utterance_set_text (SpielUtterance *self, const char *text)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  g_free (priv->text);
+  priv->text = g_strdup (text);
+  g_object_notify (G_OBJECT (self), "text");
+}
+
+/**
+ * spiel_utterance_get_pitch: (get-property pitch)
+ * @self: a #SpielUtterance
+ *
+ * Fetches the pitch used in this utterance
+ *
+ * Returns: the pitch value.
+ */
+double
+spiel_utterance_get_pitch (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  return priv->pitch;
+}
+
+/**
+ * spiel_utterance_set_pitch: (set-property pitch)
+ * @self: a #SpielUtterance
+ * @pitch: a rate to assign to this utterance
+ *
+ * Sets a pitch on this utterance
+ *
+ */
+void
+spiel_utterance_set_pitch (SpielUtterance *self, double pitch)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  priv->pitch = pitch;
+  g_object_notify (G_OBJECT (self), "pitch");
+}
+
+/**
+ * spiel_utterance_get_rate: (get-property rate)
+ * @self: a #SpielUtterance
+ *
+ * Fetches the rate used in this utterance
+ *
+ * Returns: the rate value.
+ */
+double
+spiel_utterance_get_rate (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  return priv->rate;
+}
+
+/**
+ * spiel_utterance_set_rate: (set-property rate)
+ * @self: a #SpielUtterance
+ * @rate: a rate to assign to this utterance
+ *
+ * Sets a rate on this utterance
+ *
+ */
+void
+spiel_utterance_set_rate (SpielUtterance *self, double rate)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  priv->rate = rate;
+  g_object_notify (G_OBJECT (self), "rate");
+}
+
+/**
+ * spiel_utterance_get_volume: (get-property volume)
+ * @self: a #SpielUtterance
+ *
+ * Fetches the volume used in this utterance
+ *
+ * Returns: the volume value.
+ */
+double
+spiel_utterance_get_volume (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  return priv->volume;
+}
+
+/**
+ * spiel_utterance_set_volume: (set-property volume)
+ * @self: a #SpielUtterance
+ * @volume: a volume to assign to this utterance
+ *
+ * Sets a volume on this utterance
+ *
+ */
+void
+spiel_utterance_set_volume (SpielUtterance *self, double volume)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  priv->volume = volume;
+  g_object_notify (G_OBJECT (self), "volume");
+}
+
+/**
+ * spiel_utterance_get_voice: (get-property voice)
+ * @self: a #SpielUtterance
+ *
+ * Fetches the voice used in this utterance
+ *
+ * Returns: (transfer none): the voice object.
+ */
+SpielVoice *
+spiel_utterance_get_voice (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  return priv->voice;
+}
+
+/**
+ * spiel_utterance_set_voice: (set-property voice)
+ * @self: a #SpielUtterance
+ * @voice: a #SpielVoice to assign to this utterance
+ *
+ * Sets a voice on this utterance
+ *
+ */
+void
+spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  g_clear_object (&(priv->voice));
+
+  priv->voice = g_object_ref (voice);
+  g_object_notify (G_OBJECT (self), "voice");
+}
+
 static void
 spiel_utterance_finalize (GObject *object)
 {
@@ -85,24 +257,23 @@ spiel_utterance_get_property (GObject *object,
                               GParamSpec *pspec)
 {
   SpielUtterance *self = SPIEL_UTTERANCE (object);
-  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
   switch (prop_id)
     {
     case PROP_TEXT:
-      g_value_set_string (value, priv->text);
+      g_value_set_string (value, spiel_utterance_get_text (self));
       break;
     case PROP_PITCH:
-      g_value_set_double (value, priv->pitch);
+      g_value_set_double (value, spiel_utterance_get_pitch (self));
       break;
     case PROP_RATE:
-      g_value_set_double (value, priv->rate);
+      g_value_set_double (value, spiel_utterance_get_rate (self));
       break;
     case PROP_VOLUME:
-      g_value_set_double (value, priv->volume);
+      g_value_set_double (value, spiel_utterance_get_volume (self));
       break;
     case PROP_VOICE:
-      g_value_set_object (value, priv->voice);
+      g_value_set_object (value, spiel_utterance_get_voice (self));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -116,29 +287,23 @@ spiel_utterance_set_property (GObject *object,
                               GParamSpec *pspec)
 {
   SpielUtterance *self = SPIEL_UTTERANCE (object);
-  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
   switch (prop_id)
     {
     case PROP_TEXT:
-      g_free (priv->text);
-      priv->text = g_strdup (g_value_get_string (value));
-      g_object_notify (G_OBJECT (self), "text");
+      spiel_utterance_set_text (self, g_value_get_string (value));
       break;
     case PROP_PITCH:
-      priv->pitch = g_value_get_double (value);
-      g_object_notify (G_OBJECT (self), "pitch");
+      spiel_utterance_set_pitch (self, g_value_get_double (value));
       break;
     case PROP_RATE:
-      priv->rate = g_value_get_double (value);
-      g_object_notify (G_OBJECT (self), "rate");
+      spiel_utterance_set_rate (self, g_value_get_double (value));
       break;
     case PROP_VOLUME:
-      priv->volume = g_value_get_double (value);
-      g_object_notify (G_OBJECT (self), "volume");
+      spiel_utterance_set_volume (self, g_value_get_double (value));
       break;
     case PROP_VOICE:
-      priv->voice = g_value_dup_object (value);
+      spiel_utterance_set_voice (self, g_value_dup_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -154,28 +319,54 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
   object_class->get_property = spiel_utterance_get_property;
   object_class->set_property = spiel_utterance_set_property;
 
-  properties[PROP_TEXT] = g_param_spec_string (
-      "text", "speech text", "the utterance text that will be spoken",
-      NULL /* default value */, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  /**
+   * SpielUtterance:text: (getter get_text) (setter set_text)
+   *
+   * The utterance text that will be spoken.
+   *
+   */
+  properties[PROP_TEXT] =
+      g_param_spec_string ("text", NULL, NULL, NULL /* default value */,
+                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-  properties[PROP_PITCH] =
-      g_param_spec_double ("pitch", "speech pitch",
-                           "the pitch at which the utterance will be spoken", 0,
-                           2, 1, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  /**
+   * SpielUtterance:pitch: (getter get_pitch) (setter set_pitch)
+   *
+   * The pitch at which the utterance will be spoken.
+   *
+   */
+  properties[PROP_PITCH] = g_param_spec_double (
+      "pitch", NULL, NULL, 0, 2, 1, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-  properties[PROP_RATE] = g_param_spec_double (
-      "rate", "speech rate", "the speed at which the utterance will be spoken",
-      0.1, 10, 1, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  /**
+   * SpielUtterance:rate: (getter get_rate) (setter set_rate)
+   *
+   * The speed at which the utterance will be spoken.
+   *
+   */
+  properties[PROP_RATE] =
+      g_param_spec_double ("rate", NULL, NULL, 0.1, 10, 1,
+                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielUtterance:volume: (getter get_volume) (setter set_volume)
+   *
+   * The volume at which the utterance will be spoken.
+   *
+   */
   properties[PROP_VOLUME] =
-      g_param_spec_double ("volume", "speech volume",
-                           "the volume at which the utterance will be spoken",
-                           0, 1, 1, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      g_param_spec_double ("volume", NULL, NULL, 0, 1, 1,
+                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-  properties[PROP_VOICE] = g_param_spec_object (
-      "voice", "speech voice",
-      "the voice with which the utterance will be spoken", SPIEL_TYPE_VOICE,
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  /**
+   * SpielUtterance:voice: (getter get_voice) (setter set_voice)
+   *
+   * The voice with which the utterance will be spoken.
+   *
+   */
+  properties[PROP_VOICE] =
+      g_param_spec_object ("voice", NULL, NULL, SPIEL_TYPE_VOICE,
+                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, N_PROPS, properties);
 }

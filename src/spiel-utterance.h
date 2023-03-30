@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "spiel-voice.h"
 #include <glib-object.h>
 
 G_BEGIN_DECLS
@@ -28,5 +29,25 @@ G_DECLARE_FINAL_TYPE (
     SpielUtterance, spiel_utterance, SPIEL, UTTERANCE, GObject)
 
 SpielUtterance *spiel_utterance_new (const char *text);
+
+const char *spiel_utterance_get_text (SpielUtterance *self);
+
+void spiel_utterance_set_text (SpielUtterance *self, const char *text);
+
+double spiel_utterance_get_pitch (SpielUtterance *self);
+
+void spiel_utterance_set_pitch (SpielUtterance *self, double pitch);
+
+double spiel_utterance_get_rate (SpielUtterance *self);
+
+void spiel_utterance_set_rate (SpielUtterance *self, double rate);
+
+double spiel_utterance_get_volume (SpielUtterance *self);
+
+void spiel_utterance_set_volume (SpielUtterance *self, double volume);
+
+SpielVoice *spiel_utterance_get_voice (SpielUtterance *self);
+
+void spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice);
 
 G_END_DECLS
