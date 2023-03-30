@@ -25,6 +25,24 @@
 #include "spieldbusgenerated.h"
 #include <gio/gio.h>
 
+/**
+ * SpielSpeaker:
+ *
+ * A virtual speaker for speech synthesis
+ *
+ * The #SpielSpeaker class represents a single "individual" speaker. Its primary
+ * method is [method@Speaker.speak] which queues utterances to be spoken.
+ *
+ * This class also provides a list of available voices provided by DBus speech
+ * providers that are activatable on the session bus.
+ *
+ * #SpielSpeaker's initialization may perform blocking IO if it the first
+ * instance in the process. The default constructor is asynchronous
+ * ([func@Speaker.new]), although there is a synchronous blocking alternative
+ * ([ctor@Speaker.new_sync]).
+ *
+ */
+
 struct _SpielSpeaker
 {
   GObject parent_instance;
@@ -231,7 +249,7 @@ _spiel_speaker_do_speak (SpielSpeaker *self)
  * spiel_speaker_speak:
  * @self: a #SpielSpeaker
  * @utterance: an #SpielUtterance to speak
- * 
+ *
  * Speak the given utterance. If an utterance is already being spoken
  * the provided utterances will be added to a queue and will be spoken
  * in the order recieved.
@@ -271,7 +289,7 @@ on_pause_called (GObject *source_object, GAsyncResult *res, gpointer user_data)
 /**
  * spiel_speaker_pause:
  * @self: a #SpielSpeaker
- * 
+ *
  * Pause the given speaker. If an utterance is being spoken, it will pause
  * until [method@Speaker.resume] is called.
  * If the speaker isn't speaking, calling [method@Speaker.speak] will store
@@ -443,7 +461,8 @@ handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
       return TRUE;
     }
 
-  g_signal_emit (self, speaker_signals[UTTERANCE_FINISHED], 0, entry->utterance);
+  g_signal_emit (self, speaker_signals[UTTERANCE_FINISHED], 0,
+                 entry->utterance);
 
   if (!priv->queue->next)
     {
@@ -522,7 +541,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    * SpielSpeaker:speaking:
    *
    * The speaker has an utterance queued or speaking.
-   * 
+   *
    */
   properties[PROP_SPEAKING] =
       g_param_spec_boolean ("speaking", NULL, NULL, FALSE /* default value */,
@@ -532,7 +551,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    * SpielSpeaker:paused:
    *
    * The speaker is in a paused state.
-   * 
+   *
    */
   properties[PROP_PAUSED] =
       g_param_spec_boolean ("paused", NULL, NULL, FALSE /* default value */,
@@ -542,7 +561,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    * SpielSpeaker:voices:
    *
    * The list of available [class@Voice]s that can be used in an utterance.
-   * 
+   *
    */
   properties[PROP_VOICES] =
       g_param_spec_object ("voices", NULL, NULL, G_TYPE_LIST_MODEL,
@@ -556,11 +575,11 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    * @utterance: A #SpielUtterance
    *
    * Emitted when the given utterance is actively being spoken.
-   * 
+   *
    */
-  speaker_signals[UTTURANCE_STARTED] =
-      g_signal_new ("utterance-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
-                    NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
+  speaker_signals[UTTURANCE_STARTED] = g_signal_new (
+      "utterance-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
+      NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
   /**
    * SpielSpeaker::word-reached:
@@ -569,7 +588,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    * Emitted when a word is spoken in a given utterance. Not all
    * voices are capable of notifying when a word is spoken.
-   * 
+   *
    */
   speaker_signals[WORD_REACHED] = g_signal_new (
       "word-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
@@ -581,11 +600,11 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    * @utterance: A #SpielUtterance
    *
    * Emitted when a given utterance has completed speaking
-   * 
+   *
    */
-  speaker_signals[UTTERANCE_FINISHED] =
-      g_signal_new ("utterance-finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
-                    0, NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
+  speaker_signals[UTTERANCE_FINISHED] = g_signal_new (
+      "utterance-finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
+      NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
   /**
    * SpielSpeaker::utterance-canceled:
@@ -596,9 +615,9 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    * speaking
    *
    */
-  speaker_signals[UTTERANCE_CANCELED] =
-      g_signal_new ("utterance-canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
-                    0, NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
+  speaker_signals[UTTERANCE_CANCELED] = g_signal_new (
+      "utterance-canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
+      NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 }
 
 static void
