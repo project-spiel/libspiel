@@ -35,6 +35,7 @@ custom_target('libspiel-doc',
     '@INPUT1@',
   ],
   build_by_default: true,
+  depend_files: [ 'overview.md' ]
   # install: true,
   # install_dir: docs_dir,
 )
