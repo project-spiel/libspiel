@@ -39,6 +39,8 @@ jobs:
         run: meson setup build
       - name: Build with Ninja
         run: meson compile -C build
+      - name: Test with Ninja
+        run: meson test -C build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
