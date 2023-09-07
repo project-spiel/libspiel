@@ -1,0 +1,52 @@
+#!/bin/env python3
+
+from gi.repository import GLib
+import gi
+import sys
+
+gi.require_version("Spiel", "0.1")
+from gi.repository import Spiel
+
+def speak_and_wait(speaker, voice, text):
+    def _notify_speaking_cb(synth, val):
+        print("notify speaking")
+        if not synth.props.speaking:
+            speaker.disconnect_by_func(_notify_speaking_cb)
+            speaker.disconnect_by_func(_started_cb)
+            speaker.disconnect_by_func(_reached_word_cb)
+            speaker.disconnect_by_func(_finished_cb)
+            loop.quit()
+
+    def _started_cb(synth, utt):
+        print("utterance-started")
+
+    def _reached_word_cb(synth, utt, data):
+        data[0] += 1
+        print("word", data[0])
+        if data[0] == 3:
+            synth.pause()
+            # GLib.timeout_add(1, lambda: speak_and_wait(speaker, voice, "this is just something else"))
+
+    def _finished_cb(synth, utt):
+        print("utterance-finished")
+
+    speaker.connect("notify::speaking", _notify_speaking_cb)
+    speaker.connect("utterance-started", _started_cb)
+    speaker.connect("word-reached", _reached_word_cb, [0])
+    speaker.connect("utterance-finished", _finished_cb)
+    utterance = Spiel.Utterance(text=text, voice=voice)
+    speaker.speak(utterance)
+
+    loop = GLib.MainLoop()
+    loop.run()
+
+
+if __name__ == "__main__":
+    actual_events = []
+
+    speaker = Spiel.Speaker.new_sync(None)
+    for voice in speaker.props.voices:
+        print(f"{voice.props.name}\t{voice.props.identifier}\t{voice.props.languages}")
+        speak_and_wait(speaker, voice, sys.argv[-1])
+        break;
+
