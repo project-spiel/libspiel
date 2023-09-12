@@ -58,8 +58,8 @@ class SomeObject(dbus.service.Object):
     )
     def Speak(self, task_id, utterance, voice_id, pitch, rate, volume):
         self._last_speak_args = (task_id, utterance, voice_id, pitch, rate, volume)
-        word_count = len(list(re.finditer(r"\S\b", utterance, re.MULTILINE)))
-        self._tasks.append([task_id, word_count])
+        ranges = [[m.start(), m.end()] for m in re.finditer(r".*?\b\W\s?", utterance, re.MULTILINE)]
+        self._tasks.append([task_id, ranges])
         GLib.idle_add(lambda: self.SpeechStart(task_id))
         if self._auto_step:
             GLib.idle_add(self._do_step_until_done)
@@ -73,8 +73,8 @@ class SomeObject(dbus.service.Object):
         self._tasks = []
         for task in tasks:
             if task[1]:
-                task[1] -= 1
-                self.SpeechWord(task[0])
+                start, end = task[1].pop(0)
+                self.SpeechRangeStart(task[0], start, end)
                 self._tasks.append(task)
             else:
                 self.SpeechEnd(task[0])
@@ -120,8 +120,8 @@ class SomeObject(dbus.service.Object):
     def SpeechStart(self, task_id):
         pass
 
-    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
-    def SpeechWord(self, task_id):
+    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="ttt")
+    def SpeechRangeStart(self, task_id, start, end):
         pass
 
     @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
