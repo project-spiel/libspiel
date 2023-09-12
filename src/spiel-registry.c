@@ -54,7 +54,7 @@ static SpielRegistry *sRegistry = NULL;
 enum
 {
   STARTED,
-  WORD_REACHED,
+  RANGE_STARTED,
   FINISHED,
   CANCELED,
   VOICES_CHANGED,
@@ -92,9 +92,11 @@ static gboolean handle_speech_start (SpielProvider *provider,
                                      guint64 task_id,
                                      gpointer user_data);
 
-static gboolean handle_speech_word (SpielProvider *provider,
-                                    guint64 task_id,
-                                    gpointer user_data);
+static gboolean handle_speech_range (SpielProvider *provider,
+                                     guint64 task_id,
+                                     guint64 start,
+                                     guint64 end,
+                                     gpointer user_data);
 
 static gboolean handle_speech_end (SpielProvider *provider,
                                    guint64 task_id,
@@ -151,10 +153,10 @@ _add_provider_with_voices (SpielRegistry *self,
 
   g_object_connect (
       provider, "object_signal::speech-start", G_CALLBACK (handle_speech_start),
-      self, "object_signal::speech-word", G_CALLBACK (handle_speech_word), self,
-      "object_signal::speech-end", G_CALLBACK (handle_speech_end), self,
-      "object_signal::voices-changed", G_CALLBACK (handle_voices_changed), self,
-      NULL);
+      self, "object_signal::speech-range-start",
+      G_CALLBACK (handle_speech_range), self, "object_signal::speech-end",
+      G_CALLBACK (handle_speech_end), self, "object_signal::voices-changed",
+      G_CALLBACK (handle_voices_changed), self, NULL);
 
   return g_hash_table_insert (priv->providers, provider_name, provider_entry);
 }
@@ -683,9 +685,9 @@ spiel_registry_class_init (SpielRegistryClass *klass)
       g_signal_new ("started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
                     NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  registry_signals[WORD_REACHED] = g_signal_new (
-      "word-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
-      NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
+  registry_signals[RANGE_STARTED] = g_signal_new (
+      "range-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 3, G_TYPE_UINT64, G_TYPE_UINT64, G_TYPE_UINT64);
 
   registry_signals[FINISHED] =
       g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
@@ -726,12 +728,14 @@ handle_speech_start (SpielProvider *provider,
 }
 
 static gboolean
-handle_speech_word (SpielProvider *provider,
-                    guint64 task_id,
-                    gpointer user_data)
+handle_speech_range (SpielProvider *provider,
+                     guint64 task_id,
+                     guint64 start,
+                     guint64 end,
+                     gpointer user_data)
 {
   SpielRegistry *self = user_data;
-  g_signal_emit (self, registry_signals[WORD_REACHED], 0, task_id);
+  g_signal_emit (self, registry_signals[RANGE_STARTED], 0, task_id, start, end);
   return TRUE;
 }
 

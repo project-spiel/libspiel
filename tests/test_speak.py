@@ -13,8 +13,12 @@ class TestSpeak(BaseSpielTest):
             actual_events.append("utterance-started")
             self.assertEqual(utt, utterance)
 
-        def _reached_word_cb(synth, utt):
-            actual_events.append("word-reached")
+        expected_word_offsets = [[0, 6], [6, 13], [13, 17], [17, 21], [21, 25]]
+        def _range_started_cb(synth, utt, start, end):
+            expected_start, expected_end = expected_word_offsets.pop(0)
+            self.assertEqual(expected_end, end)
+            self.assertEqual(expected_start, start)
+            actual_events.append("range-started")
             self.assertEqual(utt, utterance)
 
         def _finished_cb(synth, utt):
@@ -24,11 +28,11 @@ class TestSpeak(BaseSpielTest):
         expected_events = [
             "notify:speaking=True",
             "utterance-started",
-            "word-reached",
-            "word-reached",
-            "word-reached",
-            "word-reached",
-            "word-reached",
+            "range-started",
+            "range-started",
+            "range-started",
+            "range-started",
+            "range-started",
             "utterance-finished",
             "notify:speaking=False",
         ]
@@ -40,7 +44,7 @@ class TestSpeak(BaseSpielTest):
         self.assertFalse(speechSynthesis.props.paused)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
         speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("word-reached", _reached_word_cb)
+        speechSynthesis.connect("range-started", _range_started_cb)
         speechSynthesis.connect("utterance-finished", _finished_cb)
         utterance = Spiel.Utterance(text="hello world, how are you?")
         speechSynthesis.speak(utterance)

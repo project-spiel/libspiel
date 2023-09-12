@@ -72,7 +72,7 @@ G_DEFINE_FINAL_TYPE_WITH_CODE (
 enum
 {
   UTTURANCE_STARTED,
-  WORD_REACHED,
+  RANGE_STARTED,
   UTTERANCE_FINISHED,
   UTTERANCE_CANCELED,
   LAST_SIGNAL
@@ -434,9 +434,11 @@ handle_speech_start (SpielProvider *provider,
 }
 
 static gboolean
-handle_speech_word (SpielProvider *provider,
-                    guint64 task_id,
-                    gpointer user_data)
+handle_speech_range (SpielProvider *provider,
+                     guint64 task_id,
+                     guint64 start,
+                     guint64 end,
+                     gpointer user_data)
 {
   SpielSpeaker *self = SPIEL_SPEAKER (user_data);
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
@@ -446,7 +448,8 @@ handle_speech_word (SpielProvider *provider,
       return TRUE;
     }
 
-  g_signal_emit (self, speaker_signals[WORD_REACHED], 0, entry->utterance);
+  g_signal_emit (self, speaker_signals[RANGE_STARTED], 0, entry->utterance,
+                 start, end);
   return TRUE;
 }
 
@@ -582,17 +585,20 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
       NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
   /**
-   * SpielSpeaker::word-reached:
+   * SpielSpeaker::range-started:
    * @speaker: A #SpielSpeaker
    * @utterance: A #SpielUtterance
+   * @start: Character start offset of speech range
+   * @end: Character end offset of speech range
    *
-   * Emitted when a word is spoken in a given utterance. Not all
-   * voices are capable of notifying when a word is spoken.
+   * Emitted when a range will be spoken in a given utterance. Not all
+   * voices are capable of notifying when a range will be spoken.
    *
    */
-  speaker_signals[WORD_REACHED] = g_signal_new (
-      "word-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
-      NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
+  speaker_signals[RANGE_STARTED] =
+      g_signal_new ("range-started", G_TYPE_FROM_CLASS (klass),
+                    G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
+                    SPIEL_TYPE_UTTERANCE, G_TYPE_UINT64, G_TYPE_UINT64);
 
   /**
    * SpielSpeaker::utterance-finished:
@@ -626,8 +632,8 @@ _connect_signals (SpielSpeaker *self)
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   g_object_connect (
       priv->registry, "object_signal::started",
-      G_CALLBACK (handle_speech_start), self, "object_signal::word-reached",
-      G_CALLBACK (handle_speech_word), self, "object_signal::finished",
+      G_CALLBACK (handle_speech_start), self, "object_signal::range-started",
+      G_CALLBACK (handle_speech_range), self, "object_signal::finished",
       G_CALLBACK (handle_speech_end), self, "object_signal::voices-changed",
       G_CALLBACK (handle_voices_changed), self, NULL);
 }
