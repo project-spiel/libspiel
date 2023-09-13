@@ -1,38 +1,134 @@
 <!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
 "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node>
+  <!--
+    org.freedesktop.Speech.Provider:
+    @short_description: A common interface for text-to-speech providers.
+
+    D-Bus services that implement this interface can provide speech synth
+    to applications that use a client library, like `libspiel`.
+
+    For discoverability, the service's known name **must**
+    end with `Speech.Provider`. For example, `org.espeak.Speech.Provider`.
+  -->
   <interface name="org.freedesktop.Speech.Provider">
+  <!--
+    Speak:
+    @task_id: A unique identifier that will be assigned to this `Speak` call.
+    @text: The text to be spoken.
+    @voice_id: The voice identifier for the voice that should be spoken.
+    @pitch: The voice pitch in which the text should be spoken.
+    @rate: The rate in which the text should be spoken.
+    @volume: The volume at which the text should be spoken.
+
+    This is the basic speech method.
+    When called, the speech provider will send the synthesized output to the default audio device.
+
+    The `task_id` argument allows this task to be identified subsequent signals or method calls such as
+    `Pause()`.
+
+    If `Speak()` is called while a previous `Speak()` task is being processed, the provider
+    **should** output both synthesis streams concurrently.
+  -->
     <method name="Speak">
       <arg direction="in"  type="t" name="task_id" />
-      <arg direction="in"  type="s" name="utterance" />
+      <arg direction="in"  type="s" name="text" />
       <arg direction="in"  type="s" name="voice_id" />
       <arg direction="in"  type="d" name="pitch" />
       <arg direction="in"  type="d" name="rate" />
       <arg direction="in"  type="d" name="volume" />
     </method>
+
+  <!--
+    Pause:
+    @task_id: A task identifier.
+
+    Pause the speech of the given identifier.
+  -->
     <method name="Pause">
       <arg direction="in"  type="t" name="task_id" />
     </method>
+
+  <!--
+    Resume:
+    @task_id: A task identifier.
+
+    Resume the speech of the given identifier.
+  -->
     <method name="Resume">
       <arg direction="in"  type="t" name="task_id" />
     </method>
+
+  <!--
+    Cancel:
+    @task_id: A task identifier.
+
+    Resume the speech of the given identifier.
+  -->
     <method name="Cancel">
       <arg direction="in"  type="t" name="task_id" />
     </method>
+
+  <!--
+    GetVoices:
+    @voices: Array of voices.
+
+    Retrieve a list of voices the provider can use. If the available voices change
+    during the lifetime of the provider, the `VoicesChanged` signal **must** be emitted
+    in order for clients to be notified and update their cache.
+
+    Each voice in the array is structure with the following members:
+    <ul>
+      <li>A human readable name</li>
+      <li>A unique identifier</li>
+      <li>A list of languages the voice support represented as BCP 47 tags</li>
+    </ul>
+  -->
     <method name="GetVoices">
-      <arg direction="out" type="a(ssas)" />
+      <arg name="voices" direction="out" type="a(ssas)" />
     </method>
+
+  <!--
+    SpeechStart:
+    @task_id: A task identifier.
+
+    Emitted when a speech task has started outputting audio.
+  -->
     <signal name="SpeechStart">
       <arg type="t" name="task_id" />
     </signal>
+
+  <!--
+    SpeechRangeStart:
+    @task_id: A task identifier.
+    @start: Start offset of the spoken range.
+    @end: End offset of the spoken range.
+
+    Emitted when a speech task has is about to start speaking a certain range.
+    Usually this range is a single word.
+  -->
     <signal name="SpeechRangeStart">
       <arg type="t" name="task_id" />
       <arg type="t" name="start" />
       <arg type="t" name="end" />
     </signal>
+
+  <!--
+    SpeechStart:
+    @task_id: A task identifier.
+
+    Emitted when a speech task has completed.
+  -->
     <signal name="SpeechEnd">
       <arg type="t" name="task_id" />
     </signal>
+
+  <!--
+    VoicesChanged:
+
+    Emitted when the available voices has changed.
+    This allows clients to update their cached list of voices.
+  -->
     <signal name="VoicesChanged">
     </signal>
   </interface>

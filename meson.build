@@ -1,6 +1,6 @@
 project('spiel', 'c',
           version: '0.1.0',
-    meson_version: '>= 0.59.0',
+    meson_version: '>= 0.64.0',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
 
@@ -81,6 +81,8 @@ test_env_vars = {
   'GI_TYPELIB_PATH': join_paths(meson.current_build_dir(), 'src'),
   'LD_LIBRARY_PATH': join_paths(meson.current_build_dir(), 'src'),
 }
+
+interface_src_dir = join_paths(meson.current_source_dir(), 'interface')
 
 subdir('interface')
 subdir('src')
