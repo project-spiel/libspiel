@@ -1,6 +1,28 @@
 toml_conf = configuration_data()
 toml_conf.set('version', meson.project_version())
 
+source_toml = configure_file(
+  input: 'Spiel.toml.in',
+  output: 'Spiel.toml',
+  configuration: toml_conf,
+  # install: true,
+  # install_dir: docs_dir / 'libspiel',
+)
+
+
+
+gdbus_codegen_cmd = find_program('gdbus-codegen')
+spiel_iface_docs = custom_target('dbus-docs',
+  output : 'generated-org.freedesktop.Speech.Provider.md',
+  input : join_paths(interface_src_dir, 'org.freedesktop.Speech.Provider.xml'),
+  command : [gdbus_codegen_cmd, '--generate-md', 'generated',
+             '--output-directory', meson.current_build_dir(),
+             join_paths(interface_src_dir, 'org.freedesktop.Speech.Provider.xml')])
+
+fs = import('fs')
+overview_doc = fs.copyfile('overview.md')
+urlmap_doc = fs.copyfile('urlmap.js')
+
 gidocgen = find_program('gi-docgen', required: true)
 
 gidocgen_common_args = [
@@ -12,16 +34,6 @@ if get_option('werror')
   gidocgen_common_args += ['--fatal-warnings']
 endif
 
-# docs_dir = datadir / 'doc'
-
-source_toml = configure_file(
-  input: 'Spiel.toml.in',
-  output: 'Spiel.toml',
-  configuration: toml_conf,
-  # install: true,
-  # install_dir: docs_dir / 'libspiel',
-)
-
 custom_target('libspiel-doc',
   input: [ source_toml, spiel_gir[0] ],
   output: 'libspiel',
@@ -31,11 +43,11 @@ custom_target('libspiel-doc',
     gidocgen_common_args,
     '--config=@INPUT0@',
     '--output-dir=@OUTPUT@',
-    '--content-dir=@0@'.format(meson.current_source_dir()),
+    '--content-dir=@0@'.format(meson.current_build_dir()),
     '@INPUT1@',
   ],
   build_by_default: true,
-  depend_files: [ 'overview.md' ]
+  depends: [ spiel_iface_docs, overview_doc, urlmap_doc ]
   # install: true,
   # install_dir: docs_dir,
 )
