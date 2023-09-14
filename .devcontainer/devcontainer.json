@@ -1,10 +1,5 @@
 {
 	"name": "Ubuntu",
-	"image": "mcr.microsoft.com/devcontainers/base:jammy",
-
-	"features": {
-    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-        "packages": "meson,gi-docgen,libgirepository1.0-dev,dbus,python3-dbus,python3-tap,python3-gi"
-    }
-	}
+	"build": { "dockerfile": "Dockerfile" },
+	"remoteUser": "ubuntu"
 }
