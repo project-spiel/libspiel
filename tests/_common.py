@@ -1,6 +1,6 @@
 import unittest, os, dbus
 import dbus.mainloop.glib
-from gi.repository import GLib
+from gi.repository import GLib, Gio
 
 import gi
 

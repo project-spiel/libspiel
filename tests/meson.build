@@ -4,13 +4,15 @@ test_env = environment(test_env_vars)
 test_env.set('G_DEBUG', 'fatal-warnings')
 test_env.set('TEST_SERVICE_DIR', service_dir)
 test_env.set('TEST_DISCARDED_SERVICE_DIR', join_paths(meson.current_build_dir(), 'discarded_services'))
+test_env.set('GSETTINGS_SCHEMA_DIR', join_paths(meson.project_build_root(), 'data'))
+test_env.set('GSETTINGS_BACKEND', 'memory')
 
 python_module = import('python')
 dbus_run_session = find_program('dbus-run-session', required : false)
 python = python_module.find_installation(
   'python3', required : false, modules: 'tap')
 
-tests = ['test_speak.py', 'test_types.py', 'test_voices.py']
+tests = ['test_speak.py', 'test_types.py', 'test_voices.py', 'test_settings.py']
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()
