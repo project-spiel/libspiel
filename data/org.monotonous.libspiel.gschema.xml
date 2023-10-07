@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="libspiel">
     <schema id='org.monotonous.libspiel' path='/org/monotonous/libspiel/'>
-        <key name="default-voice" type="s">
-            <default>''</default>
+        <key name="default-voice" type="m(ss)">
+            <default>nothing</default>
             <summary>Default voice</summary>
             <description>The default voice to be used</description>
         </key>
-        <key name="language-voice-mapping" type="a{ss}">
+        <key name="language-voice-mapping" type="a{s(ss)}">
             <default>{}</default>
             <summary>Language/voice mapping</summary>
             <description>Maping of BCP-47 language tags and the voices that should be used.</description>
