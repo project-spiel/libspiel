@@ -234,6 +234,15 @@ _spiel_speaker_do_speak (SpielSpeaker *self)
   g_object_get (utterance, "text", &text, "pitch", &pitch, "rate", &rate,
                 "volume", &volume, "voice", &voice, NULL);
 
+  if (voice == NULL) {
+      voice =
+          spiel_registry_get_voice_for_utterance (priv->registry, utterance);
+      spiel_utterance_set_voice (utterance, voice);
+    }
+
+  entry->provider = g_object_ref (
+      spiel_registry_get_provider_for_voice (priv->registry, voice));
+
   spiel_provider_call_speak (entry->provider, entry->task_id, text,
                              voice ? spiel_voice_get_identifier (voice) : "",
                              pitch, rate, volume, NULL, on_speak_called, self);

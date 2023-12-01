@@ -252,6 +252,23 @@ class TestSpeak(BaseSpielTest):
         loop = GLib.MainLoop()
         loop.run()
 
+    def test_default_voice(self):
+        speechSynthesis = Spiel.Speaker.new_sync(None)
+        settings = Gio.Settings.new("org.monotonous.libspiel")
+        settings["default-voice"] = ("org.mock.Speech.Provider", "ine/hy")
+
+        utterance = Spiel.Utterance(text="hello world, how are you?")
+        self.mock_iface("org.mock.Speech.Provider").SetAutoStep(False)
+        self.wait_for_speaking_changed(
+            speechSynthesis, lambda: speechSynthesis.speak(utterance)
+        )
+        args = self.mock_iface("org.mock.Speech.Provider").GetLastSpeakArguments()
+        print(str(args))
+        self.assertEqual(str(args[2]), "ine/hy")
+        self.wait_for_speaking_changed(
+            speechSynthesis, lambda: self.mock_iface("org.mock.Speech.Provider").SetAutoStep(True)
+        )
+
     def _test_speak_with_voice(self, speechSynthesis, provider_name, voice_id):
         voice = None
         for v in speechSynthesis.props.voices:

@@ -23,6 +23,7 @@
 #include <gio/gio.h>
 
 #define PROVIDER_SUFFIX ".Speech.Provider"
+#define GSETTINGS_SCHEMA "org.monotonous.libspiel"
 
 struct _SpielRegistry
 {
@@ -34,6 +35,7 @@ typedef struct
   GDBusConnection *connection;
   guint subscription_ids[2];
   GHashTable *providers;
+  GSettings *settings;
 } SpielRegistryPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
@@ -542,6 +544,8 @@ async_initable_init_async (GAsyncInitable *initable,
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
 
+  priv->settings = g_settings_new (GSETTINGS_SCHEMA);
+
   if (cancellable != NULL)
     {
       g_task_set_task_data (task, g_object_ref (cancellable), g_object_unref);
@@ -672,6 +676,7 @@ spiel_registry_init (SpielRegistry *self)
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
+  priv->settings = g_settings_new (GSETTINGS_SCHEMA);
 }
 
 static void
@@ -800,6 +805,42 @@ spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
   return provider_entry->provider;
 }
 
+static SpielVoice *
+_get_voice_from_provider_and_name (SpielRegistry *self,
+                                   const char *provider_name,
+                                   const char *voice_id)
+{
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  _ProviderEntry *provider_entry =
+      g_hash_table_lookup (priv->providers, provider_name);
+  if (provider_entry == NULL) {
+    return NULL;
+  }
+
+  for (gsize i = 0; i < provider_entry->voices_count; i++) {
+    SpielVoice *voice = provider_entry->voices[i];
+    g_print("compare: %s == %s\n", spiel_voice_get_identifier(voice), voice_id);
+    if (g_str_equal(spiel_voice_get_identifier(voice), voice_id)) {
+      return voice;
+    }
+  }
+
+  return NULL;
+}
+
+static SpielVoice *
+_get_fallback_voice (SpielRegistry *self)
+{
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  GList *providers = g_hash_table_get_values (priv->providers);
+  SpielVoice *voice = NULL;
+  _ProviderEntry *provider_entry = providers->data;
+  if (provider_entry && provider_entry->voices_count > 0)
+  voice = provider_entry->voices[0];
+  g_list_free (providers);
+  return voice;
+}
+
 SpielVoice *
 spiel_registry_get_voice_for_utterance (SpielRegistry *self,
                                         SpielUtterance *utterance)
@@ -809,13 +850,26 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
   g_object_get (utterance, "voice", &voice, NULL);
 
   if (voice == NULL)
+  {
+    GVariant *default_voice_maybe =
+        g_settings_get_value (priv->settings, "default-voice");
+    GVariant *default_voice = g_variant_get_maybe (default_voice_maybe);
+    if (default_voice)
     {
-      GList *providers = g_hash_table_get_values (priv->providers);
-      _ProviderEntry *provider_entry = providers->data;
-      if (provider_entry && provider_entry->voices_count > 0)
-        voice = provider_entry->voices[0];
-      g_list_free (providers);
+      const char *provider_name;
+      const char *voice_id;
+      g_variant_get (default_voice, "(&s&s)", &provider_name, &voice_id);
+      voice = _get_voice_from_provider_and_name (self, provider_name, voice_id);
+      g_print("%s : %s (%p)\n", provider_name, voice_id, voice);
+      g_variant_unref (default_voice);
     }
+    g_variant_unref (default_voice_maybe);
+  }
+
+  if (voice == NULL)
+  {
+    voice = _get_fallback_voice (self);
+  }
 
   return voice;
 }
