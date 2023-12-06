@@ -42,6 +42,7 @@ typedef struct
   double rate;
   double volume;
   SpielVoice *voice;
+  char *language;
 } SpielUtterancePrivate;
 
 G_DEFINE_FINAL_TYPE_WITH_PRIVATE (SpielUtterance,
@@ -56,6 +57,7 @@ enum
   PROP_RATE,
   PROP_VOLUME,
   PROP_VOICE,
+  PROP_LANGUAGE,
   N_PROPS
 };
 
@@ -238,6 +240,39 @@ spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
   g_object_notify (G_OBJECT (self), "voice");
 }
 
+/**
+ * spiel_utterance_get_language: (get-property language)
+ * @self: a #SpielUtterance
+ *
+ * Fetches the language used in this utterance.
+ *
+ * Returns: (transfer none): the language.
+ */
+const char *
+spiel_utterance_get_language (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  return priv->language;
+}
+
+/**
+ * spiel_utterance_set_language: (set-property language)
+ * @self: a #SpielUtterance
+ * @language: the language to assign to this utterance
+ *
+ * Sets the language of this utterance
+ *
+ */
+void
+spiel_utterance_set_language (SpielUtterance *self, const char *language)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  g_free (priv->language);
+  priv->language = g_strdup (language);
+  g_object_notify (G_OBJECT (self), "language");
+}
+
 static void
 spiel_utterance_finalize (GObject *object)
 {
@@ -275,6 +310,9 @@ spiel_utterance_get_property (GObject *object,
     case PROP_VOICE:
       g_value_set_object (value, spiel_utterance_get_voice (self));
       break;
+    case PROP_LANGUAGE:
+      g_value_set_string (value, spiel_utterance_get_language (self));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -304,6 +342,9 @@ spiel_utterance_set_property (GObject *object,
       break;
     case PROP_VOICE:
       spiel_utterance_set_voice (self, g_value_dup_object (value));
+      break;
+    case PROP_LANGUAGE:
+      spiel_utterance_set_language (self, g_value_get_string (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -368,6 +409,17 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
       g_param_spec_object ("voice", NULL, NULL, SPIEL_TYPE_VOICE,
                            G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielUtterance:language: (getter get_language) (setter set_language)
+   *
+   * The utterance language. If no voice is set this language will be used to
+   * select the best matching voice.
+   *
+   */
+  properties[PROP_LANGUAGE] =
+      g_param_spec_string ("language", NULL, NULL, NULL /* default value */,
+                           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (object_class, N_PROPS, properties);
 }
 
@@ -380,4 +432,5 @@ spiel_utterance_init (SpielUtterance *self)
   priv->volume = 1;
   priv->pitch = 1;
   priv->voice = NULL;
+  priv->language = NULL;
 }

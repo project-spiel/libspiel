@@ -66,7 +66,12 @@ class TestTypes(BaseSpielTest):
         utterance.set_property("voice", voice)
         self.assertEqual(utterance.props.voice.props.name, "English")
         self.assertEqual(utterance.get_voice(), voice)
-
+        self.assertEqual(utterance.props.language, None)
+        self.assertEqual(utterance.get_language(), None)
+        utterance.set_property("language", "en-gb")
+        self.assertEqual(utterance.props.language, "en-gb")
+        utterance.set_language("en-us")
+        self.assertEqual(utterance.get_language(), "en-us")
 
 if __name__ == "__main__":
     test_main()

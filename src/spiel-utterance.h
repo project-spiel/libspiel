@@ -50,4 +50,8 @@ SpielVoice *spiel_utterance_get_voice (SpielUtterance *self);
 
 void spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice);
 
+const char *spiel_utterance_get_language (SpielUtterance *self);
+
+void spiel_utterance_set_language (SpielUtterance *self, const char *language);
+
 G_END_DECLS
