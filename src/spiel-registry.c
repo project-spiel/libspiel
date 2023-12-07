@@ -23,6 +23,7 @@
 #include <gio/gio.h>
 
 #define PROVIDER_SUFFIX ".Speech.Provider"
+#define GSETTINGS_SCHEMA "org.monotonous.libspiel"
 
 struct _SpielRegistry
 {
@@ -34,6 +35,7 @@ typedef struct
   GDBusConnection *connection;
   guint subscription_ids[2];
   GHashTable *providers;
+  GSettings *settings;
 } SpielRegistryPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
@@ -542,6 +544,8 @@ async_initable_init_async (GAsyncInitable *initable,
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
 
+  priv->settings = g_settings_new (GSETTINGS_SCHEMA);
+
   if (cancellable != NULL)
     {
       g_task_set_task_data (task, g_object_ref (cancellable), g_object_unref);
@@ -672,6 +676,7 @@ spiel_registry_init (SpielRegistry *self)
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
+  priv->settings = g_settings_new (GSETTINGS_SCHEMA);
 }
 
 static void
@@ -800,24 +805,118 @@ spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
   return provider_entry->provider;
 }
 
+static SpielVoice *
+_get_voice_from_provider_and_name (SpielRegistry *self,
+                                   const char *provider_name,
+                                   const char *voice_id)
+{
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  _ProviderEntry *provider_entry =
+      g_hash_table_lookup (priv->providers, provider_name);
+  if (provider_entry == NULL)
+    {
+      return NULL;
+    }
+
+  for (gsize i = 0; i < provider_entry->voices_count; i++)
+    {
+      SpielVoice *voice = provider_entry->voices[i];
+      if (g_str_equal (spiel_voice_get_identifier (voice), voice_id))
+        {
+          return voice;
+        }
+    }
+
+  return NULL;
+}
+
+static gboolean
+_match_voice_with_language (SpielVoice *voice,
+                            gconstpointer unused,
+                            const char *language)
+{
+  return g_strv_contains (spiel_voice_get_languages (voice), language);
+}
+
+static SpielVoice *
+_get_fallback_voice (SpielRegistry *self, const char *language)
+{
+  GListStore *voices = spiel_registry_get_voices (self);
+  SpielVoice *voice = NULL;
+  guint position = 0;
+
+  if (language)
+    {
+      g_list_store_find_with_equal_func_full (
+          voices, NULL, (GEqualFuncFull) _match_voice_with_language,
+          (gpointer) language, &position);
+    }
+
+  voice = g_list_model_get_item ((GListModel *) voices, position);
+
+  g_object_unref (voices);
+  return voice;
+}
+
 SpielVoice *
 spiel_registry_get_voice_for_utterance (SpielRegistry *self,
                                         SpielUtterance *utterance)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  SpielVoice *voice = NULL;
-  g_object_get (utterance, "voice", &voice, NULL);
+  char *provider_name = NULL;
+  char *voice_id = NULL;
+  const char *language = spiel_utterance_get_language (utterance);
 
-  if (voice == NULL)
+  SpielVoice *voice = spiel_utterance_get_voice (utterance);
+  if (voice)
     {
-      GList *providers = g_hash_table_get_values (priv->providers);
-      _ProviderEntry *provider_entry = providers->data;
-      if (provider_entry && provider_entry->voices_count > 0)
-        voice = provider_entry->voices[0];
-      g_list_free (providers);
+      return voice;
     }
 
-  return voice;
+  if (language)
+    {
+      GVariant *mapping =
+          g_settings_get_value (priv->settings, "language-voice-mapping");
+      char *_lang = g_strdup (language);
+      char *found = _lang + g_utf8_strlen (_lang, -1);
+      gssize boundary = -1;
+
+      do
+        {
+          *found = 0;
+          g_variant_lookup (mapping, _lang, "(ss)", &provider_name, &voice_id);
+          if (provider_name)
+            {
+              break;
+            }
+          found = g_utf8_strrchr (_lang, boundary, '-');
+          boundary = found - _lang - 1;
+        }
+      while (found);
+
+      g_free (_lang);
+    }
+
+  if (!provider_name)
+    {
+      g_settings_get (priv->settings, "default-voice", "m(ss)", NULL,
+                      &provider_name, &voice_id);
+    }
+
+  if (provider_name)
+    {
+      g_assert (voice_id != NULL);
+      voice = _get_voice_from_provider_and_name (self, provider_name, voice_id);
+      g_free (provider_name);
+      g_free (voice_id);
+    }
+
+  if (voice)
+    {
+      return voice;
+    }
+
+  return _get_fallback_voice (self, language);
 }
 
 static void
