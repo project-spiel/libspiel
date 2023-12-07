@@ -8,10 +8,10 @@ class TestInstallProvider(BaseSpielTest):
         self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
         self.uninstall_provider("org.mock3.Speech.Provider")
         self.wait_for_voices_changed(speechSynthesis)
-        self.assertEqual(len(speechSynthesis.props.voices), 3)
+        self.assertEqual(len(speechSynthesis.props.voices), 7)
         self.install_provider("org.mock3.Speech.Provider")
         self.wait_for_voices_changed(speechSynthesis)
-        self.assertEqual(len(speechSynthesis.props.voices), 4)
+        self.assertEqual(len(speechSynthesis.props.voices), 8)
 
 
 if __name__ == "__main__":

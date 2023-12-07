@@ -73,5 +73,6 @@ class TestTypes(BaseSpielTest):
         utterance.set_language("en-us")
         self.assertEqual(utterance.get_language(), "en-us")
 
+
 if __name__ == "__main__":
     test_main()

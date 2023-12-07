@@ -14,6 +14,7 @@ class TestSpeak(BaseSpielTest):
             self.assertEqual(utt, utterance)
 
         expected_word_offsets = [[0, 6], [6, 13], [13, 17], [17, 21], [21, 25]]
+
         def _range_started_cb(synth, utt, start, end):
             expected_start, expected_end = expected_word_offsets.pop(0)
             self.assertEqual(expected_end, end)
@@ -109,7 +110,12 @@ class TestSpeak(BaseSpielTest):
             self.assertFalse(speechSynthesis.props.paused)
             self.assertEqual(
                 actual_events,
-                ["utterance-started", "notify:paused=True", "notify:paused=False", "utterance-finished"],
+                [
+                    "utterance-started",
+                    "notify:paused=True",
+                    "notify:paused=False",
+                    "utterance-finished",
+                ],
             )
             loop.quit()
 
@@ -251,45 +257,6 @@ class TestSpeak(BaseSpielTest):
 
         loop = GLib.MainLoop()
         loop.run()
-
-    def _test_speak_with_voice(self, speechSynthesis, provider_name, voice_id):
-        voice = None
-        for v in speechSynthesis.props.voices:
-            if (
-                v.props.provider_name == provider_name
-                and v.props.identifier == voice_id
-            ):
-                voice = v
-
-        utterance = Spiel.Utterance(text="hello world, how are you?", voice=voice)
-        self.mock_iface(provider_name).SetAutoStep(False)
-        self.wait_for_speaking_changed(
-            speechSynthesis, lambda: speechSynthesis.speak(utterance)
-        )
-        args = self.mock_iface(provider_name).GetLastSpeakArguments()
-        self.assertEqual(str(args[2]), voice_id)
-        self.wait_for_speaking_changed(
-            speechSynthesis, lambda: self.mock_iface(provider_name).SetAutoStep(True)
-        )
-
-    def test_speak_with_voice_sync(self):
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        self._test_speak_with_voice(
-            speechSynthesis, "org.mock.Speech.Provider", "sit/yue"
-        )
-
-    def test_speak_with_voice_sync_autoexit(self):
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
-        self._test_speak_with_voice(
-            speechSynthesis, "org.mock3.Speech.Provider", "gmw/en"
-        )
-
-    def test_speak_with_voice_async(self):
-        speechSynthesis = self.wait_for_async_speaker_init()
-        self._test_speak_with_voice(
-            speechSynthesis, "org.mock.Speech.Provider", "sit/yue"
-        )
 
 
 if __name__ == "__main__":

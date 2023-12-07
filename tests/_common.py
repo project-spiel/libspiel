@@ -10,12 +10,20 @@ from gi.repository import Spiel
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 STANDARD_VOICES = [
+    ["English (Great Britain)", "gmw/en", ["en-gb", "en"], "org.mock2.Speech.Provider"],
     [
-        "English (Great Britain)",
-        "gmw/en",
-        ["en-gb", "en"],
-        "org.mock3.Speech.Provider",
+        "English (Scotland)",
+        "gmw/en-GB-scotland",
+        ["en-gb-scotland", "en"],
+        "org.mock2.Speech.Provider",
     ],
+    [
+        "English (Lancaster)",
+        "gmw/en-GB-x-gbclan",
+        ["en-gb-x-gbclan", "en-gb", "en"],
+        "org.mock2.Speech.Provider",
+    ],
+    ["English (America)", "gmw/en-US", ["en-us", "en"], "org.mock2.Speech.Provider"],
     [
         "Armenian (East Armenia)",
         "ine/hy",
@@ -34,6 +42,7 @@ STANDARD_VOICES = [
         ["yue", "zh-yue", "zh"],
         "org.mock.Speech.Provider",
     ],
+    ["Uzbek", "trk/uz", ["uz"], "org.mock3.Speech.Provider"],
 ]
 
 
@@ -47,6 +56,9 @@ class BaseSpielTest(unittest.TestCase):
         self.mock_service.FlushTasks()
 
     def tearDown(self):
+        settings = Gio.Settings.new("org.monotonous.libspiel")
+        settings["default-voice"] = None
+        settings["language-voice-mapping"] = {}
         discarded_dir = os.environ["TEST_DISCARDED_SERVICE_DIR"]
         service_dir = os.environ["TEST_SERVICE_DIR"]
         for fname in os.listdir(discarded_dir):

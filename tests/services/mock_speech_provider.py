@@ -31,13 +31,33 @@ VOICES = {
             "name": "Armenian (West Armenia)",
             "identifier": "ine/hyw",
             "languages": ["hyw", "hy-arevmda", "hy"],
-        }
-    ],
-    "mock3": [
+        },
+        {
+            "name": "English (Scotland)",
+            "identifier": "gmw/en-GB-scotland",
+            "languages": ["en-gb-scotland", "en"],
+        },
+        {
+            "name": "English (Lancaster)",
+            "identifier": "gmw/en-GB-x-gbclan",
+            "languages": ["en-gb-x-gbclan", "en-gb", "en"],
+        },
+        {
+            "name": "English (America)",
+            "identifier": "gmw/en-US",
+            "languages": ["en-us", "en"],
+        },
         {
             "name": "English (Great Britain)",
             "identifier": "gmw/en",
             "languages": ["en-gb", "en"],
+        },
+    ],
+    "mock3": [
+        {
+            "name": "Uzbek",
+            "identifier": "trk/uz",
+            "languages": ["uz"],
         },
     ],
 }
@@ -58,7 +78,10 @@ class SomeObject(dbus.service.Object):
     )
     def Speak(self, task_id, utterance, voice_id, pitch, rate, volume):
         self._last_speak_args = (task_id, utterance, voice_id, pitch, rate, volume)
-        ranges = [[m.start(), m.end()] for m in re.finditer(r".*?\b\W\s?", utterance, re.MULTILINE)]
+        ranges = [
+            [m.start(), m.end()]
+            for m in re.finditer(r".*?\b\W\s?", utterance, re.MULTILINE)
+        ]
         self._tasks.append([task_id, ranges])
         GLib.idle_add(lambda: self.SpeechStart(task_id))
         if self._auto_step:
