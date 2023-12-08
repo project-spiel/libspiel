@@ -530,6 +530,26 @@ spiel_registry_get_sync (GCancellable *cancellable, GError **error)
   return sRegistry;
 }
 
+static GSettings *
+_settings_new (void)
+{
+  GSettingsSchema *schema = NULL;
+  GSettingsSchemaSource *source = g_settings_schema_source_get_default ();
+  GSettings *settings = NULL;
+
+  schema = g_settings_schema_source_lookup (source, GSETTINGS_SCHEMA, TRUE);
+  if (!schema)
+    {
+      g_warning ("libspiel settings schema is not installed");
+      return NULL;
+    }
+
+  settings = g_settings_new (GSETTINGS_SCHEMA);
+  g_settings_schema_unref (schema);
+
+  return settings;
+}
+
 static void
 async_initable_init_async (GAsyncInitable *initable,
                            gint io_priority,
@@ -544,7 +564,7 @@ async_initable_init_async (GAsyncInitable *initable,
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
 
-  priv->settings = g_settings_new (GSETTINGS_SCHEMA);
+  priv->settings = _settings_new();
 
   if (cancellable != NULL)
     {
@@ -676,7 +696,7 @@ spiel_registry_init (SpielRegistry *self)
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
                                            _provider_entry_destroy);
-  priv->settings = g_settings_new (GSETTINGS_SCHEMA);
+  priv->settings = _settings_new();
 }
 
 static void
@@ -873,7 +893,7 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
       return voice;
     }
 
-  if (language)
+  if (language && priv->settings)
     {
       GVariant *mapping =
           g_settings_get_value (priv->settings, "language-voice-mapping");
@@ -897,7 +917,7 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
       g_free (_lang);
     }
 
-  if (!provider_name)
+  if (!provider_name && priv->settings)
     {
       g_settings_get (priv->settings, "default-voice", "m(ss)", NULL,
                       &provider_name, &voice_id);
