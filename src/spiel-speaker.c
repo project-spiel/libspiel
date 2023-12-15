@@ -213,6 +213,10 @@ _get_utterance_provider_or_default (SpielSpeakerPrivate *priv,
 {
   SpielVoice *voice =
       spiel_registry_get_voice_for_utterance (priv->registry, utterance);
+  if (voice == NULL)
+    {
+      return NULL;
+    }
 
   return spiel_registry_get_provider_for_voice (priv->registry, voice);
 }
@@ -272,6 +276,12 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   _QueueEntry *entry = g_slice_new0 (_QueueEntry);
   SpielProvider *provider =
       _get_utterance_provider_or_default (priv, utterance);
+  if (!provider)
+    {
+      g_warning ("Can't get a speech provider");
+      return;
+    }
+
   entry->utterance = g_object_ref (utterance);
   entry->task_id = g_random_int ();
   entry->provider = g_object_ref (provider);
