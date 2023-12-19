@@ -10,39 +10,39 @@ from gi.repository import Spiel
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 STANDARD_VOICES = [
-    ["English (Great Britain)", "gmw/en", ["en-gb", "en"], "org.mock2.Speech.Provider"],
+    ["org.mock2.Speech.Provider", "English (Great Britain)", "gmw/en", ["en-gb", "en"]],
     [
+        "org.mock2.Speech.Provider",
         "English (Scotland)",
         "gmw/en-GB-scotland",
         ["en-gb-scotland", "en"],
-        "org.mock2.Speech.Provider",
     ],
     [
+        "org.mock2.Speech.Provider",
         "English (Lancaster)",
         "gmw/en-GB-x-gbclan",
         ["en-gb-x-gbclan", "en-gb", "en"],
-        "org.mock2.Speech.Provider",
     ],
-    ["English (America)", "gmw/en-US", ["en-us", "en"], "org.mock2.Speech.Provider"],
+    ["org.mock2.Speech.Provider", "English (America)", "gmw/en-US", ["en-us", "en"]],
     [
+        "org.mock.Speech.Provider",
         "Armenian (East Armenia)",
         "ine/hy",
         ["hy", "hy-arevela"],
-        "org.mock.Speech.Provider",
     ],
     [
+        "org.mock2.Speech.Provider",
         "Armenian (West Armenia)",
         "ine/hyw",
         ["hyw", "hy-arevmda", "hy"],
-        "org.mock2.Speech.Provider",
     ],
     [
+        "org.mock.Speech.Provider",
         "Chinese (Cantonese)",
         "sit/yue",
         ["yue", "zh-yue", "zh"],
-        "org.mock.Speech.Provider",
     ],
-    ["Uzbek", "trk/uz", ["uz"], "org.mock3.Speech.Provider"],
+    ["org.mock3.Speech.Provider", "Uzbek", "trk/uz", ["uz"]],
 ]
 
 
@@ -134,12 +134,20 @@ class BaseSpielTest(unittest.TestCase):
         loop = GLib.MainLoop()
         loop.run()
 
-    def wait_for_voices_changed(self, speaker):
+    def wait_for_voices_changed(self, speaker, added=[], removed=[]):
+        voices = speaker.props.voices
         def _cb(*args):
-            speaker.disconnect_by_func(_cb)
+            voice_ids = [v.props.identifier for v in voices]
+            for a in added:
+                if a not in voice_ids:
+                    return
+            for r in removed:
+                if r in voice_ids:
+                    return
+            voices.disconnect_by_func(_cb)
             loop.quit()
 
-        speaker.connect("notify::voices", _cb)
+        voices.connect("items-changed", _cb)
         loop = GLib.MainLoop()
         loop.run()
 

@@ -7,10 +7,10 @@ class TestInstallProvider(BaseSpielTest):
 
         self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
         self.uninstall_provider("org.mock3.Speech.Provider")
-        self.wait_for_voices_changed(speechSynthesis)
+        self.wait_for_voices_changed(speechSynthesis, removed=["trk/uz"])
         self.assertEqual(len(speechSynthesis.props.voices), 7)
         self.install_provider("org.mock3.Speech.Provider")
-        self.wait_for_voices_changed(speechSynthesis)
+        self.wait_for_voices_changed(speechSynthesis, added=["trk/uz"])
         self.assertEqual(len(speechSynthesis.props.voices), 8)
 
 

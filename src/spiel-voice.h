@@ -34,4 +34,11 @@ const char *spiel_voice_get_provider_name (SpielVoice *self);
 
 const char *const *spiel_voice_get_languages (SpielVoice *self);
 
+guint spiel_voice_hash (SpielVoice *self);
+
+gboolean spiel_voice_equal (SpielVoice *self, SpielVoice *other);
+
+gint
+spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data);
+
 G_END_DECLS

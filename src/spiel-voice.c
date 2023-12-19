@@ -123,6 +123,79 @@ spiel_voice_get_languages (SpielVoice *self)
   return (const char *const *) priv->languages;
 }
 
+guint
+spiel_voice_hash (SpielVoice *self)
+{
+  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  guint hash = 0;
+
+  hash = g_str_hash (priv->name);
+  hash = (hash << 5) - hash + g_str_hash (priv->identifier);
+  hash = (hash << 5) - hash + g_str_hash (priv->provider_name);
+
+  for (char **language = priv->languages; *language; language++)
+    {
+      hash = (hash << 5) - hash + g_str_hash (language);
+    }
+
+  return hash;
+}
+
+gboolean
+spiel_voice_equal (SpielVoice *self, SpielVoice *other)
+{
+  SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
+  SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
+
+  if (!g_str_equal (self_priv->provider_name, other_priv->provider_name))
+    {
+      return FALSE;
+    }
+
+  if (!g_str_equal (self_priv->name, other_priv->name))
+    {
+      return FALSE;
+    }
+
+  if (!g_str_equal (self_priv->identifier, other_priv->identifier))
+    {
+      return FALSE;
+    }
+
+  if (!g_strv_equal ((const gchar *const *) self_priv->languages,
+                     (const gchar *const *) other_priv->languages))
+    {
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+gint
+spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
+{
+  SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
+  SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
+  gint cmp = 0;
+
+    if ((cmp = g_strcmp0 (self_priv->provider_name, other_priv->provider_name)))
+    {
+      return cmp;
+    }
+
+    if ((cmp = g_strcmp0 (self_priv->name, other_priv->name)))
+    {
+      return cmp;
+    }
+
+    if ((cmp = g_strcmp0 (self_priv->identifier, other_priv->identifier)))
+    {
+      return cmp;
+    }
+
+  return cmp;
+}
+
 static void
 spiel_voice_finalize (GObject *object)
 {

@@ -503,14 +503,6 @@ handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
   return TRUE;
 }
 
-static gboolean
-handle_voices_changed (SpielProvider *provider, gpointer user_data)
-{
-  SpielSpeaker *self = user_data;
-  g_object_notify (G_OBJECT (self), "voices");
-  return TRUE;
-}
-
 static void
 spiel_speaker_finalize (GObject *object)
 {
@@ -542,12 +534,8 @@ spiel_speaker_get_property (GObject *object,
       g_value_set_boolean (value, priv->paused);
       break;
     case PROP_VOICES:
-      {
-        GListStore *voices = spiel_registry_get_voices (priv->registry);
-        g_value_set_object (value, voices);
-        g_object_unref (voices);
-        break;
-      }
+      g_value_set_object (value, spiel_registry_get_voices (priv->registry));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -655,8 +643,7 @@ _connect_signals (SpielSpeaker *self)
       priv->registry, "object_signal::started",
       G_CALLBACK (handle_speech_start), self, "object_signal::range-started",
       G_CALLBACK (handle_speech_range), self, "object_signal::finished",
-      G_CALLBACK (handle_speech_end), self, "object_signal::voices-changed",
-      G_CALLBACK (handle_voices_changed), self, NULL);
+      G_CALLBACK (handle_speech_end), self, NULL);
 }
 
 static void
