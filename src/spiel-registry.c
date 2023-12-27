@@ -37,6 +37,7 @@ typedef struct
   GHashTable *providers;
   GListStore *voices;
   GSettings *settings;
+  GCancellable *cancellable;
 } SpielRegistryPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
@@ -327,23 +328,77 @@ _on_providers_updated (GObject *source, GAsyncResult *res, gpointer user_data)
   update_providers_finished (source, res, &err);
   if (err != NULL)
     {
-      g_warning ("Error updating providers: %s\n", err->message);
+      if (!g_error_matches (err, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
+          g_warning ("Error updating providers: %s\n", err->message);
+        }
       g_error_free (err);
     }
+}
 
+static gboolean
+_voice_has_no_provider (SpielVoice *voice,
+                        gconstpointer unused,
+                        GHashTable *providers)
+{
+  return !g_hash_table_contains (providers,
+                                 spiel_voice_get_provider_name (voice));
 }
 
 static void
-_providers_maybe_changed (GDBusConnection *connection,
-                          const gchar *sender_name,
-                          const gchar *object_path,
-                          const gchar *interface_name,
-                          const gchar *signal_name,
-                          GVariant *parameters,
-                          gpointer user_data)
+_maybe_activatable_providers_changed (GDBusConnection *connection,
+                                      const gchar *sender_name,
+                                      const gchar *object_path,
+                                      const gchar *interface_name,
+                                      const gchar *signal_name,
+                                      GVariant *parameters,
+                                      gpointer user_data)
 {
   SpielRegistry *self = user_data;
-  update_providers (self, NULL, _on_providers_updated, NULL);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+
+  g_clear_object (&priv->cancellable);
+  priv->cancellable = g_cancellable_new ();
+  update_providers (self, priv->cancellable, _on_providers_updated, NULL);
+}
+
+static void
+_maybe_running_providers_changed (GDBusConnection *connection,
+                                  const gchar *sender_name,
+                                  const gchar *object_path,
+                                  const gchar *interface_name,
+                                  const gchar *signal_name,
+                                  GVariant *parameters,
+                                  gpointer user_data)
+{
+  SpielRegistry *self = user_data;
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  const char *service_name;
+  const char *old_owner;
+  const char *new_owner;
+  g_variant_get (parameters, "(&s&s&s)", &service_name, &old_owner, &new_owner);
+  if (g_str_has_suffix (service_name, PROVIDER_SUFFIX))
+    {
+      gboolean provider_removed = strlen (new_owner) == 0;
+
+      if (provider_removed && priv->cancellable)
+        {
+          // If a provider was removed cancel any previous updates because they
+          // will fail.
+          g_cancellable_cancel (priv->cancellable);
+        }
+
+      g_clear_object (&priv->cancellable);
+      priv->cancellable = g_cancellable_new ();
+
+      if (provider_removed ||
+          !g_hash_table_contains (priv->providers, service_name))
+        {
+          // A provider was removed or one was added that we don't yet know of.
+          update_providers (self, priv->cancellable, _on_providers_updated,
+                            NULL);
+        }
+    }
 }
 
 static void
@@ -355,16 +410,17 @@ _subscribe_to_activatable_services_changed (SpielRegistry *self,
   priv->subscription_ids[0] = g_dbus_connection_signal_subscribe (
       connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
       "ActivatableServicesChanged", "/org/freedesktop/DBus", NULL,
-      G_DBUS_SIGNAL_FLAGS_NONE, _providers_maybe_changed, self, NULL);
+      G_DBUS_SIGNAL_FLAGS_NONE, _maybe_activatable_providers_changed, self,
+      NULL);
 
-  // priv->subscription_ids[1] = g_dbus_connection_signal_subscribe (
-  //     connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
-  //     "NameOwnerChanged", "/org/freedesktop/DBus", NULL,
-  //     G_DBUS_SIGNAL_FLAGS_NONE, _providers_maybe_changed,
-  //     g_object_ref (self), g_object_unref);
+  priv->subscription_ids[1] = g_dbus_connection_signal_subscribe (
+      connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
+      "NameOwnerChanged", "/org/freedesktop/DBus", NULL,
+      G_DBUS_SIGNAL_FLAGS_NONE, _maybe_running_providers_changed,
+      g_object_ref (self), g_object_unref);
 }
 
-static void
+static gboolean
 _collect_provider_names (GObject *source,
                          GAsyncResult *result,
                          gpointer user_data)
@@ -381,7 +437,7 @@ _collect_provider_names (GObject *source,
     {
       g_task_return_error (task, error);
       g_object_unref (task);
-      return;
+      return FALSE;
     }
 
   real_ret = g_variant_get_child_value (ret, 0);
@@ -400,6 +456,8 @@ _collect_provider_names (GObject *source,
       g_variant_unref (service);
     }
   g_variant_unref (real_ret);
+
+  return TRUE;
 }
 
 static gboolean
@@ -423,7 +481,10 @@ _update_providers_on_list_names (GObject *source,
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   guint position = 0;
 
-  _collect_provider_names (source, result, user_data);
+  if (!_collect_provider_names (source, result, user_data))
+    {
+      return;
+    }
   closure->removed_count = g_hash_table_foreach_remove (
       priv->providers, _purge_providers, closure->provider_names);
 
@@ -447,7 +508,10 @@ _update_providers_on_list_activatable_names (GObject *source,
   SpielRegistry *self = g_task_get_source_object (task);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
-  _collect_provider_names (source, result, user_data);
+  if (!_collect_provider_names (source, result, user_data))
+    {
+      return;
+    }
 
   g_dbus_connection_call (
       priv->connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
@@ -618,7 +682,7 @@ async_initable_init_async (GAsyncInitable *initable,
                                            _provider_entry_destroy);
   priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
   priv->settings = _settings_new ();
-
+  priv->cancellable = NULL;
 
   if (cancellable != NULL)
     {
@@ -644,13 +708,15 @@ spiel_registry_finalize (GObject *object)
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   g_hash_table_unref (priv->providers);
+  g_clear_object (&priv->settings);
+  g_clear_object (&priv->cancellable);
   if (priv->connection)
     {
       g_dbus_connection_signal_unsubscribe (priv->connection,
                                             priv->subscription_ids[0]);
-      // g_dbus_connection_signal_unsubscribe (priv->connection,
-      //                                       priv->subscription_ids[1]);
-      g_object_unref (priv->connection);
+      g_dbus_connection_signal_unsubscribe (priv->connection,
+                                            priv->subscription_ids[1]);
+      g_clear_object (&priv->connection);
     }
 
   G_OBJECT_CLASS (spiel_registry_parent_class)->finalize (object);
@@ -752,6 +818,7 @@ spiel_registry_init (SpielRegistry *self)
                                            _provider_entry_destroy);
   priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
   priv->settings = _settings_new ();
+  priv->cancellable = NULL;
 }
 
 static void
