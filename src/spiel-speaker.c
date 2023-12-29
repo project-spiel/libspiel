@@ -75,6 +75,7 @@ enum
   RANGE_STARTED,
   UTTERANCE_FINISHED,
   UTTERANCE_CANCELED,
+  UTTERANCE_ERROR,
   LAST_SIGNAL
 };
 
@@ -474,19 +475,12 @@ handle_speech_range (SpielProvider *provider,
   return TRUE;
 }
 
-static gboolean
-handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
+static void
+_advance_queue (SpielSpeaker *self)
 {
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (!entry || entry->task_id != task_id)
-    {
-      return TRUE;
-    }
-
-  g_signal_emit (self, speaker_signals[UTTERANCE_FINISHED], 0,
-                 entry->utterance);
+  g_assert(entry);
 
   if (!priv->queue->next)
     {
@@ -500,6 +494,52 @@ handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
     {
       _spiel_speaker_do_speak (self);
     }
+}
+
+static gboolean
+handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
+{
+  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  if (!entry || entry->task_id != task_id)
+    {
+      return TRUE;
+    }
+
+  g_signal_emit (self, speaker_signals[UTTERANCE_FINISHED], 0,
+                 entry->utterance);
+  _advance_queue (self);
+  return TRUE;
+}
+
+static gboolean
+handle_provider_died (SpielProvider *provider,
+                      const char *provider_name,
+                      gpointer user_data)
+{
+  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+
+  if (entry != NULL)
+    {
+      char *current_provider_name = NULL;
+      g_object_get (entry->provider, "g-name", &current_provider_name, NULL);
+      if (g_str_equal (provider_name, current_provider_name))
+        {
+          GError *error = NULL;
+          g_set_error (&error, SPIEL_ERROR,
+                       SPIEL_ERROR_PROVIDER_UNEXPECTEDLY_DIED,
+                       "Provider unexpectedly died: %s", provider_name);
+          g_signal_emit (self, speaker_signals[UTTERANCE_ERROR], 0,
+                         entry->utterance, error);
+          g_error_free (error);
+          _advance_queue (self);
+        }
+      g_free (current_provider_name);
+    }
+
   return TRUE;
 }
 
@@ -633,6 +673,19 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
   speaker_signals[UTTERANCE_CANCELED] = g_signal_new (
       "utterance-canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
       NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
+
+  /**
+   * SpielSpeaker::utterance-error:
+   * @speaker: A #SpielSpeaker
+   * @utterance: A #SpielUtterance
+   * @error: A #GError
+   *
+   * Emitted when a given utterance has failed to start or complete.
+   *
+   */
+  speaker_signals[UTTERANCE_ERROR] = g_signal_new (
+      "utterance-error", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
+      NULL, NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_ERROR);
 }
 
 static void
@@ -643,7 +696,8 @@ _connect_signals (SpielSpeaker *self)
       priv->registry, "object_signal::started",
       G_CALLBACK (handle_speech_start), self, "object_signal::range-started",
       G_CALLBACK (handle_speech_range), self, "object_signal::finished",
-      G_CALLBACK (handle_speech_end), self, NULL);
+      G_CALLBACK (handle_speech_end), self, "object_signal::provider-died",
+      G_CALLBACK (handle_provider_died), self, NULL);
 }
 
 static void
@@ -733,4 +787,10 @@ spiel_speaker_init (SpielSpeaker *self)
   priv->speaking = FALSE;
   priv->paused = FALSE;
   priv->queue = NULL;
+}
+
+GQuark
+spiel_error_quark (void)
+{
+  return g_quark_from_static_string ("spiel-error-quark");
 }

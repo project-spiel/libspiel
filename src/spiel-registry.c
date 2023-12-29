@@ -60,7 +60,7 @@ enum
   STARTED,
   RANGE_STARTED,
   FINISHED,
-  CANCELED,
+  PROVIDER_DIED,
   LAST_SIGNAL
 };
 
@@ -381,11 +381,15 @@ _maybe_running_providers_changed (GDBusConnection *connection,
     {
       gboolean provider_removed = strlen (new_owner) == 0;
 
-      if (provider_removed && priv->cancellable)
+      if (provider_removed)
         {
-          // If a provider was removed cancel any previous updates because they
-          // will fail.
-          g_cancellable_cancel (priv->cancellable);
+          g_signal_emit (self, registry_signals[PROVIDER_DIED], 0, service_name);
+          if (priv->cancellable)
+            {
+              // If a provider was removed cancel any previous updates because
+              // they will fail.
+              g_cancellable_cancel (priv->cancellable);
+            }
         }
 
       g_clear_object (&priv->cancellable);
@@ -840,9 +844,9 @@ spiel_registry_class_init (SpielRegistryClass *klass)
       g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
                     0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  registry_signals[CANCELED] =
-      g_signal_new ("canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
-                    0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
+  registry_signals[PROVIDER_DIED] =
+      g_signal_new ("provider-died", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
+                    0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
 static void

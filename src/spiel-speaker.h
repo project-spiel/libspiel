@@ -46,4 +46,31 @@ void spiel_speaker_resume (SpielSpeaker *self);
 
 void spiel_speaker_cancel (SpielSpeaker *self);
 
+GQuark spiel_error_quark (void);
+
+/**
+ * SPIEL_ERROR:
+ *
+ * Domain for `SpielSpeaker` errors.
+ */
+#define SPIEL_ERROR spiel_error_quark ()
+
+/**
+ * SpielError:
+ * @SPIEL_ERROR_NO_PROVIDERS: No speech providers are available
+ * @SPIEL_ERROR_PROVIDER_UNEXPECTEDLY_DIED: Speech provider unexpectedly
+ * died
+ * @SPIEL_ERROR_INTERNAL_PROVIDER_FAILURE: Internal error in speech
+ * provider
+ *
+ * Error codes in the `SPIEL_ERROR` domain that can be emitted in the
+ * `utterance-error` signal.
+ */
+typedef enum /*<underscore_name=spiel_error>*/
+{
+  SPIEL_ERROR_NO_PROVIDERS,
+  SPIEL_ERROR_PROVIDER_UNEXPECTEDLY_DIED,
+  SPIEL_ERROR_INTERNAL_PROVIDER_FAILURE,
+} SpielError;
+
 G_END_DECLS

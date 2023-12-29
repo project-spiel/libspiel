@@ -69,6 +69,7 @@ class SomeObject(dbus.service.Object):
         self._auto_step = not AUTOEXIT
         self._tasks = []
         self._voices = VOICES[NAME][:]
+        self._die_on_speak = False
         dbus.service.Object.__init__(self, *args)
 
     @dbus.service.method(
@@ -92,6 +93,8 @@ class SomeObject(dbus.service.Object):
             GLib.idle_add(self._do_step_until_done)
 
     def _do_step(self):
+        if self._die_on_speak:
+            self.byebye()
         tasks = self._tasks
         self._tasks = []
         for task in tasks:
@@ -209,6 +212,14 @@ class SomeObject(dbus.service.Object):
     def RemoveVoice(self, identifier):
         self._voices = [v for v in self._voices if v["identifier"] != identifier]
         GLib.idle_add(self.VoicesChanged)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.MockProvider",
+        in_signature="",
+        out_signature="",
+    )
+    def DieOnSpeak(self):
+        self._die_on_speak = True
 
     def byebye(self):
         exit()

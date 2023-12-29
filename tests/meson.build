@@ -12,7 +12,12 @@ dbus_run_session = find_program('dbus-run-session', required : false)
 python = python_module.find_installation(
   'python3', required : false, modules: 'tap')
 
-tests = ['test_speak.py', 'test_types.py', 'test_voices.py', 'test_settings.py', 'test_voice_selection.py']
+tests = ['test_speak.py',
+         'test_types.py',
+         'test_voices.py',
+         'test_settings.py',
+         'test_voice_selection.py',
+         'test_errors.py']
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()

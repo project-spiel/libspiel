@@ -48,10 +48,10 @@ STANDARD_VOICES = [
 
 class BaseSpielTest(unittest.TestCase):
     def __init__(self, *args):
-        self.mock_service = self.mock_iface("org.mock.Speech.Provider")
         super().__init__(*args)
 
     def setUp(self):
+        self.mock_service = self.mock_iface("org.mock.Speech.Provider")
         self.mock_service.SetAutoStep(True)
         self.mock_service.FlushTasks()
 
