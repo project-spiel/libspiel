@@ -89,13 +89,19 @@ class SpielItApp(Adw.Application):
         label.set_text(voice.props.name)
 
     def _on_list_factory_setup(self, factory, list_item):
-        label = Gtk.Label()
-        list_item.set_child(label)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, hexpand=True)
+        name_label = Gtk.Label(halign="start")
+        provider_label = Gtk.Label(halign="end", hexpand=True)
+        box.append(name_label)
+        box.append(provider_label)
+        list_item.set_child(box)
 
     def _on_list_factory_bind(self, factory, list_item):
-        label = list_item.get_child()
+        name_label = list_item.get_child().get_first_child()
+        provider_label = list_item.get_child().get_last_child()
         voice = list_item.get_item()
-        label.set_text(voice.props.name)
+        name_label.set_text(voice.props.name)
+        provider_label.set_text(voice.props.provider_name)
 
     def _on_playpause_clicked(self, button):
         if not self.speaker.props.speaking:
