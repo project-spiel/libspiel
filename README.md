@@ -1,8 +1,8 @@
+<img alt="libspiel logo" align="right" src="https://raw.githubusercontent.com/eeejay/libspiel/main/spiel-logo.svg">
+
 # libspiel
 
 [![ Build, Test & Docs](https://github.com/eeejay/libspiel/actions/workflows/ci.yml/badge.svg)](https://github.com/eeejay/libspiel/actions/workflows/ci.yml)
-
-![libspiel logo](https://raw.githubusercontent.com/eeejay/libspiel/main/spiel-logo.svg)
 
 libspiel is a library that interfaces with D-Bus speech synthesis providers.
 The library makes it easy to query for voices and manage a speech utterance queue.
