@@ -88,6 +88,12 @@ logo = join_paths(meson.current_source_dir(), 'spiel-logo.svg')
 
 subdir('interface')
 subdir('src')
-subdir('tests')
-subdir('doc')
+if get_option('tests')
+  subdir('tests')
+endif
+
+if get_option('docs')
+  subdir('doc')
+endif
+
 subdir('data')
