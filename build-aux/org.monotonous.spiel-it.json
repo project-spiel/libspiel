@@ -1,0 +1,30 @@
+{
+  "app-id": "org.monotonous.spiel-it",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "45",
+  "sdk": "org.gnome.Sdk",
+  "command": "spiel-it",
+  "finish-args": [
+    "--socket=session-bus",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--device=dri"
+  ],
+  "modules": [
+    {
+      "name": "libspiel",
+      "buildsystem": "meson",
+      "config-opts": [
+        "-Dtests=false",
+        "-Ddocs=false",
+        "-Dspiel-it=true"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../"
+        }
+      ]
+    }
+  ]
+}

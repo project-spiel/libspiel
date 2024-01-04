@@ -1,2 +1,3 @@
 option('tests', type: 'boolean', value: true, description: 'Enable tests')
 option('docs', type: 'boolean', value: true, description: 'Enable docs')
+option('spiel-it', type: 'boolean', value: false, description: 'Enable spiel-it demo application')

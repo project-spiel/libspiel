@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.16.0 -->
+<interface>
+  <!-- interface-name spiel-it.ui -->
+  <requires lib="gtk" version="4.12"/>
+  <object class="GtkApplicationWindow" id="window">
+    <property name="default-height">250</property>
+    <property name="default-width">600</property>
+    <property name="title">Spiel It</property>
+    <child>
+      <object class="GtkBox">
+        <child>
+          <object class="GtkBox" id="speech-controls">
+            <property name="margin-bottom">4</property>
+            <property name="margin-end">4</property>
+            <property name="margin-start">4</property>
+            <property name="margin-top">4</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkGrid">
+                <property name="column-spacing">4</property>
+                <property name="row-spacing">4</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">end</property>
+                    <property name="label">Volume</property>
+                    <layout>
+                      <property name="column">0</property>
+                      <property name="row">0</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="volume">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0.1</property>
+                        <property name="step-increment">0.1</property>
+                        <property name="upper">1.0</property>
+                        <property name="value">1.0</property>
+                      </object>
+                    </property>
+                    <property name="digits">1</property>
+                    <property name="value">1.0</property>
+                    <layout>
+                      <property name="column">1</property>
+                      <property name="column-span">1</property>
+                      <property name="row">0</property>
+                      <property name="row-span">1</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">end</property>
+                    <property name="label">Rate</property>
+                    <layout>
+                      <property name="column">0</property>
+                      <property name="row">1</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="rate">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0.1</property>
+                        <property name="step-increment">0.1</property>
+                        <property name="upper">10.0</property>
+                        <property name="value">1.0</property>
+                      </object>
+                    </property>
+                    <property name="digits">1</property>
+                    <property name="value">1.0</property>
+                    <layout>
+                      <property name="column">1</property>
+                      <property name="row">1</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">end</property>
+                    <property name="label">Pitch</property>
+                    <layout>
+                      <property name="column">0</property>
+                      <property name="row">2</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="pitch">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0.1</property>
+                        <property name="step-increment">0.1</property>
+                        <property name="upper">5.0</property>
+                        <property name="value">1.0</property>
+                      </object>
+                    </property>
+                    <property name="digits">1</property>
+                    <property name="value">1.0</property>
+                    <layout>
+                      <property name="column">1</property>
+                      <property name="row">2</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkDropDown" id="voices-select">
+                <property name="enable-search">True</property>
+                <property name="margin-top">2</property>
+                <property name="search-match-mode">substring</property>
+                <!-- Custom fragments -->
+                <property name="expression">
+                  <lookup type="SpielVoice" name="name"/>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkOverlay">
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkTextView" id="text-view">
+                <property name="bottom-margin">10</property>
+                <property name="left-margin">10</property>
+                <property name="right-margin">10</property>
+                <property name="top-margin">10</property>
+                <property name="wrap-mode">word</property>
+              </object>
+            </child>
+            <child type="overlay">
+              <object class="GtkBox">
+                <property name="halign">end</property>
+                <property name="valign">end</property>
+                <child>
+                  <object class="GtkButton" id="stop">
+                    <property name="css-classes">circular
+overlay-button</property>
+                    <property name="icon-name">media-playback-stop-symbolic</property>
+                    <property name="margin-bottom">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="visible">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="play-pause">
+                    <property name="css-classes">circular
+overlay-button</property>
+                    <property name="icon-name">media-playback-start-symbolic</property>
+                    <property name="margin-bottom">8</property>
+                    <property name="margin-end">8</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
