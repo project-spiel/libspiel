@@ -22,6 +22,7 @@ spiel_iface_docs = custom_target('dbus-docs',
 fs = import('fs')
 overview_doc = fs.copyfile('overview.md')
 urlmap_doc = fs.copyfile('urlmap.js')
+logo_file = fs.copyfile(logo)
 
 gidocgen = find_program('gi-docgen', required: true)
 
@@ -47,7 +48,7 @@ custom_target('libspiel-doc',
     '@INPUT1@',
   ],
   build_by_default: true,
-  depends: [ spiel_iface_docs, overview_doc, urlmap_doc ]
+  depends: [ spiel_iface_docs, overview_doc, urlmap_doc, logo_file ]
   # install: true,
   # install_dir: docs_dir,
 )

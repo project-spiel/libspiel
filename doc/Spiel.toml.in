@@ -5,6 +5,7 @@ repository_url = "https://github.com/eeejay/libspiel.git"
 website_url = "https://github.com/eeejay/libspiel"
 docs_url = "https://eeejay.github.io/libspiel/"
 authors = "Eitan Isaacson"
+logo_url = "spiel-logo.svg"
 license = "LGPL-2.1"
 description = "A library that interfaces with D-Bus speech synthesis providers."
 dependencies = [ "GObject-2.0", "GLib-2.0", "Gio-2.0"]
@@ -37,3 +38,4 @@ base_url = "https://github.com/eeejay/libspiel/blob/main/"
 [extra]
 urlmap_file = "urlmap.js"
 content_files = ["overview.md", "generated-org.freedesktop.Speech.Provider.md"]
+content_images = ["spiel-logo.svg"]

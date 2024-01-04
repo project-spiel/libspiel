@@ -84,6 +84,8 @@ test_env_vars = {
 
 interface_src_dir = join_paths(meson.current_source_dir(), 'interface')
 
+logo = join_paths(meson.current_source_dir(), 'spiel-logo.svg')
+
 subdir('interface')
 subdir('src')
 subdir('tests')
