@@ -9,8 +9,6 @@ source_toml = configure_file(
   # install_dir: docs_dir / 'libspiel',
 )
 
-
-
 gdbus_codegen_cmd = find_program('gdbus-codegen')
 spiel_iface_docs = custom_target('dbus-docs',
   output : 'generated-org.freedesktop.Speech.Provider.md',
@@ -20,7 +18,6 @@ spiel_iface_docs = custom_target('dbus-docs',
              join_paths(interface_src_dir, 'org.freedesktop.Speech.Provider.xml')])
 
 fs = import('fs')
-overview_doc = fs.copyfile('overview.md')
 urlmap_doc = fs.copyfile('urlmap.js')
 logo_file = fs.copyfile(logo)
 
@@ -34,6 +31,16 @@ gidocgen_common_args = [
 if get_option('werror')
   gidocgen_common_args += ['--fatal-warnings']
 endif
+
+python_module = import('python')
+python = python_module.find_installation(
+  'python3', required : true, modules: 'tap')
+overview_doc = custom_target(
+    input: join_paths(meson.project_source_root(), 'README.md'),
+    output: 'overview.md',
+    command: [python, files('generate_overview.py'), '@INPUT@'],
+    capture: true
+)
 
 custom_target('libspiel-doc',
   input: [ source_toml, spiel_gir[0] ],
