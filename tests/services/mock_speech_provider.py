@@ -93,8 +93,6 @@ class SomeObject(dbus.service.Object):
             GLib.idle_add(self._do_step_until_done)
 
     def _do_step(self):
-        if self._die_on_speak:
-            self.byebye()
         tasks = self._tasks
         self._tasks = []
         for task in tasks:
@@ -152,7 +150,9 @@ class SomeObject(dbus.service.Object):
 
     @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
     def SpeechEnd(self, task_id):
-        if AUTOEXIT:
+        if self._die_on_speak:
+            self.byebye()
+        elif AUTOEXIT:
             GLib.idle_add(self.byebye)
 
     @dbus.service.signal("org.freedesktop.Speech.Provider")
