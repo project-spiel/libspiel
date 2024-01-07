@@ -2,7 +2,7 @@
 #pragma once
 
 #if !defined(SPIEL_INSIDE) && !defined(SPIEL_COMPILATION)
-#error "Only <libspiel.h> can be included directly."
+#error "Only <spiel.h> can be included directly."
 #endif
 
 /**

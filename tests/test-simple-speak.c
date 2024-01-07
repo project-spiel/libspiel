@@ -1,4 +1,4 @@
-#include <libspiel.h>
+#include <spiel.h>
 
 static GMainLoop *main_loop;
 static uint speaking_change_count = 0;

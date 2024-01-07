@@ -13,7 +13,7 @@ spiel_sources = [
 ]
 
 spiel_public_headers = [
-  'libspiel.h',
+  'spiel.h',
   'spiel-utterance.h',
   'spiel-voice.h',
   'spiel-speaker.h',
@@ -66,14 +66,13 @@ install_headers(spiel_public_headers, subdir: 'spiel')
 
 pkg = import('pkgconfig')
 pkg.generate(
-  description: 'A shared library for ...',
+  description: 'A shared library for speech synthesis clients',
     libraries: spiel_lib,
          name: 'spiel',
      filebase: 'spiel-' + api_version,
       version: meson.project_version(),
       subdirs: 'spiel',
-     requires: 'gio-2.0',
-  install_dir: join_paths(get_option('libdir'), 'pkgconfig')
+     requires: 'gio-2.0'
 )
 
 gnome = import('gnome')
@@ -81,8 +80,10 @@ spiel_gir = gnome.generate_gir(spiel_lib,
             sources: spiel_public_headers + spiel_public_sources,
             nsversion: api_version,
             namespace: 'Spiel',
+            header: 'spiel/spiel.h',
         symbol_prefix: 'spiel',
     identifier_prefix: 'Spiel',
              includes: [ 'Gio-2.0' ],
               install: true,
+              export_packages: 'spiel',
 )

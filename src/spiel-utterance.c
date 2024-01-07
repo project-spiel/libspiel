@@ -16,7 +16,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libspiel.h"
+#include "spiel.h"
 
 #include "spiel-utterance.h"
 

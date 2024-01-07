@@ -1,4 +1,4 @@
-/* libspiel.h
+/* spiel.h
  *
  * Copyright (C) 2023 Eitan Isaacson <eitan@monotonous.org>
  *
