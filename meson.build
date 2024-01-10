@@ -97,7 +97,3 @@ if get_option('docs')
 endif
 
 subdir('data')
-
-if get_option('spiel-it')
-  subdir('spiel-it')
-endif
