@@ -63,7 +63,7 @@
     Cancel:
     @task_id: A task identifier.
 
-    Resume the speech of the given identifier.
+    Cancel the speech of the given identifier.
   -->
     <method name="Cancel">
       <arg direction="in"  type="t" name="task_id" />
