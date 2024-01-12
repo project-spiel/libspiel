@@ -9,6 +9,9 @@ source_toml = configure_file(
   # install_dir: docs_dir / 'libspiel',
 )
 
+interface_src_dir = join_paths(meson.project_source_root(), 'interface')
+logo = join_paths(meson.project_source_root(), 'spiel-logo.svg')
+
 gdbus_codegen_cmd = find_program('gdbus-codegen')
 spiel_iface_docs = custom_target('dbus-docs',
   output : 'generated-org.freedesktop.Speech.Provider.md',

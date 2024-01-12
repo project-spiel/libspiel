@@ -4,6 +4,8 @@ project('spiel', 'c',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
 
+api_version = '0.1'
+
 cc = meson.get_compiler('c')
 
 config_h = configuration_data()
@@ -77,23 +79,12 @@ foreach arg: test_c_args
 endforeach
 add_project_arguments(project_c_args, language: 'c')
 
-test_env_vars = {
-  'GI_TYPELIB_PATH': join_paths(meson.current_build_dir(), 'src'),
-  'LD_LIBRARY_PATH': join_paths(meson.current_build_dir(), 'src'),
-}
-
-interface_src_dir = join_paths(meson.current_source_dir(), 'interface')
-
-logo = join_paths(meson.current_source_dir(), 'spiel-logo.svg')
-
-subdir('interface')
-subdir('src')
-if get_option('tests')
-  subdir('tests')
-endif
+subdir('libspiel')
 
 if get_option('docs')
   subdir('doc')
 endif
 
-subdir('data')
+if get_option('tests')
+  subdir('tests')
+endif

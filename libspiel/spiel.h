@@ -22,10 +22,10 @@
 
 G_BEGIN_DECLS
 
-#define SPIEL_INSIDE
+#define SPEECH_PROVIDER_INSIDE
 #include "spiel-speaker.h"
 #include "spiel-utterance.h"
 #include "spiel-version.h"
-#undef SPIEL_INSIDE
+#undef SPEECH_PROVIDER_INSIDE
 
 G_END_DECLS

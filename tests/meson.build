@@ -1,10 +1,12 @@
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
-test_env = environment(test_env_vars)
+test_env = environment()
+test_env.set('GI_TYPELIB_PATH', join_paths(meson.project_build_root(), 'libspiel'))
+test_env.set('LD_LIBRARY_PATH', join_paths(meson.project_build_root(), 'libspiel'))
 test_env.set('G_DEBUG', 'fatal-warnings')
 test_env.set('TEST_SERVICE_DIR', service_dir)
 test_env.set('TEST_DISCARDED_SERVICE_DIR', join_paths(meson.current_build_dir(), 'discarded_services'))
-test_env.set('GSETTINGS_SCHEMA_DIR', join_paths(meson.project_build_root(), 'data'))
+test_env.set('GSETTINGS_SCHEMA_DIR', join_paths(meson.project_build_root(), 'libspiel'))
 test_env.set('GSETTINGS_BACKEND', 'memory')
 
 python_module = import('python')
