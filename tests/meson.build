@@ -1,8 +1,12 @@
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
 test_env = environment()
-test_env.set('GI_TYPELIB_PATH', join_paths(meson.project_build_root(), 'libspiel'))
-test_env.set('LD_LIBRARY_PATH', join_paths(meson.project_build_root(), 'libspiel'))
+test_env.prepend('GI_TYPELIB_PATH',
+  join_paths(meson.project_build_root(), 'libspiel'),
+  join_paths(meson.project_build_root(), 'libspielprovider'), separator: ':')
+test_env.prepend('LD_LIBRARY_PATH',
+  join_paths(meson.project_build_root(), 'libspiel'),
+  join_paths(meson.project_build_root(), 'libspielprovider'), separator: ':')
 test_env.set('G_DEBUG', 'fatal-warnings')
 test_env.set('TEST_SERVICE_DIR', service_dir)
 test_env.set('TEST_DISCARDED_SERVICE_DIR', join_paths(meson.current_build_dir(), 'discarded_services'))
@@ -21,7 +25,8 @@ tests = ['test_speak.py',
          'test_settings.py',
          'test_voice_selection.py',
          'test_errors.py',
-         'test_audio.py']
+         'test_audio.py',
+         'test_provider_lib.py']
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()
