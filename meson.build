@@ -79,12 +79,14 @@ foreach arg: test_c_args
 endforeach
 add_project_arguments(project_c_args, language: 'c')
 
-subdir('libspiel')
+if get_option('libspiel')
+  subdir('libspiel')
+endif
 
 if get_option('docs')
   subdir('doc')
 endif
 
-if get_option('tests')
+if get_option('tests') and get_option('libspiel')
   subdir('tests')
 endif

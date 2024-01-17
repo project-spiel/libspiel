@@ -1,2 +1,3 @@
+option('libspiel', type: 'boolean', value: true, description: 'Enable libspiel')
 option('tests', type: 'boolean', value: true, description: 'Enable tests')
 option('docs', type: 'boolean', value: true, description: 'Enable docs')
