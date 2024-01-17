@@ -1,6 +1,6 @@
 <img alt="libspiel logo" align="right" src="https://raw.githubusercontent.com/eeejay/libspiel/main/spiel-logo.svg">
 
-# libspiel
+# Spiel
 
 [![ Build, Test & Docs](https://github.com/eeejay/libspiel/actions/workflows/ci.yml/badge.svg)](https://github.com/eeejay/libspiel/actions/workflows/ci.yml)
 
