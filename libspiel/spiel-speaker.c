@@ -94,9 +94,7 @@ static GParamSpec *properties[N_PROPS];
 
 typedef struct
 {
-  guint64 task_id;
   SpielUtterance *utterance;
-  SpielProvider *provider;
 } _QueueEntry;
 
 static void
@@ -106,7 +104,6 @@ _queue_entry_destroy (gpointer data)
   if (entry)
     {
       g_clear_object (&entry->utterance);
-      g_clear_object (&entry->provider);
     }
 
   g_slice_free (_QueueEntry, entry);
@@ -185,366 +182,6 @@ SpielSpeaker *
 spiel_speaker_new_sync (GCancellable *cancellable, GError **error)
 {
   return g_initable_new (SPIEL_TYPE_SPEAKER, cancellable, error, NULL);
-}
-
-static void
-on_speak_called (GObject *source_object, GAsyncResult *res, gpointer user_data)
-{
-  SpielProvider *provider = SPIEL_PROVIDER (source_object);
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  GError *err = NULL;
-  spiel_provider_call_speak_finish (provider, res, &err);
-  if (err != NULL)
-    {
-      g_warning ("Speak error: %s", err->message);
-      g_error_free (err);
-      return;
-    }
-  if (!priv->speaking)
-    {
-      priv->speaking = TRUE;
-      g_object_notify (G_OBJECT (self), "speaking");
-    }
-}
-
-static SpielProvider *
-_get_utterance_provider_or_default (SpielSpeakerPrivate *priv,
-                                    SpielUtterance *utterance)
-{
-  SpielVoice *voice =
-      spiel_registry_get_voice_for_utterance (priv->registry, utterance);
-  if (voice == NULL)
-    {
-      return NULL;
-    }
-
-  return spiel_registry_get_provider_for_voice (priv->registry, voice);
-}
-
-static void
-_spiel_speaker_do_speak (SpielSpeaker *self)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  char *text = NULL;
-  gdouble pitch, rate, volume;
-  SpielVoice *voice = NULL;
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  SpielUtterance *utterance = entry ? SPIEL_UTTERANCE (entry->utterance) : NULL;
-  if (!entry)
-    {
-      return;
-    }
-
-  g_object_get (utterance, "text", &text, "pitch", &pitch, "rate", &rate,
-                "volume", &volume, "voice", &voice, NULL);
-
-  if (voice == NULL)
-    {
-      voice =
-          spiel_registry_get_voice_for_utterance (priv->registry, utterance);
-      spiel_utterance_set_voice (utterance, voice);
-      g_object_ref (voice);
-    }
-
-  entry->provider = g_object_ref (
-      spiel_registry_get_provider_for_voice (priv->registry, voice));
-
-  spiel_provider_call_speak (entry->provider, entry->task_id, text,
-                             voice ? spiel_voice_get_identifier (voice) : "",
-                             pitch, rate, volume, G_DBUS_CALL_FLAGS_NONE, -1,
-                             NULL, on_speak_called, self);
-
-  g_free (text);
-  if (voice)
-    {
-      g_object_unref (voice);
-    }
-}
-
-/**
- * spiel_speaker_speak:
- * @self: a #SpielSpeaker
- * @utterance: an #SpielUtterance to speak
- *
- * Speak the given utterance. If an utterance is already being spoken
- * the provided utterances will be added to a queue and will be spoken
- * in the order recieved.
- */
-void
-spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = g_slice_new0 (_QueueEntry);
-  SpielProvider *provider =
-      _get_utterance_provider_or_default (priv, utterance);
-  if (!provider)
-    {
-      g_warning ("Can't get a speech provider");
-      return;
-    }
-
-  entry->utterance = g_object_ref (utterance);
-  entry->task_id = g_random_int ();
-  entry->provider = g_object_ref (provider);
-  priv->queue = g_slist_append (priv->queue, entry);
-
-  if (!priv->queue->next && !priv->paused)
-    {
-      _spiel_speaker_do_speak (self);
-    }
-}
-
-static void
-on_pause_called (GObject *source_object, GAsyncResult *res, gpointer user_data)
-{
-  SpielProvider *provider = SPIEL_PROVIDER (source_object);
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  spiel_provider_call_pause_finish (provider, res, NULL);
-  if (!priv->paused)
-    {
-      priv->paused = TRUE;
-      g_object_notify (G_OBJECT (self), "paused");
-    }
-}
-
-/**
- * spiel_speaker_pause:
- * @self: a #SpielSpeaker
- *
- * Pause the given speaker. If an utterance is being spoken, it will pause
- * until [method@Speaker.resume] is called.
- * If the speaker isn't speaking, calling [method@Speaker.speak] will store
- * new utterances in a queue until [method@Speaker.resume] is called.
- */
-void
-spiel_speaker_pause (SpielSpeaker *self)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (priv->paused)
-    {
-      return;
-    }
-
-  if (!entry)
-    {
-      priv->paused = TRUE;
-      g_object_notify (G_OBJECT (self), "paused");
-      return;
-    }
-
-  spiel_provider_call_pause (entry->provider, entry->task_id,
-                             G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_pause_called,
-                             self);
-}
-
-static void
-on_resume_called (GObject *source_object, GAsyncResult *res, gpointer user_data)
-{
-  SpielProvider *provider = SPIEL_PROVIDER (source_object);
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  spiel_provider_call_resume_finish (provider, res, NULL);
-  if (priv->paused)
-    {
-      priv->paused = FALSE;
-      g_object_notify (G_OBJECT (self), "paused");
-    }
-
-  if (!priv->speaking)
-    {
-      _spiel_speaker_do_speak (self);
-    }
-}
-
-/**
- * spiel_speaker_resume:
- * @self: a #SpielSpeaker
- *
- * Resumes the given paused speaker. If the speaker isn't pause this will do
- * nothing.
- */
-void
-spiel_speaker_resume (SpielSpeaker *self)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (!priv->paused)
-    {
-      return;
-    }
-
-  if (!entry)
-    {
-      priv->paused = FALSE;
-      g_object_notify (G_OBJECT (self), "paused");
-      return;
-    }
-
-  spiel_provider_call_resume (entry->provider, entry->task_id,
-                              G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-                              on_resume_called, self);
-}
-
-static void
-on_cancel_called (GObject *source_object, GAsyncResult *res, gpointer user_data)
-{
-  SpielProvider *provider = SPIEL_PROVIDER (source_object);
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  SpielUtterance *utterance = NULL;
-  GError *err = NULL;
-  if (!entry)
-    {
-      return;
-    }
-
-  spiel_provider_call_cancel_finish (provider, res, &err);
-  if (err)
-    {
-      g_error_free (err);
-    }
-  utterance = g_object_ref (entry->utterance);
-  g_slist_free_full (g_steal_pointer (&priv->queue),
-                     (GDestroyNotify) _queue_entry_destroy);
-
-  g_signal_emit (self, speaker_signals[UTTERANCE_CANCELED], 0, utterance);
-  g_object_unref (utterance);
-
-  if (priv->speaking)
-    {
-      priv->speaking = FALSE;
-      g_object_notify (G_OBJECT (self), "speaking");
-    }
-}
-
-/**
- * spiel_speaker_cancel:
- * @self: a #SpielSpeaker
- *
- * Stops the current utterance from being spoken and dumps the utterance queue.
- */
-void
-spiel_speaker_cancel (SpielSpeaker *self)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (!entry)
-    {
-      return;
-    }
-
-  spiel_provider_call_cancel (entry->provider, entry->task_id,
-                              G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-                              on_cancel_called, self);
-}
-
-static gboolean
-handle_speech_start (SpielProvider *provider,
-                     guint64 task_id,
-                     gpointer user_data)
-{
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (!entry || entry->task_id != task_id)
-    {
-      return TRUE;
-    }
-
-  g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0, entry->utterance);
-  return TRUE;
-}
-
-static gboolean
-handle_speech_range (SpielProvider *provider,
-                     guint64 task_id,
-                     guint64 start,
-                     guint64 end,
-                     gpointer user_data)
-{
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (!entry || entry->task_id != task_id)
-    {
-      return TRUE;
-    }
-
-  g_signal_emit (self, speaker_signals[RANGE_STARTED], 0, entry->utterance,
-                 start, end);
-  return TRUE;
-}
-
-static void
-_advance_queue (SpielSpeaker *self)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  g_assert (entry);
-
-  if (!priv->queue->next)
-    {
-      priv->speaking = FALSE;
-      g_object_notify (G_OBJECT (self), "speaking");
-    }
-
-  _queue_entry_destroy (entry);
-  priv->queue = g_slist_delete_link (priv->queue, priv->queue);
-  if (priv->queue)
-    {
-      _spiel_speaker_do_speak (self);
-    }
-}
-
-static gboolean
-handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
-{
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  if (!entry || entry->task_id != task_id)
-    {
-      return TRUE;
-    }
-
-  g_signal_emit (self, speaker_signals[UTTERANCE_FINISHED], 0,
-                 entry->utterance);
-  _advance_queue (self);
-  return TRUE;
-}
-
-static gboolean
-handle_provider_died (SpielProvider *provider,
-                      const char *provider_name,
-                      gpointer user_data)
-{
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-
-  if (entry != NULL)
-    {
-      char *current_provider_name = NULL;
-      g_object_get (entry->provider, "g-name", &current_provider_name, NULL);
-      if (g_str_equal (provider_name, current_provider_name))
-        {
-          GError *error = NULL;
-          g_set_error (&error, SPIEL_ERROR,
-                       SPIEL_ERROR_PROVIDER_UNEXPECTEDLY_DIED,
-                       "Provider unexpectedly died: %s", provider_name);
-          g_signal_emit (self, speaker_signals[UTTERANCE_ERROR], 0,
-                         entry->utterance, error);
-          g_error_free (error);
-          _advance_queue (self);
-        }
-      g_free (current_provider_name);
-    }
-
-  return TRUE;
 }
 
 static void
@@ -692,16 +329,16 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
       NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_ERROR);
 }
 
+static gboolean handle_provider_died (SpielProvider *provider,
+                                      const char *provider_name,
+                                      gpointer user_data);
+
 static void
 _connect_signals (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  g_object_connect (
-      priv->registry, "object_signal::started",
-      G_CALLBACK (handle_speech_start), self, "object_signal::range-started",
-      G_CALLBACK (handle_speech_range), self, "object_signal::finished",
-      G_CALLBACK (handle_speech_end), self, "object_signal::provider-died",
-      G_CALLBACK (handle_provider_died), self, NULL);
+  g_object_connect (priv->registry, "object_signal::provider-died",
+                    G_CALLBACK (handle_provider_died), self, NULL);
 }
 
 static void
@@ -797,4 +434,67 @@ GQuark
 spiel_error_quark (void)
 {
   return g_quark_from_static_string ("spiel-error-quark");
+}
+
+/**
+ * Playback
+ */
+
+/**
+ * spiel_speaker_speak:
+ * @self: a #SpielSpeaker
+ * @utterance: an #SpielUtterance to speak
+ *
+ * Speak the given utterance. If an utterance is already being spoken
+ * the provided utterances will be added to a queue and will be spoken
+ * in the order recieved.
+ */
+void
+spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
+{
+}
+
+/**
+ * spiel_speaker_pause:
+ * @self: a #SpielSpeaker
+ *
+ * Pause the given speaker. If an utterance is being spoken, it will pause
+ * until [method@Speaker.resume] is called.
+ * If the speaker isn't speaking, calling [method@Speaker.speak] will store
+ * new utterances in a queue until [method@Speaker.resume] is called.
+ */
+void
+spiel_speaker_pause (SpielSpeaker *self)
+{
+}
+
+/**
+ * spiel_speaker_resume:
+ * @self: a #SpielSpeaker
+ *
+ * Resumes the given paused speaker. If the speaker isn't pause this will do
+ * nothing.
+ */
+void
+spiel_speaker_resume (SpielSpeaker *self)
+{
+}
+
+/**
+ * spiel_speaker_cancel:
+ * @self: a #SpielSpeaker
+ *
+ * Stops the current utterance from being spoken and dumps the utterance queue.
+ */
+void
+spiel_speaker_cancel (SpielSpeaker *self)
+{
+}
+
+static gboolean
+handle_provider_died (SpielProvider *provider,
+                      const char *provider_name,
+                      gpointer user_data)
+{
+  return TRUE;
 }

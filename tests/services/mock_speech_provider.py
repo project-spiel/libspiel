@@ -74,64 +74,6 @@ class SomeObject(dbus.service.Object):
 
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
-        in_signature="tssddd",
-        out_signature="",
-    )
-    def Speak(self, task_id, utterance, voice_id, pitch, rate, volume):
-        self._last_speak_args = (task_id, utterance, voice_id, pitch, rate, volume)
-        ranges = [
-            [m.start(), m.end()]
-            for m in re.finditer(r".*?\b\W\s?", utterance, re.MULTILINE)
-        ]
-        self._tasks.append([task_id, ranges])
-        GLib.idle_add(lambda: self.SpeechStart(task_id))
-        if self._auto_step:
-            GLib.idle_add(self._do_step_until_done)
-
-    def _do_step_until_done(self):
-        if self._do_step():
-            GLib.idle_add(self._do_step_until_done)
-
-    def _do_step(self):
-        tasks = self._tasks
-        self._tasks = []
-        for task in tasks:
-            if task[1]:
-                start, end = task[1].pop(0)
-                self.SpeechRangeStart(task[0], start, end)
-                self._tasks.append(task)
-            else:
-                self.SpeechEnd(task[0])
-        return bool(self._tasks)
-
-    @dbus.service.method(
-        "org.freedesktop.Speech.Provider",
-        in_signature="t",
-        out_signature="",
-    )
-    def Pause(self, task_id):
-        return
-
-    @dbus.service.method(
-        "org.freedesktop.Speech.Provider",
-        in_signature="t",
-        out_signature="",
-    )
-    def Resume(self, task_id):
-        return
-
-    @dbus.service.method(
-        "org.freedesktop.Speech.Provider",
-        in_signature="t",
-        out_signature="",
-    )
-    def Cancel(self, task_id):
-        self._tasks = []
-        if AUTOEXIT:
-            GLib.idle_add(self.byebye)
-
-    @dbus.service.method(
-        "org.freedesktop.Speech.Provider",
         in_signature="",
         out_signature="a(ssas)",
     )
@@ -139,21 +81,6 @@ class SomeObject(dbus.service.Object):
         if AUTOEXIT:
             GLib.idle_add(self.byebye)
         return [(v["name"], v["identifier"], v["languages"]) for v in self._voices]
-
-    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
-    def SpeechStart(self, task_id):
-        pass
-
-    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="ttt")
-    def SpeechRangeStart(self, task_id, start, end):
-        pass
-
-    @dbus.service.signal("org.freedesktop.Speech.Provider", signature="t")
-    def SpeechEnd(self, task_id):
-        if self._die_on_speak:
-            self.byebye()
-        elif AUTOEXIT:
-            GLib.idle_add(self.byebye)
 
     @dbus.service.signal("org.freedesktop.Speech.Provider")
     def VoicesChanged(self):
@@ -182,16 +109,6 @@ class SomeObject(dbus.service.Object):
     )
     def SetAutoStep(self, val):
         self._auto_step = val
-        if self._auto_step:
-            GLib.idle_add(self._do_step_until_done)
-
-    @dbus.service.method(
-        "org.freedesktop.Speech.MockProvider",
-        in_signature="",
-        out_signature="",
-    )
-    def Step(self):
-        self._do_step()
 
     @dbus.service.method(
         "org.freedesktop.Speech.MockProvider",
