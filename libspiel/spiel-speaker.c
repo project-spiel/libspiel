@@ -94,6 +94,7 @@ enum
   PROP_SPEAKING,
   PROP_PAUSED,
   PROP_VOICES,
+  PROP_SINK,
   N_PROPS
 };
 
@@ -260,6 +261,38 @@ spiel_speaker_get_property (GObject *object,
     case PROP_VOICES:
       g_value_set_object (value, spiel_registry_get_voices (priv->registry));
       break;
+    case PROP_SINK:
+      g_value_set_object (value, priv->sink);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    }
+}
+
+static void
+spiel_speaker_set_property (GObject *object,
+                            guint prop_id,
+                            const GValue *value,
+                            GParamSpec *pspec)
+{
+  SpielSpeaker *self = SPIEL_SPEAKER (object);
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+
+  switch (prop_id)
+    {
+    case PROP_SINK:
+      {
+        GstElement *new_sink = g_value_get_object (value);
+
+        gst_element_unlink (priv->convert, priv->sink);
+        gst_bin_remove (GST_BIN (priv->pipeline), priv->sink);
+        g_object_unref (priv->sink);
+
+        gst_bin_add (GST_BIN (priv->pipeline), new_sink);
+        gst_element_link (priv->convert, new_sink);
+        priv->sink = g_object_ref (new_sink);
+      }
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -272,6 +305,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   object_class->finalize = spiel_speaker_finalize;
   object_class->get_property = spiel_speaker_get_property;
+  object_class->set_property = spiel_speaker_set_property;
 
   /**
    * SpielSpeaker:speaking:
@@ -302,6 +336,15 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
   properties[PROP_VOICES] =
       g_param_spec_object ("voices", NULL, NULL, G_TYPE_LIST_MODEL,
                            G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  /**
+   * SpielSpeaker:sink:
+   *
+   * The gstreamer sink this speaker is connected to.
+   *
+   */
+  properties[PROP_SINK] = g_param_spec_object (
+      "sink", NULL, NULL, GST_TYPE_ELEMENT, G_PARAM_READWRITE);
 
   g_object_class_install_properties (object_class, N_PROPS, properties);
 

@@ -20,7 +20,8 @@ tests = ['test_speak.py',
          'test_voices.py',
          'test_settings.py',
          'test_voice_selection.py',
-         'test_errors.py']
+         'test_errors.py',
+         'test_audio.py']
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()
