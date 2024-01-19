@@ -23,7 +23,11 @@
 #include "spiel-registry.h"
 #include "spiel-voice.h"
 #include "spieldbusgenerated.h"
+#include <fcntl.h>
 #include <gio/gio.h>
+#include <glib-unix.h>
+#include <gst/audio/audio.h>
+#include <gst/gst.h>
 
 /**
  * SpielSpeaker:
@@ -54,6 +58,9 @@ typedef struct
   gboolean paused;
   SpielRegistry *registry;
   GSList *queue;
+  GstElement *pipeline;
+  GstElement *convert;
+  GstElement *sink;
 } SpielSpeakerPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
@@ -95,6 +102,10 @@ static GParamSpec *properties[N_PROPS];
 typedef struct
 {
   SpielUtterance *utterance;
+  GstElement *src;
+  GstElement *parse;
+  GstElement *volume;
+  GError *error;
 } _QueueEntry;
 
 static void
@@ -104,6 +115,31 @@ _queue_entry_destroy (gpointer data)
   if (entry)
     {
       g_clear_object (&entry->utterance);
+      if (entry->error)
+        {
+          g_error_free (entry->error);
+        }
+
+      if (entry->src)
+        {
+          gint fd = -1;
+          g_object_get (entry->src, "fd", &fd, NULL);
+          if (fd > 0)
+            {
+              close (fd);
+            }
+          g_clear_object (&entry->src);
+        }
+
+      if (entry->parse)
+        {
+          g_clear_object (&entry->parse);
+        }
+
+      if (entry->volume)
+        {
+          g_clear_object (&entry->volume);
+        }
     }
 
   g_slice_free (_QueueEntry, entry);
@@ -191,6 +227,13 @@ spiel_speaker_finalize (GObject *object)
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
 
   g_clear_object (&priv->registry);
+  if (priv->pipeline)
+    {
+      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+    }
+  g_clear_object (&priv->pipeline);
+  g_clear_object (&priv->convert);
+  g_clear_object (&priv->sink);
   g_slist_free_full (g_steal_pointer (&priv->queue),
                      (GDestroyNotify) _queue_entry_destroy);
 
@@ -341,6 +384,36 @@ _connect_signals (SpielSpeaker *self)
                     G_CALLBACK (handle_provider_died), self, NULL);
 }
 
+static gboolean
+_handle_gst_eos (GstBus *bus, GstMessage *msg, SpielSpeaker *self);
+
+static gboolean
+_handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self);
+
+static void
+_setup_pipeline (SpielSpeaker *self, GError **error)
+{
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  GstBus *bus;
+  GstElement *convert = gst_element_factory_make ("audioconvert", "convert");
+  GstElement *sink = gst_element_factory_make (
+      g_getenv ("SPIEL_TEST") ? "fakesink" : "autoaudiosink", "sink");
+  priv->pipeline = gst_pipeline_new ("pipeline");
+
+  gst_bin_add_many (GST_BIN (priv->pipeline), convert, sink, NULL);
+  gst_element_link (convert, sink);
+
+  bus = gst_element_get_bus (priv->pipeline);
+
+  gst_bus_add_signal_watch (bus);
+  g_object_connect (bus, "signal::message::eos", _handle_gst_eos, self,
+                    "signal::message::state-changed", _handle_gst_state_change,
+                    self, NULL);
+
+  priv->convert = g_object_ref (convert);
+  priv->sink = g_object_ref (sink);
+}
+
 static void
 _on_registry_get (GObject *source, GAsyncResult *result, gpointer user_data)
 {
@@ -350,6 +423,10 @@ _on_registry_get (GObject *source, GAsyncResult *result, gpointer user_data)
   GError *error = NULL;
 
   priv->registry = spiel_registry_get_finish (result, &error);
+  if (error == NULL)
+    {
+      _setup_pipeline (self, &error);
+    }
   if (error != NULL)
     {
       g_task_return_error (task, error);
@@ -405,6 +482,11 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
   SpielSpeaker *self = SPIEL_SPEAKER (initable);
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   priv->registry = spiel_registry_get_sync (cancellable, error);
+  if (*error == NULL)
+    {
+      _setup_pipeline (self, error);
+    }
+
   if (*error)
     {
       g_warning ("Error initializing speaker: %s\n", (*error)->message);
@@ -440,6 +522,15 @@ spiel_error_quark (void)
  * Playback
  */
 
+static void _provider_call_synthesize_done (GObject *source_object,
+                                            GAsyncResult *res,
+                                            gpointer user_data);
+
+static void _speak_current_entry (SpielSpeaker *self);
+
+static void _advance_to_next_entry_or_finish (SpielSpeaker *self,
+                                              gboolean canceled);
+
 /**
  * spiel_speaker_speak:
  * @self: a #SpielSpeaker
@@ -452,6 +543,100 @@ spiel_error_quark (void)
 void
 spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 {
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = g_slice_new0 (_QueueEntry);
+  SpielProvider *provider = NULL;
+  GUnixFDList *fd_list = g_unix_fd_list_new ();
+  int mypipe[2];
+  int fd;
+  char *text = NULL;
+  const char *output_format = NULL;
+  gdouble pitch, rate, volume;
+  SpielVoice *voice = NULL;
+  GstStructure *gst_struct;
+
+  g_object_get (utterance, "text", &text, "pitch", &pitch, "rate", &rate,
+                "volume", &volume, "voice", &voice, NULL);
+
+  if (voice == NULL)
+    {
+      voice =
+          spiel_registry_get_voice_for_utterance (priv->registry, utterance);
+      spiel_utterance_set_voice (utterance, voice);
+      g_object_ref (voice);
+    }
+
+  provider = spiel_registry_get_provider_for_voice (priv->registry, voice);
+
+  // XXX: Emit error on failure
+  g_unix_open_pipe (mypipe, 0, NULL);
+  fd = g_unix_fd_list_append (fd_list, mypipe[1], NULL);
+
+  // XXX: Emit error on failure
+  close (mypipe[1]);
+
+  spiel_provider_call_synthesize (
+      provider, g_variant_new_handle (fd), text,
+      voice ? spiel_voice_get_identifier (voice) : "", pitch, rate,
+      G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL, _provider_call_synthesize_done,
+      self);
+
+  g_object_unref (fd_list);
+  g_free (text);
+  g_object_unref (voice);
+
+  entry->utterance = g_object_ref (utterance);
+
+  output_format = spiel_voice_get_output_format (voice);
+
+  gst_struct = gst_structure_from_string (output_format, NULL);
+
+  if (!gst_struct ||
+      (!g_str_equal (gst_structure_get_name (gst_struct), "audio/x-raw") &&
+       !g_str_equal (gst_structure_get_name (gst_struct), "audio/x-spiel")))
+    {
+      g_assert (!entry->error);
+      g_set_error (&entry->error, SPIEL_ERROR, SPIEL_ERROR_MISCONFIGURED_VOICE,
+                   "Voice output format not set correctly: '%s'",
+                   output_format);
+    }
+  else
+    {
+      gint sample_rate, channels;
+      const char *pcm_format;
+
+      entry->src =
+          gst_element_factory_make_full ("fdsrc", "fd", mypipe[0], NULL);
+      entry->volume =
+          gst_element_factory_make_full ("volume", "volume", volume, NULL);
+
+      entry->parse = gst_element_factory_make ("rawaudioparse", "parse");
+      if (gst_structure_get_int (gst_struct, "rate", &sample_rate))
+        {
+          g_object_set (entry->parse, "sample-rate", sample_rate, NULL);
+        }
+
+      if (gst_structure_get_int (gst_struct, "channels", &channels))
+        {
+          g_object_set (entry->parse, "num-channels", channels, NULL);
+        }
+
+      pcm_format = gst_structure_get_string (gst_struct, "format");
+      if (pcm_format)
+        {
+          g_object_set (entry->parse, "pcm-format",
+                        gst_audio_format_from_string (pcm_format), NULL);
+        }
+    }
+
+  gst_structure_free (gst_struct);
+
+  priv->queue = g_slist_append (priv->queue, entry);
+
+  if (!priv->queue->next)
+    {
+      _speak_current_entry (self);
+    }
 }
 
 /**
@@ -466,6 +651,21 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 void
 spiel_speaker_pause (SpielSpeaker *self)
 {
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  if (priv->paused)
+    {
+      return;
+    }
+
+  if (!entry)
+    {
+      priv->paused = TRUE;
+      g_object_notify (G_OBJECT (self), "paused");
+      return;
+    }
+
+  gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
 }
 
 /**
@@ -478,6 +678,21 @@ spiel_speaker_pause (SpielSpeaker *self)
 void
 spiel_speaker_resume (SpielSpeaker *self)
 {
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  if (!priv->paused)
+    {
+      return;
+    }
+
+  if (!entry)
+    {
+      priv->paused = FALSE;
+      g_object_notify (G_OBJECT (self), "paused");
+      return;
+    }
+
+  gst_element_set_state (priv->pipeline, GST_STATE_PLAYING);
 }
 
 /**
@@ -489,6 +704,17 @@ spiel_speaker_resume (SpielSpeaker *self)
 void
 spiel_speaker_cancel (SpielSpeaker *self)
 {
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  if (!priv->queue)
+    {
+      return;
+    }
+
+  // Dump the rest of the queue after the current entry.
+  g_slist_free_full (g_steal_pointer (&priv->queue->next),
+                     (GDestroyNotify) _queue_entry_destroy);
+
+  _advance_to_next_entry_or_finish (self, TRUE);
 }
 
 static gboolean
@@ -496,5 +722,170 @@ handle_provider_died (SpielProvider *provider,
                       const char *provider_name,
                       gpointer user_data)
 {
+  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+
+  if (entry != NULL)
+    {
+      SpielVoice *voice = spiel_utterance_get_voice (entry->utterance);
+      g_assert (voice);
+      if (g_str_equal (provider_name, spiel_voice_get_provider_name (voice)))
+        {
+          g_assert (!entry->error);
+          g_set_error (&entry->error, SPIEL_ERROR,
+                       SPIEL_ERROR_PROVIDER_UNEXPECTEDLY_DIED,
+                       "Provider unexpectedly died: %s", provider_name);
+          _advance_to_next_entry_or_finish (self, FALSE);
+        }
+    }
+
   return TRUE;
+}
+
+static gboolean
+_handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
+{
+  GstState old_state, new_state, pending_state;
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  GstObject *element = GST_MESSAGE_SRC (msg);
+
+  gst_message_parse_state_changed (msg, &old_state, &new_state, &pending_state);
+
+  if (new_state == GST_STATE_PLAYING &&
+      pending_state == GST_STATE_VOID_PENDING &&
+      element == GST_OBJECT (priv->pipeline))
+    {
+      if (!priv->paused)
+        {
+          if (!priv->speaking)
+            {
+              priv->speaking = TRUE;
+              g_object_notify (G_OBJECT (self), "speaking");
+            }
+          g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0,
+                         entry->utterance);
+        }
+      else
+        {
+          priv->paused = FALSE;
+          g_object_notify (G_OBJECT (self), "paused");
+        }
+    }
+  if (new_state == GST_STATE_PAUSED &&
+      pending_state == GST_STATE_VOID_PENDING &&
+      element == GST_OBJECT (priv->pipeline))
+    {
+      priv->paused = TRUE;
+      g_object_notify (G_OBJECT (self), "paused");
+    }
+
+  if (new_state == GST_STATE_NULL && pending_state == GST_STATE_VOID_PENDING &&
+      element == GST_OBJECT (entry->src))
+    {
+      _advance_to_next_entry_or_finish (self, FALSE);
+    }
+
+  return TRUE;
+}
+
+static gboolean
+_handle_gst_eos (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
+{
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  GstElement *fdsrc = entry->src;
+  gst_element_set_state (fdsrc, GST_STATE_NULL);
+
+  return TRUE;
+}
+
+static void
+_provider_call_synthesize_done (GObject *source_object,
+                                GAsyncResult *res,
+                                gpointer user_data)
+{
+  SpielProvider *provider = SPIEL_PROVIDER (source_object);
+  GError *err = NULL;
+  spiel_provider_call_synthesize_finish (provider, NULL, res, &err);
+  if (err != NULL)
+    {
+      // XXX: Emit error on associated utterance
+      g_warning ("Synthesis error: %s", err->message);
+      g_error_free (err);
+      return;
+    }
+}
+
+static void
+_speak_current_entry (SpielSpeaker *self)
+{
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+
+  g_assert (entry);
+
+  if (entry->error)
+    {
+      g_assert (!entry->src);
+      g_assert (!entry->parse);
+      g_assert (!entry->volume);
+      _advance_to_next_entry_or_finish (self, FALSE);
+      return;
+    }
+
+  gst_bin_add_many (GST_BIN (priv->pipeline), g_object_ref (entry->src),
+                    g_object_ref (entry->parse), g_object_ref (entry->volume),
+                    NULL);
+
+  gst_element_link_many (entry->src, entry->parse, entry->volume, priv->convert,
+                         NULL);
+
+  gst_element_set_state (priv->pipeline, GST_STATE_PLAYING);
+}
+
+static void
+_advance_to_next_entry_or_finish (SpielSpeaker *self, gboolean canceled)
+{
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+
+  g_assert (entry);
+
+  gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+
+  if (entry->error)
+    {
+      g_signal_emit (self, speaker_signals[UTTERANCE_ERROR], 0,
+                     entry->utterance, entry->error);
+    }
+  else
+    {
+      g_signal_emit (self,
+                     canceled ? speaker_signals[UTTERANCE_CANCELED]
+                              : speaker_signals[UTTERANCE_FINISHED],
+                     0, entry->utterance);
+    }
+
+  if (entry->src)
+    {
+      g_assert (entry->parse);
+      g_assert (entry->volume);
+      gst_bin_remove_many (GST_BIN (priv->pipeline), entry->src, entry->parse,
+                           entry->volume, NULL);
+    }
+
+  if (!priv->queue->next)
+    {
+      priv->speaking = FALSE;
+      g_object_notify (G_OBJECT (self), "speaking");
+    }
+
+  _queue_entry_destroy (entry);
+  priv->queue = g_slist_delete_link (priv->queue, priv->queue);
+  if (priv->queue)
+    {
+      _speak_current_entry (self);
+    }
 }

@@ -2,9 +2,10 @@
 
 static GMainLoop *main_loop;
 static uint speaking_change_count = 0;
+static SpielSpeaker *speaker = NULL;
 
 static void
-speaking_cb (SpielSpeaker *speaker, GParamSpec *pspec, gpointer user_data)
+speaking_cb (SpielSpeaker *_speaker, GParamSpec *pspec, gpointer user_data)
 {
   gboolean speaking = FALSE;
   speaking_change_count++;
@@ -12,7 +13,6 @@ speaking_cb (SpielSpeaker *speaker, GParamSpec *pspec, gpointer user_data)
 
   if (!speaking)
     {
-      g_object_unref (speaker);
       g_assert_cmpuint (speaking_change_count, ==, 2);
       g_main_loop_quit (main_loop);
     }
@@ -22,8 +22,9 @@ static void
 speaker_new_cb (GObject *source, GAsyncResult *result, gpointer user_data)
 {
   GError *err = NULL;
-  SpielSpeaker *speaker = spiel_speaker_new_finish (result, &err);
   SpielUtterance *utterance = spiel_utterance_new ("hello world");
+
+  speaker = spiel_speaker_new_finish (result, &err);
   g_assert_no_error (err);
   if (err)
     g_error_free (err);
@@ -47,6 +48,7 @@ test_speak (void)
   main_loop = g_main_loop_new (NULL, FALSE);
   spiel_speaker_new (NULL, speaker_new_cb, NULL);
   g_main_loop_run (main_loop);
+  g_object_unref (speaker);
 }
 
 gint

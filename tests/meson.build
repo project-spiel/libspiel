@@ -8,20 +8,19 @@ test_env.set('TEST_SERVICE_DIR', service_dir)
 test_env.set('TEST_DISCARDED_SERVICE_DIR', join_paths(meson.current_build_dir(), 'discarded_services'))
 test_env.set('GSETTINGS_SCHEMA_DIR', join_paths(meson.project_build_root(), 'libspiel'))
 test_env.set('GSETTINGS_BACKEND', 'memory')
+test_env.set('SPIEL_TEST', '1')
 
 python_module = import('python')
 dbus_run_session = find_program('dbus-run-session', required : false)
 python = python_module.find_installation(
   'python3', required : false, modules: 'tap')
 
-tests = [
-#         'test_speak.py',
+tests = ['test_speak.py',
          'test_types.py',
          'test_voices.py',
          'test_settings.py',
-#         'test_voice_selection.py',
-#         'test_errors.py'
-]
+         'test_voice_selection.py',
+         'test_errors.py']
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()
@@ -59,13 +58,13 @@ if dbus_run_session.found() and python.found()
     )
   endforeach
 
-# test('test-simple-speak', dbus_run_session,
-#       args : [
-#         '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
-#         '--', test_simple_speak
-#         ],
-#       env : test_env
-#     )
+test('test-simple-speak', dbus_run_session,
+      args : [
+        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+        '--', test_simple_speak
+        ],
+      env : test_env
+    )
 endif
 
 

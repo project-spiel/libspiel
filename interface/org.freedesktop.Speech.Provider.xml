@@ -12,6 +12,27 @@
     end with `Speech.Provider`. For example, `org.espeak.Speech.Provider`.
   -->
   <interface name="org.freedesktop.Speech.Provider">
+  <!--
+    Synthesize:
+    @pipe_fd: File descriptor of pipe to write to.
+    @text: The text to be spoken.
+    @voice_id: The voice identifier for the voice that should be spoken.
+    @pitch: The voice pitch in which the text should be spoken.
+    @rate: The rate in which the text should be spoken.
+
+    This is the basic synthesis method.
+    When called, the speech provider will send the synthesized output to the given file descriptor.
+    Depending on the voice's advertised format it will be raw audio or composite audio and events.
+
+    Providers should be capable of synthesizing more than one request concurrently.
+  -->
+    <method name="Synthesize">
+      <arg direction="in"  type="h" name="pipe_fd" />
+      <arg direction="in"  type="s" name="text" />
+      <arg direction="in"  type="s" name="voice_id" />
+      <arg direction="in"  type="d" name="pitch" />
+      <arg direction="in"  type="d" name="rate" />
+    </method>
 
   <!--
     GetVoices:

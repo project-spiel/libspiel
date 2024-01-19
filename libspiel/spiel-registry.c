@@ -21,6 +21,7 @@
 #include "spiel-registry.h"
 
 #include <gio/gio.h>
+#include <gst/gst.h>
 
 #define PROVIDER_SUFFIX ".Speech.Provider"
 #define GSETTINGS_SCHEMA "org.monotonous.libspiel"
@@ -604,6 +605,7 @@ spiel_registry_get_finish (GAsyncResult *result, GError **error)
     {
       if (sRegistry == NULL)
         {
+          gst_init_check (NULL, NULL, error);
           sRegistry = SPIEL_REGISTRY (object);
         }
       g_assert (sRegistry == SPIEL_REGISTRY (object));
@@ -620,6 +622,7 @@ spiel_registry_get_sync (GCancellable *cancellable, GError **error)
 {
   if (sRegistry == NULL)
     {
+      gst_init_check (NULL, NULL, error);
       sRegistry =
           g_initable_new (SPIEL_TYPE_REGISTRY, cancellable, error, NULL);
     }

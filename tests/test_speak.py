@@ -29,11 +29,11 @@ class TestSpeak(BaseSpielTest):
         expected_events = [
             "notify:speaking=True",
             "utterance-started",
-            "range-started",
-            "range-started",
-            "range-started",
-            "range-started",
-            "range-started",
+            # "range-started",
+            # "range-started",
+            # "range-started",
+            # "range-started",
+            # "range-started",
             "utterance-finished",
             "notify:speaking=False",
         ]
@@ -103,10 +103,10 @@ class TestSpeak(BaseSpielTest):
             if speechSynthesis.props.paused:
                 synth.resume()
             else:
-                self.mock_service.SetAutoStep(True)
+                synth.cancel()
 
-        def _finished_cb(synth, utt):
-            actual_events.append("utterance-finished")
+        def _canceled_cb(synth, utt):
+            actual_events.append("utterance-canceled")
             self.assertFalse(speechSynthesis.props.paused)
             self.assertEqual(
                 actual_events,
@@ -114,18 +114,18 @@ class TestSpeak(BaseSpielTest):
                     "utterance-started",
                     "notify:paused=True",
                     "notify:paused=False",
-                    "utterance-finished",
+                    "utterance-canceled",
                 ],
             )
             loop.quit()
 
         actual_events = []
 
-        self.mock_service.SetAutoStep(False)
+        self.mock_service.SetInfinite(True)
         speechSynthesis = Spiel.Speaker.new_sync(None)
         speechSynthesis.connect("utterance-started", _started_cb)
         speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("utterance-finished", _finished_cb)
+        speechSynthesis.connect("utterance-canceled", _canceled_cb)
         utterance = Spiel.Utterance(text="hello world, how are you?")
         speechSynthesis.speak(utterance)
 
@@ -157,7 +157,7 @@ class TestSpeak(BaseSpielTest):
         def _canceled_cb(synth, utt):
             actual_events.append("canceled '%s'" % utt.props.text)
 
-        self.mock_service.SetAutoStep(False)
+        self.mock_service.SetInfinite(True)
         speechSynthesis = Spiel.Speaker.new_sync(None)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
         speechSynthesis.connect("utterance-started", _started_cb)
@@ -201,7 +201,7 @@ class TestSpeak(BaseSpielTest):
 
         actual_events = []
 
-        self.mock_service.SetAutoStep(False)
+        self.mock_service.SetInfinite(True)
         speechSynthesis = Spiel.Speaker.new_sync(None)
         speechSynthesis.connect("utterance-started", _started_cb)
         speechSynthesis.connect("notify::speaking", _notify_speaking_cb)

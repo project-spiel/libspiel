@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 
-from gi.repository import GLib
+import gi
+
+gi.require_version("Gst", "1.0")
+from gi.repository import GLib, Gst
 
 import dbus
 import dbus.service
 import dbus.mainloop.glib
 import re
+import os
 from os import getcwd
 from sys import argv
+
+Gst.init(None)
 
 NAME = argv[-1] if len(argv) > 1 else "mock"
 
@@ -71,14 +77,49 @@ VOICES = {
 }
 
 
+class RawSynthStream(object):
+    def __init__(self, fd, text, indefinite=False):
+        elements = [
+            "audiotestsrc num-buffers=%d name=src" % (-1 if indefinite else 10),
+            "audioconvert",
+            "audio/x-raw,format=S16LE,channels=1,rate=22050",
+            "fdsink name=sink",
+        ]
+        self._pipeline = Gst.parse_launch(" ! ".join(elements))
+        self._pipeline.get_by_name("sink").set_property("fd", fd)
+        bus = self._pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message::eos", self._on_eos)
+
+    def start(self):
+        self._pipeline.set_state(Gst.State.PLAYING)
+
+    def _on_eos(self, *args):
+        src = self._pipeline.get_by_name("src")
+        raw_fd = self._pipeline.get_by_name("sink").get_property("fd")
+        os.close(raw_fd)
+        src.set_state(Gst.State.NULL)
+
+
 class SomeObject(dbus.service.Object):
     def __init__(self, *args):
         self._last_speak_args = [0, "", "", 0, 0, 0]
-        self._auto_step = not AUTOEXIT
+        self._infinite = False
         self._tasks = []
         self._voices = VOICES[NAME][:]
-        self._die_on_speak = False
+
         dbus.service.Object.__init__(self, *args)
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.Provider",
+        in_signature="hssdd",
+        out_signature="",
+    )
+    def Synthesize(self, fd, utterance, voice_id, pitch, rate):
+        raw_fd = fd.take()
+        self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate)
+        stream = RawSynthStream(raw_fd, utterance, self._infinite)
+        stream.start()
 
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
@@ -100,7 +141,7 @@ class SomeObject(dbus.service.Object):
     @dbus.service.method(
         "org.freedesktop.Speech.MockProvider",
         in_signature="",
-        out_signature="tssddd",
+        out_signature="tssdd",
     )
     def GetLastSpeakArguments(self):
         return self._last_speak_args
@@ -118,8 +159,16 @@ class SomeObject(dbus.service.Object):
         in_signature="b",
         out_signature="",
     )
-    def SetAutoStep(self, val):
-        self._auto_step = val
+    def SetInfinite(self, val):
+        self._infinite = val
+
+    @dbus.service.method(
+        "org.freedesktop.Speech.MockProvider",
+        in_signature="",
+        out_signature="",
+    )
+    def Step(self):
+        self._do_step()
 
     @dbus.service.method(
         "org.freedesktop.Speech.MockProvider",
@@ -151,8 +200,8 @@ class SomeObject(dbus.service.Object):
         in_signature="",
         out_signature="",
     )
-    def DieOnSpeak(self):
-        self._die_on_speak = True
+    def Die(self):
+        GLib.idle_add(self.byebye)
 
     def byebye(self):
         exit()

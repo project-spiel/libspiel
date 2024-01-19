@@ -54,6 +54,8 @@ spiel_lib_generated_headers = [
 spiel_deps = [
   dependency('gio-2.0'),
   dependency('gio-unix-2.0'),
+  dependency('gstreamer-1.0'),
+  dependency('gstreamer-audio-1.0'),
 ]
 
 spiel_lib = shared_library('spiel-' + api_version,

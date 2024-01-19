@@ -52,7 +52,7 @@ class BaseSpielTest(unittest.TestCase):
 
     def setUp(self):
         self.mock_service = self.mock_iface("org.mock.Speech.Provider")
-        self.mock_service.SetAutoStep(True)
+        self.mock_service.SetInfinite(False)
         self.mock_service.FlushTasks()
 
     def tearDown(self):
@@ -190,6 +190,14 @@ class BaseSpielTest(unittest.TestCase):
             os.environ["TEST_SERVICE_DIR"], f"{name}{os.path.extsep}service"
         )
         os.rename(src, dest)
+
+    def get_voice(self, synth, provider_name, voice_id):
+        for v in synth.props.voices:
+            if (
+                v.props.provider_name == provider_name
+                and v.props.identifier == voice_id
+            ):
+                return v
 
 
 def test_main():
