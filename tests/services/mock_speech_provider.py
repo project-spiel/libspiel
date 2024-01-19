@@ -17,11 +17,13 @@ VOICES = {
     "mock": [
         {
             "name": "Chinese (Cantonese)",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "sit/yue",
             "languages": ["yue", "zh-yue", "zh"],
         },
         {
             "name": "Armenian (East Armenia)",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "ine/hy",
             "languages": ["hy", "hy-arevela"],
         },
@@ -29,26 +31,31 @@ VOICES = {
     "mock2": [
         {
             "name": "Armenian (West Armenia)",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "ine/hyw",
             "languages": ["hyw", "hy-arevmda", "hy"],
         },
         {
             "name": "English (Scotland)",
+            "output_format": "nuthin",
             "identifier": "gmw/en-GB-scotland",
             "languages": ["en-gb-scotland", "en"],
         },
         {
             "name": "English (Lancaster)",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en-GB-x-gbclan",
             "languages": ["en-gb-x-gbclan", "en-gb", "en"],
         },
         {
             "name": "English (America)",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en-US",
             "languages": ["en-us", "en"],
         },
         {
             "name": "English (Great Britain)",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en",
             "languages": ["en-gb", "en"],
         },
@@ -56,6 +63,7 @@ VOICES = {
     "mock3": [
         {
             "name": "Uzbek",
+            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "trk/uz",
             "languages": ["uz"],
         },
@@ -75,12 +83,15 @@ class SomeObject(dbus.service.Object):
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
         in_signature="",
-        out_signature="a(ssas)",
+        out_signature="a(sssas)",
     )
     def GetVoices(self):
         if AUTOEXIT:
             GLib.idle_add(self.byebye)
-        return [(v["name"], v["identifier"], v["languages"]) for v in self._voices]
+        return [
+            (v["name"], v["identifier"], v["output_format"], v["languages"])
+            for v in self._voices
+        ]
 
     @dbus.service.signal("org.freedesktop.Speech.Provider")
     def VoicesChanged(self):
@@ -117,7 +128,12 @@ class SomeObject(dbus.service.Object):
     )
     def AddVoice(self, name, identifier, languages):
         self._voices.append(
-            {"name": name, "identifier": identifier, "languages": languages}
+            {
+                "name": name,
+                "identifier": identifier,
+                "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
+                "languages": languages,
+            }
         )
         GLib.idle_add(self.VoicesChanged)
 

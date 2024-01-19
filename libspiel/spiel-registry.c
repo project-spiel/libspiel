@@ -124,16 +124,17 @@ _add_provider_with_voices (SpielRegistry *self,
     {
       const char *name = NULL;
       const char *identifier = NULL;
+      const char *output_format = NULL;
       const char **languages = NULL;
 
-      g_variant_get_child (voices, i, "(&s&s^a&s)", &name, &identifier,
-                           &languages);
-      g_hash_table_insert (voices_hashset,
-                           g_object_new (SPIEL_TYPE_VOICE, "name", name,
-                                         "identifier", identifier, "languages",
-                                         languages, "provider-name",
-                                         provider_name, NULL),
-                           NULL);
+      g_variant_get_child (voices, i, "(&s&s&s^a&s)", &name, &identifier,
+                           &output_format, &languages);
+      g_hash_table_insert (
+          voices_hashset,
+          g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
+                        identifier, "languages", languages, "provider-name",
+                        provider_name, "output-format", output_format, NULL),
+          NULL);
 
       g_free (languages);
     }
