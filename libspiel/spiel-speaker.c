@@ -252,7 +252,8 @@ _spiel_speaker_do_speak (SpielSpeaker *self)
 
   spiel_provider_call_speak (entry->provider, entry->task_id, text,
                              voice ? spiel_voice_get_identifier (voice) : "",
-                             pitch, rate, volume, NULL, on_speak_called, self);
+                             pitch, rate, volume, G_DBUS_CALL_FLAGS_NONE, -1,
+                             NULL, on_speak_called, self);
 
   g_free (text);
   if (voice)
@@ -334,8 +335,9 @@ spiel_speaker_pause (SpielSpeaker *self)
       return;
     }
 
-  spiel_provider_call_pause (entry->provider, entry->task_id, NULL,
-                             on_pause_called, self);
+  spiel_provider_call_pause (entry->provider, entry->task_id,
+                             G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_pause_called,
+                             self);
 }
 
 static void
@@ -381,7 +383,8 @@ spiel_speaker_resume (SpielSpeaker *self)
       return;
     }
 
-  spiel_provider_call_resume (entry->provider, entry->task_id, NULL,
+  spiel_provider_call_resume (entry->provider, entry->task_id,
+                              G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                               on_resume_called, self);
 }
 
@@ -434,7 +437,8 @@ spiel_speaker_cancel (SpielSpeaker *self)
       return;
     }
 
-  spiel_provider_call_cancel (entry->provider, entry->task_id, NULL,
+  spiel_provider_call_cancel (entry->provider, entry->task_id,
+                              G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                               on_cancel_called, self);
 }
 

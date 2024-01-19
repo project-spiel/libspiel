@@ -264,8 +264,8 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
       return;
     }
 
-  spiel_provider_call_get_voices (provider, closure->cancellable,
-                                  _on_get_voices, task);
+  spiel_provider_call_get_voices (provider, G_DBUS_CALL_FLAGS_NONE, -1,
+                                  closure->cancellable, _on_get_voices, task);
 
   g_object_unref (provider);
 }
@@ -765,7 +765,8 @@ _add_provider (SpielRegistry *self, const char *service_name)
       g_error_free (err);
     }
 
-  spiel_provider_call_get_voices_sync (provider, &voices, NULL, &err);
+  spiel_provider_call_get_voices_sync (provider, G_DBUS_CALL_FLAGS_NONE, -1,
+                                       &voices, NULL, &err);
   if (err)
     {
       g_warning ("Error getting voices: %s\n", err->message);
@@ -922,8 +923,8 @@ handle_voices_changed (SpielProvider *provider, gpointer user_data)
 {
   SpielRegistry *self = user_data;
 
-  spiel_provider_call_get_voices (provider, NULL, _on_get_voices_maybe_changed,
-                                  self);
+  spiel_provider_call_get_voices (provider, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+                                  _on_get_voices_maybe_changed, self);
 
   return TRUE;
 }

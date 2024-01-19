@@ -4,7 +4,8 @@ spiel_iface_sources = gnome.gdbus_codegen(
     'spieldbusgenerated',
     join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
     interface_prefix: 'org.freedesktop.Speech.',
-    namespace: 'Spiel')
+    namespace: 'Spiel',
+    extra_args: '--glib-min-required=2.64')
 
 
 spiel_public_sources = [
