@@ -178,17 +178,17 @@ spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
   gint cmp = 0;
 
-    if ((cmp = g_strcmp0 (self_priv->provider_name, other_priv->provider_name)))
+  if ((cmp = g_strcmp0 (self_priv->provider_name, other_priv->provider_name)))
     {
       return cmp;
     }
 
-    if ((cmp = g_strcmp0 (self_priv->name, other_priv->name)))
+  if ((cmp = g_strcmp0 (self_priv->name, other_priv->name)))
     {
       return cmp;
     }
 
-    if ((cmp = g_strcmp0 (self_priv->identifier, other_priv->identifier)))
+  if ((cmp = g_strcmp0 (self_priv->identifier, other_priv->identifier)))
     {
       return cmp;
     }

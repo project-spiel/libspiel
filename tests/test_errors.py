@@ -42,5 +42,6 @@ class TestSpeak(BaseSpielTest):
         loop = GLib.MainLoop()
         loop.run()
 
+
 if __name__ == "__main__":
     test_main()

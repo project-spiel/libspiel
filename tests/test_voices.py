@@ -1,5 +1,6 @@
 from _common import *
 
+
 class TestVoices(BaseSpielTest):
     def test_get_async_voices(self):
         speechSynthesis = self.wait_for_async_speaker_init()
@@ -16,7 +17,7 @@ class TestVoices(BaseSpielTest):
             for v in voices
         ]
         _expected_voices = expected_voices[:]
-        _expected_voices.sort(key=lambda v: '-'.join(v[:3]))
+        _expected_voices.sort(key=lambda v: "-".join(v[:3]))
         self.assertEqual(
             voices_info,
             _expected_voices,

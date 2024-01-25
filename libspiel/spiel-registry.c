@@ -383,7 +383,8 @@ _maybe_running_providers_changed (GDBusConnection *connection,
 
       if (provider_removed)
         {
-          g_signal_emit (self, registry_signals[PROVIDER_DIED], 0, service_name);
+          g_signal_emit (self, registry_signals[PROVIDER_DIED], 0,
+                         service_name);
           if (priv->cancellable)
             {
               // If a provider was removed cancel any previous updates because
@@ -844,9 +845,9 @@ spiel_registry_class_init (SpielRegistryClass *klass)
       g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
                     0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
 
-  registry_signals[PROVIDER_DIED] =
-      g_signal_new ("provider-died", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
-                    0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
+  registry_signals[PROVIDER_DIED] = g_signal_new (
+      "provider-died", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
 static void

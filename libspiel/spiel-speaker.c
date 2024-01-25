@@ -480,7 +480,7 @@ _advance_queue (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  g_assert(entry);
+  g_assert (entry);
 
   if (!priv->queue->next)
     {
@@ -684,8 +684,8 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    */
   speaker_signals[UTTERANCE_ERROR] = g_signal_new (
-      "utterance-error", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
-      NULL, NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_ERROR);
+      "utterance-error", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_ERROR);
 }
 
 static void

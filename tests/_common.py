@@ -136,6 +136,7 @@ class BaseSpielTest(unittest.TestCase):
 
     def wait_for_voices_changed(self, speaker, added=[], removed=[]):
         voices = speaker.props.voices
+
         def _cb(*args):
             voice_ids = [v.props.identifier for v in voices]
             for a in added:
