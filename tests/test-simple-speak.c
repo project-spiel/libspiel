@@ -33,7 +33,7 @@ speaker_new_cb (GObject *source, GAsyncResult *result, gpointer user_data)
   g_assert (utterance != NULL);
 
   // prevents mock3 from being used
-  spiel_utterance_set_language (utterance, "en");
+  spiel_utterance_set_language (utterance, "hy");
 
   spiel_speaker_speak (speaker, utterance);
   g_object_unref (utterance);

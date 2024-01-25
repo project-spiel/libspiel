@@ -3,7 +3,8 @@
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GLib, Gst
+gi.require_version("SpielProvider", "0.1")
+from gi.repository import GLib, Gst, SpielProvider
 
 import dbus
 import dbus.service
@@ -55,7 +56,7 @@ VOICES = {
         },
         {
             "name": "English (America)",
-            "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
+            "output_format": "audio/x-spiel,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en-US",
             "languages": ["en-us", "en"],
         },
@@ -101,6 +102,46 @@ class RawSynthStream(object):
         src.set_state(Gst.State.NULL)
 
 
+class SpielSynthStream(object):
+    def __init__(self, fd, text, indefinite=False):
+        self.ranges = ranges = [
+            [m.start(), m.end()] for m in re.finditer(r".*?\b\W\s?", text, re.MULTILINE)
+        ]
+        num_buffers = -1
+        if not indefinite:
+            num_buffers = max(10, len(self.ranges) + 1)
+        elements = [
+            f"audiotestsrc num-buffers={num_buffers} name=src",
+            "audioconvert",
+            "audio/x-raw,format=S16LE,channels=1,rate=22050",
+            "appsink emit-signals=True name=sink",
+        ]
+        self._pipeline = Gst.parse_launch(" ! ".join(elements))
+        sink = self._pipeline.get_by_name("sink")
+        sink.connect("new-sample", self._on_new_sample)
+        sink.connect("eos", self._on_eos)
+
+        self.stream_writer = SpielProvider.StreamWriter.new(fd)
+
+    def _on_new_sample(self, sink):
+        sample = sink.emit("pull-sample")
+        buffer = sample.get_buffer()
+        b = buffer.extract_dup(0, buffer.get_size())
+        if self.ranges:
+            start, end = self.ranges.pop(0)
+            self.stream_writer.send_event(SpielProvider.EventType.WORD, start, end, "")
+        self.stream_writer.send_audio(b)
+
+        return Gst.FlowReturn.OK
+
+    def start(self):
+        self.stream_writer.send_stream_header()
+        self._pipeline.set_state(Gst.State.PLAYING)
+
+    def _on_eos(self, *args):
+        self.stream_writer.close()
+
+
 class SomeObject(dbus.service.Object):
     def __init__(self, *args):
         self._last_speak_args = [0, "", "", 0, 0, 0]
@@ -118,7 +159,13 @@ class SomeObject(dbus.service.Object):
     def Synthesize(self, fd, utterance, voice_id, pitch, rate):
         raw_fd = fd.take()
         self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate)
-        stream = RawSynthStream(raw_fd, utterance, self._infinite)
+        voice = dict([[v["identifier"], v] for v in self._voices])[voice_id]
+        output_format = voice["output_format"]
+        synthstream_cls = RawSynthStream
+        if output_format.startswith("audio/x-spiel"):
+            synthstream_cls = SpielSynthStream
+
+        stream = synthstream_cls(raw_fd, utterance, self._infinite)
         stream.start()
 
     @dbus.service.method(

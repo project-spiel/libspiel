@@ -48,6 +48,10 @@ class TestSpeak(BaseSpielTest):
 
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.volume = 1
+        utterance.props.voice = self.get_voice(
+            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+        )
+
         speechSynthesis.speak(utterance)
 
         loop.run()
@@ -67,6 +71,9 @@ class TestSpeak(BaseSpielTest):
 
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.volume = 0.5
+        utterance.props.voice = self.get_voice(
+            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+        )
         speechSynthesis.speak(utterance)
 
         loop.run()
