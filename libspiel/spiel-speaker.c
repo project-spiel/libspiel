@@ -20,6 +20,7 @@
 
 #include "spiel-speaker.h"
 
+#include "spiel-provider-src.h"
 #include "spiel-registry.h"
 #include "spiel-voice.h"
 #include "spieldbusgenerated.h"
@@ -594,6 +595,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   int fd;
   char *text = NULL;
   const char *output_format = NULL;
+  const char *stream_type = NULL;
   gdouble pitch, rate, volume;
   SpielVoice *voice = NULL;
   GstStructure *gst_struct;
@@ -634,9 +636,19 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   gst_struct = gst_structure_from_string (output_format, NULL);
 
-  if (!gst_struct ||
-      (!g_str_equal (gst_structure_get_name (gst_struct), "audio/x-raw") &&
-       !g_str_equal (gst_structure_get_name (gst_struct), "audio/x-spiel")))
+  stream_type = gst_struct ? gst_structure_get_name (gst_struct) : NULL;
+
+  if (g_str_equal (stream_type, "audio/x-raw"))
+    {
+      entry->src =
+          gst_element_factory_make_full ("fdsrc", "fd", mypipe[0], NULL);
+    }
+  else if (g_str_equal (stream_type, "audio/x-spiel"))
+    {
+      entry->src = GST_ELEMENT (spiel_provider_src_new (mypipe[0]));
+    }
+
+  if (!entry->src)
     {
       g_assert (!entry->error);
       g_set_error (&entry->error, SPIEL_ERROR, SPIEL_ERROR_MISCONFIGURED_VOICE,
@@ -648,8 +660,6 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
       gint sample_rate, channels;
       const char *pcm_format;
 
-      entry->src =
-          gst_element_factory_make_full ("fdsrc", "fd", mypipe[0], NULL);
       entry->volume =
           gst_element_factory_make_full ("volume", "volume", volume, NULL);
 
