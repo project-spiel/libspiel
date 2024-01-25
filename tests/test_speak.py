@@ -29,11 +29,11 @@ class TestSpeak(BaseSpielTest):
         expected_events = [
             "notify:speaking=True",
             "utterance-started",
-            # "range-started",
-            # "range-started",
-            # "range-started",
-            # "range-started",
-            # "range-started",
+            "range-started",
+            "range-started",
+            "range-started",
+            "range-started",
+            "range-started",
             "utterance-finished",
             "notify:speaking=False",
         ]
@@ -47,7 +47,12 @@ class TestSpeak(BaseSpielTest):
         speechSynthesis.connect("utterance-started", _started_cb)
         speechSynthesis.connect("range-started", _range_started_cb)
         speechSynthesis.connect("utterance-finished", _finished_cb)
+
         utterance = Spiel.Utterance(text="hello world, how are you?")
+        utterance.props.voice = self.get_voice(
+            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+        )
+
         speechSynthesis.speak(utterance)
 
         loop = GLib.MainLoop()
