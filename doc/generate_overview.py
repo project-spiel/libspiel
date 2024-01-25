@@ -1,7 +1,7 @@
 from sys import argv
 import re
 
-f = open(argv[-1], 'r').read()
+f = open(argv[-1], "r").read()
 
 regex = r"(## Overview.*\n)## Building.*"
 
