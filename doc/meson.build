@@ -45,20 +45,22 @@ overview_doc = custom_target(
     capture: true
 )
 
-custom_target('libspiel-doc',
-  input: [ source_toml, spiel_gir[0] ],
-  output: 'libspiel',
-  command: [
-    gidocgen,
-    'generate',
-    gidocgen_common_args,
-    '--config=@INPUT0@',
-    '--output-dir=@OUTPUT@',
-    '--content-dir=@0@'.format(meson.current_build_dir()),
-    '@INPUT1@',
-  ],
-  build_by_default: true,
-  depends: [ spiel_iface_docs, overview_doc, urlmap_doc, logo_file ]
-  # install: true,
-  # install_dir: docs_dir,
-)
+if get_option('libspiel')
+  custom_target('libspiel-doc',
+    input: [ source_toml, spiel_gir[0] ],
+    output: 'libspiel',
+    command: [
+      gidocgen,
+      'generate',
+      gidocgen_common_args,
+      '--config=@INPUT0@',
+      '--output-dir=@OUTPUT@',
+      '--content-dir=@0@'.format(meson.current_build_dir()),
+      '@INPUT1@',
+    ],
+    build_by_default: true,
+    depends: [ spiel_iface_docs, overview_doc, urlmap_doc, logo_file ]
+    # install: true,
+    # install_dir: docs_dir,
+  )
+endif

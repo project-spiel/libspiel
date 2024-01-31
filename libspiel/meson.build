@@ -17,6 +17,7 @@ spiel_public_sources = [
 spiel_sources = [
   spiel_public_sources,
   'spiel-registry.c',
+  'spiel-provider-src.c',
   spiel_iface_sources,
 ]
 
@@ -30,6 +31,7 @@ spiel_public_headers = [
 spiel_headers = [
   spiel_public_headers,
   'spiel-registry.h',
+  'spiel-provider-src.h',
 ]
 
 version_split = meson.project_version().split('.')
@@ -54,6 +56,9 @@ spiel_lib_generated_headers = [
 spiel_deps = [
   dependency('gio-2.0'),
   dependency('gio-unix-2.0'),
+  dependency('gstreamer-1.0'),
+  dependency('gstreamer-audio-1.0'),
+  spiel_provider_lib_dep
 ]
 
 spiel_lib = shared_library('spiel-' + api_version,

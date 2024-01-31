@@ -1,0 +1,78 @@
+
+#pragma once
+
+#if !defined(SPIEL_PROVIDER_INSIDE) && !defined(SPIEL_PROVIDER_COMPILATION)
+#error "Only <spiel-provider.h> can be included directly."
+#endif
+
+/**
+ * SECTION:spiel-providerversion
+ * @short_description: spiel-provider version checking
+ *
+ * spiel-provider provides macros to check the version of the library
+ * at compile-time
+ */
+
+/**
+ * SPIEL_PROVIDER_MAJOR_VERSION:
+ *
+ * spiel-provider major version component (e.g. 1 if %SPIEL_PROVIDER_VERSION is 1.2.3)
+ */
+#define SPIEL_PROVIDER_MAJOR_VERSION (@MAJOR_VERSION @)
+
+/**
+ * SPIEL_PROVIDER_MINOR_VERSION:
+ *
+ * spiel-provider minor version component (e.g. 2 if %SPIEL_PROVIDER_VERSION is 1.2.3)
+ */
+#define SPIEL_PROVIDER_MINOR_VERSION (@MINOR_VERSION @)
+
+/**
+ * SPIEL_PROVIDER_MICRO_VERSION:
+ *
+ * spiel-provider micro version component (e.g. 3 if %SPIEL_PROVIDER_VERSION is 1.2.3)
+ */
+#define SPIEL_PROVIDER_MICRO_VERSION (@MICRO_VERSION @)
+
+/**
+ * SPIEL_PROVIDER_VERSION
+ *
+ * spiel-provider version.
+ */
+#define SPIEL_PROVIDER_VERSION (@VERSION @)
+
+/**
+ * SPIEL_PROVIDER_VERSION_S:
+ *
+ * spiel-provider version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define SPIEL_PROVIDER_VERSION_S "@VERSION@"
+
+#define SPIEL_PROVIDER_ENCODE_VERSION(major, minor, micro)                              \
+  ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * SPIEL_PROVIDER_VERSION_HEX:
+ *
+ * spiel-provider version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define SPIEL_PROVIDER_VERSION_HEX                                                      \
+  (SPIEL_PROVIDER_ENCODE_VERSION (SPIEL_PROVIDER_MAJOR_VERSION, SPIEL_PROVIDER_MINOR_VERSION,             \
+                         SPIEL_PROVIDER_MICRO_VERSION))
+
+/**
+ * SPIEL_PROVIDER_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of spiel-provider is greater than the required one.
+ */
+#define SPIEL_PROVIDER_CHECK_VERSION(major, minor, micro)                               \
+  (SPIEL_PROVIDER_MAJOR_VERSION > (major) ||                                            \
+   (SPIEL_PROVIDER_MAJOR_VERSION == (major) && SPIEL_PROVIDER_MINOR_VERSION > (minor)) ||        \
+   (SPIEL_PROVIDER_MAJOR_VERSION == (major) && SPIEL_PROVIDER_MINOR_VERSION == (minor) &&        \
+    SPIEL_PROVIDER_MICRO_VERSION >= (micro)))

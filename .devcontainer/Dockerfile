@@ -15,6 +15,8 @@ RUN apt-get update \
     python3-dbus \
     python3-tap \
     python3-gi \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
     && apt-get clean -y \
     && apt-get autoremove -y \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \

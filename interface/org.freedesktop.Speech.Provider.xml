@@ -13,60 +13,25 @@
   -->
   <interface name="org.freedesktop.Speech.Provider">
   <!--
-    Speak:
-    @task_id: A unique identifier that will be assigned to this `Speak` call.
+    Synthesize:
+    @pipe_fd: File descriptor of pipe to write to.
     @text: The text to be spoken.
     @voice_id: The voice identifier for the voice that should be spoken.
     @pitch: The voice pitch in which the text should be spoken.
     @rate: The rate in which the text should be spoken.
-    @volume: The volume at which the text should be spoken.
 
-    This is the basic speech method.
-    When called, the speech provider will send the synthesized output to the default audio device.
+    This is the basic synthesis method.
+    When called, the speech provider will send the synthesized output to the given file descriptor.
+    Depending on the voice's advertised format it will be raw audio or composite audio and events.
 
-    The `task_id` argument allows this task to be identified subsequent signals or method calls such as
-    `Pause()`.
-
-    If `Speak()` is called while a previous `Speak()` task is being processed, the provider
-    **should** output both synthesis streams concurrently.
+    Providers should be capable of synthesizing more than one request concurrently.
   -->
-    <method name="Speak">
-      <arg direction="in"  type="t" name="task_id" />
+    <method name="Synthesize">
+      <arg direction="in"  type="h" name="pipe_fd" />
       <arg direction="in"  type="s" name="text" />
       <arg direction="in"  type="s" name="voice_id" />
       <arg direction="in"  type="d" name="pitch" />
       <arg direction="in"  type="d" name="rate" />
-      <arg direction="in"  type="d" name="volume" />
-    </method>
-
-  <!--
-    Pause:
-    @task_id: A task identifier.
-
-    Pause the speech of the given identifier.
-  -->
-    <method name="Pause">
-      <arg direction="in"  type="t" name="task_id" />
-    </method>
-
-  <!--
-    Resume:
-    @task_id: A task identifier.
-
-    Resume the speech of the given identifier.
-  -->
-    <method name="Resume">
-      <arg direction="in"  type="t" name="task_id" />
-    </method>
-
-  <!--
-    Cancel:
-    @task_id: A task identifier.
-
-    Cancel the speech of the given identifier.
-  -->
-    <method name="Cancel">
-      <arg direction="in"  type="t" name="task_id" />
     </method>
 
   <!--
@@ -81,47 +46,13 @@
     <ul>
       <li>A human readable name</li>
       <li>A unique identifier</li>
+      <li>Synthesis output format</li>
       <li>A list of languages the voice support represented as BCP 47 tags</li>
     </ul>
   -->
     <method name="GetVoices">
-      <arg name="voices" direction="out" type="a(ssas)" />
+      <arg name="voices" direction="out" type="a(sssas)" />
     </method>
-
-  <!--
-    SpeechStart:
-    @task_id: A task identifier.
-
-    Emitted when a speech task has started outputting audio.
-  -->
-    <signal name="SpeechStart">
-      <arg type="t" name="task_id" />
-    </signal>
-
-  <!--
-    SpeechRangeStart:
-    @task_id: A task identifier.
-    @start: Start offset of the spoken range.
-    @end: End offset of the spoken range.
-
-    Emitted when a speech task has is about to start speaking a certain range.
-    Usually this range is a single word.
-  -->
-    <signal name="SpeechRangeStart">
-      <arg type="t" name="task_id" />
-      <arg type="t" name="start" />
-      <arg type="t" name="end" />
-    </signal>
-
-  <!--
-    SpeechStart:
-    @task_id: A task identifier.
-
-    Emitted when a speech task has completed.
-  -->
-    <signal name="SpeechEnd">
-      <arg type="t" name="task_id" />
-    </signal>
 
   <!--
     VoicesChanged:

@@ -21,6 +21,7 @@
 #include "spiel-registry.h"
 
 #include <gio/gio.h>
+#include <gst/gst.h>
 
 #define PROVIDER_SUFFIX ".Speech.Provider"
 #define GSETTINGS_SCHEMA "org.monotonous.libspiel"
@@ -57,9 +58,6 @@ static SpielRegistry *sRegistry = NULL;
 
 enum
 {
-  STARTED,
-  RANGE_STARTED,
-  FINISHED,
   PROVIDER_DIED,
   LAST_SIGNAL
 };
@@ -89,20 +87,6 @@ _update_providers_closure_destroy (gpointer data)
 
   g_slice_free (_UpdateProvidersClosure, closure);
 }
-
-static gboolean handle_speech_start (SpielProvider *provider,
-                                     guint64 task_id,
-                                     gpointer user_data);
-
-static gboolean handle_speech_range (SpielProvider *provider,
-                                     guint64 task_id,
-                                     guint64 start,
-                                     guint64 end,
-                                     gpointer user_data);
-
-static gboolean handle_speech_end (SpielProvider *provider,
-                                   guint64 task_id,
-                                   gpointer user_data);
 
 static gboolean handle_voices_changed (SpielProvider *provider,
                                        gpointer user_data);
@@ -141,16 +125,17 @@ _add_provider_with_voices (SpielRegistry *self,
     {
       const char *name = NULL;
       const char *identifier = NULL;
+      const char *output_format = NULL;
       const char **languages = NULL;
 
-      g_variant_get_child (voices, i, "(&s&s^a&s)", &name, &identifier,
-                           &languages);
-      g_hash_table_insert (voices_hashset,
-                           g_object_new (SPIEL_TYPE_VOICE, "name", name,
-                                         "identifier", identifier, "languages",
-                                         languages, "provider-name",
-                                         provider_name, NULL),
-                           NULL);
+      g_variant_get_child (voices, i, "(&s&s&s^a&s)", &name, &identifier,
+                           &output_format, &languages);
+      g_hash_table_insert (
+          voices_hashset,
+          g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
+                        identifier, "languages", languages, "provider-name",
+                        provider_name, "output-format", output_format, NULL),
+          NULL);
 
       g_free (languages);
     }
@@ -199,13 +184,8 @@ _add_provider_with_voices (SpielRegistry *self,
     }
   else
     {
-      g_object_connect (
-          provider, "object_signal::speech-start",
-          G_CALLBACK (handle_speech_start), self,
-          "object_signal::speech-range-start", G_CALLBACK (handle_speech_range),
-          self, "object_signal::speech-end", G_CALLBACK (handle_speech_end),
-          self, "object_signal::voices-changed",
-          G_CALLBACK (handle_voices_changed), self, NULL);
+      g_object_connect (provider, "object_signal::voices-changed",
+                        G_CALLBACK (handle_voices_changed), self, NULL);
       g_hash_table_insert (priv->providers, provider_name, provider_entry);
     }
 
@@ -625,6 +605,7 @@ spiel_registry_get_finish (GAsyncResult *result, GError **error)
     {
       if (sRegistry == NULL)
         {
+          gst_init_check (NULL, NULL, error);
           sRegistry = SPIEL_REGISTRY (object);
         }
       g_assert (sRegistry == SPIEL_REGISTRY (object));
@@ -641,6 +622,7 @@ spiel_registry_get_sync (GCancellable *cancellable, GError **error)
 {
   if (sRegistry == NULL)
     {
+      gst_init_check (NULL, NULL, error);
       sRegistry =
           g_initable_new (SPIEL_TYPE_REGISTRY, cancellable, error, NULL);
     }
@@ -834,18 +816,6 @@ spiel_registry_class_init (SpielRegistryClass *klass)
 
   object_class->finalize = spiel_registry_finalize;
 
-  registry_signals[STARTED] =
-      g_signal_new ("started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
-                    NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
-
-  registry_signals[RANGE_STARTED] = g_signal_new (
-      "range-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
-      NULL, NULL, G_TYPE_NONE, 3, G_TYPE_UINT64, G_TYPE_UINT64, G_TYPE_UINT64);
-
-  registry_signals[FINISHED] =
-      g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
-                    0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_UINT64);
-
   registry_signals[PROVIDER_DIED] = g_signal_new (
       "provider-died", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
@@ -865,36 +835,6 @@ initable_iface_init (GInitableIface *initable_iface)
 }
 
 /* Signal handlers */
-
-static gboolean
-handle_speech_start (SpielProvider *provider,
-                     guint64 task_id,
-                     gpointer user_data)
-{
-  SpielRegistry *self = user_data;
-  g_signal_emit (self, registry_signals[STARTED], 0, task_id);
-  return TRUE;
-}
-
-static gboolean
-handle_speech_range (SpielProvider *provider,
-                     guint64 task_id,
-                     guint64 start,
-                     guint64 end,
-                     gpointer user_data)
-{
-  SpielRegistry *self = user_data;
-  g_signal_emit (self, registry_signals[RANGE_STARTED], 0, task_id, start, end);
-  return TRUE;
-}
-
-static gboolean
-handle_speech_end (SpielProvider *provider, guint64 task_id, gpointer user_data)
-{
-  SpielRegistry *self = user_data;
-  g_signal_emit (self, registry_signals[FINISHED], 0, task_id);
-  return TRUE;
-}
 
 static void
 _on_get_voices_maybe_changed (GObject *source,
