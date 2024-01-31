@@ -230,6 +230,7 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
 
   success =
       spiel_provider_stream_reader_get_audio (src->reader, &chunk, &chunk_size);
+  g_printerr ("recv %d\n", chunk_size);
 
   if (!success)
     {

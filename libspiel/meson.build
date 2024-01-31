@@ -17,6 +17,7 @@ spiel_public_sources = [
 spiel_sources = [
   spiel_public_sources,
   'spiel-registry.c',
+  'spiel-collect-providers.c',
   'spiel-provider-src.c',
   spiel_iface_sources,
 ]
@@ -31,6 +32,7 @@ spiel_public_headers = [
 spiel_headers = [
   spiel_public_headers,
   'spiel-registry.h',
+  'spiel-collect-providers.h',
   'spiel-provider-src.h',
 ]
 

@@ -153,7 +153,7 @@ spiel_voice_hash (SpielVoice *self)
 
   for (char **language = priv->languages; *language; language++)
     {
-      hash = (hash << 5) - hash + g_str_hash (language);
+      hash = (hash << 5) - hash + g_str_hash (*language);
     }
 
   return hash;

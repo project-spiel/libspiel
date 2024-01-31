@@ -148,7 +148,7 @@ _queue_entry_destroy (gpointer data)
       if (entry->deferred_messages)
         {
           g_slist_free_full (g_steal_pointer (&entry->deferred_messages),
-                             (GDestroyNotify)gst_message_unref);
+                             (GDestroyNotify) gst_message_unref);
         }
     }
 
@@ -466,8 +466,8 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
   gst_bus_add_signal_watch (bus);
   g_object_connect (bus, "signal::message::eos", _handle_gst_eos, self,
                     "signal::message::state-changed", _handle_gst_state_change,
-                    self, "signal::message::element", _handle_gst_element_message,
-                    self, NULL);
+                    self, "signal::message::element",
+                    _handle_gst_element_message, self, NULL);
 
   priv->convert = g_object_ref (convert);
   priv->sink = g_object_ref (sink);
@@ -838,9 +838,9 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
           if (entry->deferred_messages)
             {
               g_slist_foreach (entry->deferred_messages,
-                               (GFunc)_process_going_to_speak_message, self);
+                               (GFunc) _process_going_to_speak_message, self);
               g_slist_free_full (g_steal_pointer (&entry->deferred_messages),
-                                 (GDestroyNotify)gst_message_unref);
+                                 (GDestroyNotify) gst_message_unref);
             }
         }
       else
@@ -878,25 +878,29 @@ _handle_gst_eos (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
 }
 
 static void
-_process_going_to_speak_message(GstMessage *msg, SpielSpeaker *self) {
+_process_going_to_speak_message (GstMessage *msg, SpielSpeaker *self)
+{
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  const GstStructure* strct = gst_message_get_structure(msg);
+  const GstStructure *strct = gst_message_get_structure (msg);
   guint event_type = SPIEL_PROVIDER_EVENT_TYPE_NONE;
   guint32 range_start = 0;
   guint32 range_end = 0;
 
-  if (!gst_structure_get_uint(strct, "event_type", &event_type)) {
-    g_warning("No 'event_type' in message structure");
-  }
+  if (!gst_structure_get_uint (strct, "event_type", &event_type))
+    {
+      g_warning ("No 'event_type' in message structure");
+    }
 
-  if (!gst_structure_get_uint(strct, "range_start", &range_start)) {
-    g_warning("No 'range_start' in message structure");
-  }
+  if (!gst_structure_get_uint (strct, "range_start", &range_start))
+    {
+      g_warning ("No 'range_start' in message structure");
+    }
 
-  if (!gst_structure_get_uint(strct, "range_end", &range_end)) {
-    g_warning("No 'range_end' in message structure");
-  }
+  if (!gst_structure_get_uint (strct, "range_end", &range_end))
+    {
+      g_warning ("No 'range_end' in message structure");
+    }
 
   g_signal_emit (self, speaker_signals[RANGE_STARTED], 0, entry->utterance,
                  range_start, range_end);

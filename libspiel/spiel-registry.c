@@ -18,12 +18,12 @@
 
 #include "spiel.h"
 
+#include "spiel-collect-providers.h"
 #include "spiel-registry.h"
 
 #include <gio/gio.h>
 #include <gst/gst.h>
 
-#define PROVIDER_SUFFIX ".Speech.Provider"
 #define GSETTINGS_SCHEMA "org.monotonous.libspiel"
 
 struct _SpielRegistry
@@ -38,7 +38,6 @@ typedef struct
   GHashTable *providers;
   GListStore *voices;
   GSettings *settings;
-  GCancellable *cancellable;
 } SpielRegistryPrivate;
 
 static void initable_iface_init (GInitableIface *initable_iface);
@@ -66,27 +65,10 @@ static guint registry_signals[LAST_SIGNAL] = { 0 };
 
 typedef struct
 {
-  GCancellable *cancellable;
-  GSList *provider_names;
-  guint removed_count;
-  guint added_count;
-} _UpdateProvidersClosure;
-
-typedef struct
-{
   SpielProvider *provider;
   GHashTable *voices_hashset;
+  gboolean is_activatable;
 } _ProviderEntry;
-
-static void
-_update_providers_closure_destroy (gpointer data)
-{
-  _UpdateProvidersClosure *closure = data;
-  g_clear_object (&closure->cancellable);
-  g_slist_free_full (closure->provider_names, g_free);
-
-  g_slice_free (_UpdateProvidersClosure, closure);
-}
 
 static gboolean handle_voices_changed (SpielProvider *provider,
                                        gpointer user_data);
@@ -102,227 +84,178 @@ _provider_entry_destroy (gpointer data)
   g_slice_free (_ProviderEntry, entry);
 }
 
-static void _update_next_provider (GTask *task);
-
-static gboolean
-_add_provider_with_voices (SpielRegistry *self,
-                           SpielProvider *provider,
-                           GVariant *voices)
+static void
+_update_voices (SpielRegistry *self,
+                GSList *new_voices,
+                GHashTable *voices_hashset)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  char *provider_name = NULL;
-  gsize voices_count = 0;
-  gboolean new_provider = FALSE;
-  SpielVoice **new_voices = NULL;
-  _ProviderEntry *provider_entry = NULL; // g_slice_new0 (_ProviderEntry);
-  GHashTable *voices_hashset = g_hash_table_new_full (
-      (GHashFunc) spiel_voice_hash, (GCompareFunc) spiel_voice_equal,
-      g_object_unref, NULL);
+  GHashTable *new_voices_hashset = NULL;
 
-  g_object_get (provider, "g-name", &provider_name, NULL);
-  voices_count = g_variant_n_children (voices);
-  for (gsize i = 0; i < voices_count; i++)
+  if (g_hash_table_size (voices_hashset) > 0)
     {
-      const char *name = NULL;
-      const char *identifier = NULL;
-      const char *output_format = NULL;
-      const char **languages = NULL;
-
-      g_variant_get_child (voices, i, "(&s&s&s^a&s)", &name, &identifier,
-                           &output_format, &languages);
-      g_hash_table_insert (
-          voices_hashset,
-          g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
-                        identifier, "languages", languages, "provider-name",
-                        provider_name, "output-format", output_format, NULL),
-          NULL);
-
-      g_free (languages);
+      // We are adding voices to an already populated provider, store
+      // new voices in a hashset for easy purge of ones that were removed.
+      new_voices_hashset = g_hash_table_new ((GHashFunc) spiel_voice_hash,
+                                             (GCompareFunc) spiel_voice_equal);
     }
 
-  provider_entry = g_hash_table_lookup (priv->providers, provider_name);
-  if (provider_entry == NULL)
+  if (new_voices)
     {
-      new_provider = TRUE;
-      provider_entry = g_slice_new0 (_ProviderEntry);
-      provider_entry->provider = g_object_ref (provider);
-    }
-
-  new_voices =
-      (SpielVoice **) g_hash_table_get_keys_as_array (voices_hashset, NULL);
-
-  for (SpielVoice **new_voice = new_voices; *new_voice; new_voice++)
-    {
-      if (new_provider ||
-          !g_hash_table_contains (provider_entry->voices_hashset, *new_voice))
+      for (GSList *item = new_voices; item; item = item->next)
         {
-          g_list_store_insert_sorted (priv->voices, g_object_ref (*new_voice),
-                                      (GCompareDataFunc) spiel_voice_compare,
-                                      NULL);
+          SpielVoice *voice = item->data;
+          if (!g_hash_table_contains (voices_hashset, voice))
+            {
+              g_hash_table_insert (voices_hashset, g_object_ref (voice), NULL);
+              g_list_store_insert_sorted (
+                  priv->voices, g_object_ref (voice),
+                  (GCompareDataFunc) spiel_voice_compare, NULL);
+            }
+          if (new_voices_hashset)
+            {
+              g_hash_table_insert (new_voices_hashset, voice, NULL);
+            }
         }
     }
 
-  g_free (new_voices);
-
-  if (!new_provider)
+  if (new_voices_hashset)
     {
-      SpielVoice **old_voices = (SpielVoice **) g_hash_table_get_keys_as_array (
-          provider_entry->voices_hashset, NULL);
-      for (SpielVoice **old_voice = old_voices; *old_voice; old_voice++)
+      GHashTableIter voices_iter;
+      SpielVoice *old_voice;
+      g_hash_table_iter_init (&voices_iter, voices_hashset);
+      while (
+          g_hash_table_iter_next (&voices_iter, (gpointer *) &old_voice, NULL))
         {
-          if (!g_hash_table_contains (voices_hashset, *old_voice))
+          if (!g_hash_table_contains (new_voices_hashset, old_voice))
             {
               guint position = 0;
-              if (g_list_store_find (priv->voices, *old_voice, &position))
+              if (g_list_store_find (priv->voices, old_voice, &position))
                 {
                   g_list_store_remove (priv->voices, position);
                 }
+              g_hash_table_iter_remove (&voices_iter);
             }
         }
-      g_free (old_voices);
-      g_hash_table_unref (provider_entry->voices_hashset);
+      g_hash_table_unref (new_voices_hashset);
     }
-  else
-    {
-      g_object_connect (provider, "object_signal::voices-changed",
-                        G_CALLBACK (handle_voices_changed), self, NULL);
-      g_hash_table_insert (priv->providers, provider_name, provider_entry);
-    }
-
-  provider_entry->voices_hashset = voices_hashset;
-
-  return new_provider;
 }
 
 static void
-_on_get_voices (GObject *source, GAsyncResult *result, gpointer user_data)
+_insert_providers_and_voices (const char *provider_name,
+                              ProviderAndVoices *provider_and_voices,
+                              SpielRegistry *self)
 {
-  GTask *task = user_data;
-  _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielRegistry *self = g_task_get_source_object (task);
-  GSList *next_provider = closure->provider_names;
-  SpielProvider *provider = SPIEL_PROVIDER (source);
-  GVariant *voices = NULL;
-  GError *error = NULL;
-
-  g_assert (next_provider != NULL);
-  spiel_provider_call_get_voices_finish (provider, &voices, result, &error);
-
-  if (error != NULL)
-    {
-      g_task_return_error (task, error);
-      g_object_unref (task);
-      return;
-    }
-
-  if (_add_provider_with_voices (self, g_object_ref (provider), voices))
-    {
-      closure->added_count++;
-    }
-
-  closure->provider_names =
-      g_slist_remove_link (closure->provider_names, next_provider);
-  g_slist_free_full (next_provider, g_free);
-  _update_next_provider (task);
-}
-
-static void
-_on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
-{
-  GTask *task = user_data;
-  _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielProvider *provider = NULL;
-  GSList *next_provider = closure->provider_names;
-  GError *error = NULL;
-  g_assert (next_provider != NULL);
-
-  provider = spiel_provider_proxy_new_for_bus_finish (result, &error);
-  if (error != NULL)
-    {
-      g_task_return_error (task, error);
-      g_object_unref (task);
-      return;
-    }
-
-  spiel_provider_call_get_voices (provider, G_DBUS_CALL_FLAGS_NONE, -1,
-                                  closure->cancellable, _on_get_voices, task);
-
-  g_object_unref (provider);
-}
-
-static void
-_update_next_provider (GTask *task)
-{
-  _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielRegistry *self = g_task_get_source_object (task);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  GSList *next_provider = closure->provider_names;
-  char *service_name = NULL;
-  char **split_name = NULL;
-  char *partial_path = NULL;
-  char *obj_path = NULL;
+  _ProviderEntry *provider_entry =
+      g_hash_table_lookup (priv->providers, provider_name);
 
-  if (next_provider == NULL)
+  if (!provider_entry)
     {
-      g_task_return_boolean (task, closure->removed_count > 0 ||
-                                       closure->added_count > 0);
-      g_object_unref (task);
-      return;
+      provider_entry = g_slice_new0 (_ProviderEntry);
+      provider_entry->provider = g_object_ref (provider_and_voices->provider);
+      provider_entry->voices_hashset = g_hash_table_new_full (
+          (GHashFunc) spiel_voice_hash, (GCompareFunc) spiel_voice_equal,
+          g_object_unref, NULL);
+      g_hash_table_insert (priv->providers, g_strdup (provider_name),
+                           provider_entry);
+
+      g_object_connect (provider_entry->provider,
+                        "object_signal::voices-changed",
+                        G_CALLBACK (handle_voices_changed), self, NULL);
     }
 
-  service_name = (char *) next_provider->data;
-  if (g_hash_table_contains (priv->providers, service_name))
-    {
-      closure->provider_names =
-          g_slist_remove_link (closure->provider_names, next_provider);
-      g_slist_free_full (next_provider, g_free);
-      _update_next_provider (task);
-      return;
-    }
+  provider_entry->is_activatable = provider_and_voices->is_activatable;
 
-  split_name = g_strsplit (service_name, ".", 0);
-  partial_path = g_strjoinv ("/", split_name);
-  obj_path = g_strdup_printf ("/%s", partial_path);
-  g_strfreev (split_name);
-  g_free (partial_path);
-
-  spiel_provider_proxy_new_for_bus (
-      G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION,
-      service_name, obj_path, closure->cancellable, _on_provider_created, task);
-
-  g_free (obj_path);
+  _update_voices (self, provider_and_voices->voices,
+                  provider_entry->voices_hashset);
 }
 
-static gboolean
-update_providers_finished (GObject *source, GAsyncResult *res, GError **error);
-
-static void update_providers (SpielRegistry *self,
-                              GCancellable *cancellable,
-                              GAsyncReadyCallback callback,
-                              gpointer user_data);
-
 static void
-_on_providers_updated (GObject *source, GAsyncResult *res, gpointer user_data)
+_on_providers_and_voices_updated (GObject *source,
+                                  GAsyncResult *res,
+                                  SpielRegistry *self)
 {
   GError *err = NULL;
-  update_providers_finished (source, res, &err);
+  GHashTable *providers_and_voices = spiel_collect_providers_finish (res, &err);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  GHashTableIter current_providers_iter;
+  const char *provider_name;
+  _ProviderEntry *provider_entry;
+
   if (err != NULL)
     {
-      if (!g_error_matches (err, G_IO_ERROR, G_IO_ERROR_CANCELLED))
-        {
-          g_warning ("Error updating providers: %s\n", err->message);
-        }
+      g_warning ("Error updating providers: %s\n", err->message);
       g_error_free (err);
+      return;
     }
+
+  g_hash_table_foreach (providers_and_voices,
+                        (GHFunc) _insert_providers_and_voices, self);
+
+  g_hash_table_iter_init (&current_providers_iter, priv->providers);
+  while (g_hash_table_iter_next (&current_providers_iter,
+                                 (gpointer *) &provider_name,
+                                 (gpointer *) &provider_entry))
+    {
+      if (!g_hash_table_contains (providers_and_voices, provider_name))
+        {
+          _update_voices (self, NULL, provider_entry->voices_hashset);
+          g_hash_table_iter_remove (&current_providers_iter);
+        }
+    }
+
+  g_hash_table_unref (providers_and_voices);
 }
 
-static gboolean
-_voice_has_no_provider (SpielVoice *voice,
-                        gconstpointer unused,
-                        GHashTable *providers)
+static void
+_on_new_provider_collected (GObject *source,
+                            GAsyncResult *res,
+                            SpielRegistry *self)
 {
-  return !g_hash_table_contains (providers,
-                                 spiel_voice_get_provider_name (voice));
+  GError *err = NULL;
+  ProviderAndVoices *provider_and_voices =
+      spiel_collect_provider_finish (res, &err);
+  const char *provider_name;
+
+  if (err != NULL)
+    {
+      g_warning ("Error collecting provider: %s\n", err->message);
+      g_error_free (err);
+      return;
+    }
+
+  provider_name =
+      g_dbus_proxy_get_name (G_DBUS_PROXY (provider_and_voices->provider));
+  _insert_providers_and_voices (provider_name, provider_and_voices, self);
+
+  spiel_collect_free_provider_and_voices (provider_and_voices);
+}
+
+static void
+_on_got_changed_voices (GObject *source, GAsyncResult *res, SpielRegistry *self)
+{
+  SpielProvider *provider = SPIEL_PROVIDER (source);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  GError *err = NULL;
+  const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
+  _ProviderEntry *provider_entry =
+      g_hash_table_lookup (priv->providers, provider_name);
+  GSList *changed_voices = spiel_collect_provider_voices_finish (res, &err);
+
+  g_assert (provider_entry);
+
+  if (err != NULL)
+    {
+      g_warning ("Error getting changed voices for %s: %s\n", provider_name,
+                 err->message);
+      g_error_free (err);
+      return;
+    }
+
+  _update_voices (self, changed_voices, provider_entry->voices_hashset);
+
+  g_slist_free_full (changed_voices, (GDestroyNotify) g_object_unref);
 }
 
 static void
@@ -335,11 +268,11 @@ _maybe_activatable_providers_changed (GDBusConnection *connection,
                                       gpointer user_data)
 {
   SpielRegistry *self = user_data;
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
-  g_clear_object (&priv->cancellable);
-  priv->cancellable = g_cancellable_new ();
-  update_providers (self, priv->cancellable, _on_providers_updated, NULL);
+  // No arguments given, so update the whole providers cache.
+  spiel_collect_providers (
+      connection, NULL, (GAsyncReadyCallback) _on_providers_and_voices_updated,
+      self);
 }
 
 static void
@@ -363,186 +296,65 @@ _maybe_running_providers_changed (GDBusConnection *connection,
 
       if (provider_removed)
         {
+          _ProviderEntry *entry =
+              g_hash_table_lookup (priv->providers, service_name);
+
+          if (entry && !entry->is_activatable)
+            {
+              _update_voices (self, NULL, entry->voices_hashset);
+              g_hash_table_remove (priv->providers, service_name);
+            }
+
           g_signal_emit (self, registry_signals[PROVIDER_DIED], 0,
                          service_name);
-          if (priv->cancellable)
-            {
-              // If a provider was removed cancel any previous updates because
-              // they will fail.
-              g_cancellable_cancel (priv->cancellable);
-            }
         }
-
-      g_clear_object (&priv->cancellable);
-      priv->cancellable = g_cancellable_new ();
-
-      if (provider_removed ||
-          !g_hash_table_contains (priv->providers, service_name))
+      else if (!g_hash_table_contains (priv->providers, service_name))
         {
-          // A provider was removed or one was added that we don't yet know of.
-          update_providers (self, priv->cancellable, _on_providers_updated,
-                            NULL);
+          spiel_collect_provider (
+              connection, NULL, service_name,
+              (GAsyncReadyCallback) _on_new_provider_collected, self);
         }
     }
 }
 
 static void
-_subscribe_to_activatable_services_changed (SpielRegistry *self,
-                                            GDBusConnection *connection)
+_subscribe_to_activatable_services_changed (SpielRegistry *self)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  priv->connection = g_object_ref (connection);
   priv->subscription_ids[0] = g_dbus_connection_signal_subscribe (
-      connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
+      priv->connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
       "ActivatableServicesChanged", "/org/freedesktop/DBus", NULL,
       G_DBUS_SIGNAL_FLAGS_NONE, _maybe_activatable_providers_changed, self,
       NULL);
 
   priv->subscription_ids[1] = g_dbus_connection_signal_subscribe (
-      connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
+      priv->connection, "org.freedesktop.DBus", "org.freedesktop.DBus",
       "NameOwnerChanged", "/org/freedesktop/DBus", NULL,
       G_DBUS_SIGNAL_FLAGS_NONE, _maybe_running_providers_changed,
       g_object_ref (self), g_object_unref);
 }
 
-static gboolean
-_collect_provider_names (GObject *source,
-                         GAsyncResult *result,
-                         gpointer user_data)
-{
-  GTask *task = user_data;
-  _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  GError *error = NULL;
-  GDBusConnection *bus = G_DBUS_CONNECTION (source);
-  GVariant *real_ret = NULL;
-  GVariantIter iter;
-  GVariant *service = NULL;
-  GVariant *ret = g_dbus_connection_call_finish (bus, result, &error);
-  if (error != NULL)
-    {
-      g_task_return_error (task, error);
-      g_object_unref (task);
-      return FALSE;
-    }
-
-  real_ret = g_variant_get_child_value (ret, 0);
-  g_variant_unref (ret);
-
-  g_variant_iter_init (&iter, real_ret);
-  while ((service = g_variant_iter_next_value (&iter)))
-    {
-      const char *service_name = g_variant_get_string (service, NULL);
-      if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX))
-        {
-          continue;
-        }
-      closure->provider_names =
-          g_slist_prepend (closure->provider_names, g_strdup (service_name));
-      g_variant_unref (service);
-    }
-  g_variant_unref (real_ret);
-
-  return TRUE;
-}
-
-static gboolean
-_purge_providers (gpointer key, gpointer value, gpointer user_data)
-{
-  const char *provider_name = key;
-  GSList *provider_names = user_data;
-
-  return g_slist_find_custom (provider_names, provider_name,
-                              (GCompareFunc) g_strcmp0) == NULL;
-}
-
 static void
-_update_providers_on_list_names (GObject *source,
-                                 GAsyncResult *result,
-                                 gpointer user_data)
-{
-  GTask *task = user_data;
-  _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielRegistry *self = g_task_get_source_object (task);
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  guint position = 0;
-
-  if (!_collect_provider_names (source, result, user_data))
-    {
-      return;
-    }
-  closure->removed_count = g_hash_table_foreach_remove (
-      priv->providers, _purge_providers, closure->provider_names);
-
-  while (g_list_store_find_with_equal_func_full (
-      priv->voices, NULL, (GEqualFuncFull) _voice_has_no_provider,
-      priv->providers, &position))
-    {
-      g_list_store_remove (priv->voices, position);
-    }
-
-  _update_next_provider (task);
-}
-
-static void
-_update_providers_on_list_activatable_names (GObject *source,
-                                             GAsyncResult *result,
-                                             gpointer user_data)
-{
-  GTask *task = user_data;
-  _UpdateProvidersClosure *closure = g_task_get_task_data (task);
-  SpielRegistry *self = g_task_get_source_object (task);
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-
-  if (!_collect_provider_names (source, result, user_data))
-    {
-      return;
-    }
-
-  g_dbus_connection_call (
-      priv->connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
-      "org.freedesktop.DBus", "ListNames", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
-      -1, closure->cancellable, _update_providers_on_list_names, task);
-}
-
-static void
-update_providers (SpielRegistry *self,
-                  GCancellable *cancellable,
-                  GAsyncReadyCallback callback,
-                  gpointer user_data)
-{
-  GTask *task = g_task_new (self, cancellable, callback, user_data);
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  _UpdateProvidersClosure *closure = g_slice_new0 (_UpdateProvidersClosure);
-
-  closure->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
-  g_task_set_task_data (task, closure,
-                        (GDestroyNotify) _update_providers_closure_destroy);
-  g_dbus_connection_call (priv->connection, "org.freedesktop.DBus",
-                          "/org/freedesktop/DBus", "org.freedesktop.DBus",
-                          "ListActivatableNames", NULL, NULL,
-                          G_DBUS_CALL_FLAGS_NONE, -1, closure->cancellable,
-                          _update_providers_on_list_activatable_names, task);
-}
-
-static gboolean
-update_providers_finished (GObject *source, GAsyncResult *res, GError **error)
-{
-  g_return_val_if_fail (g_task_is_valid (res, source), FALSE);
-
-  return g_task_propagate_boolean (G_TASK (res), error);
-}
-
-static void
-_on_providers_created (GObject *source, GAsyncResult *res, gpointer user_data)
+_on_providers_and_voices_collected (GObject *source,
+                                    GAsyncResult *res,
+                                    gpointer user_data)
 {
   GTask *task = user_data;
   GError *err = NULL;
-  update_providers_finished (source, res, &err);
+  SpielRegistry *self = g_task_get_source_object (task);
+  GHashTable *providers_and_voices = spiel_collect_providers_finish (res, &err);
+
   if (err != NULL)
     {
-      g_warning ("Error creating providers: %s\n", err->message);
-      g_error_free (err);
+      g_warning ("Error retrieving providers: %s\n", err->message);
+      g_task_return_error (task, err);
+      return;
     }
+
+  g_hash_table_foreach (providers_and_voices,
+                        (GHFunc) _insert_providers_and_voices, self);
+
+  _subscribe_to_activatable_services_changed (self);
 
   g_task_return_boolean (task, TRUE);
   g_object_unref (task);
@@ -554,6 +366,7 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
   GTask *task = user_data;
   GCancellable *cancellable = g_task_get_task_data (task);
   SpielRegistry *self = g_task_get_source_object (task);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   GError *error = NULL;
   GDBusConnection *bus = g_bus_get_finish (result, &error);
@@ -564,9 +377,10 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
       return;
     }
 
-  _subscribe_to_activatable_services_changed (self, bus);
+  priv->connection = g_object_ref (bus);
 
-  update_providers (self, cancellable, _on_providers_created, task);
+  spiel_collect_providers (bus, cancellable, _on_providers_and_voices_collected,
+                           task);
 }
 
 void
@@ -669,7 +483,6 @@ async_initable_init_async (GAsyncInitable *initable,
                                            _provider_entry_destroy);
   priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
   priv->settings = _settings_new ();
-  priv->cancellable = NULL;
 
   if (cancellable != NULL)
     {
@@ -696,7 +509,6 @@ spiel_registry_finalize (GObject *object)
 
   g_hash_table_unref (priv->providers);
   g_clear_object (&priv->settings);
-  g_clear_object (&priv->cancellable);
   if (priv->connection)
     {
       g_dbus_connection_signal_unsubscribe (priv->connection,
@@ -711,89 +523,29 @@ spiel_registry_finalize (GObject *object)
   sRegistry = NULL;
 }
 
-static void
-_add_provider (SpielRegistry *self, const char *service_name)
-{
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  SpielProvider *provider = NULL;
-  char **split_name = NULL;
-  char *partial_path = NULL;
-  char *obj_path = NULL;
-  GError *err = NULL;
-  GVariant *voices = NULL;
-
-  if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX))
-    {
-      return;
-    }
-
-  if (g_hash_table_contains (priv->providers, service_name))
-    {
-      return;
-    }
-
-  split_name = g_strsplit (service_name, ".", 0);
-  partial_path = g_strjoinv ("/", split_name);
-  obj_path = g_strdup_printf ("/%s", partial_path);
-  g_strfreev (split_name);
-  g_free (partial_path);
-  provider = spiel_provider_proxy_new_for_bus_sync (
-      G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION,
-      service_name, obj_path, NULL, &err);
-  g_free (obj_path);
-  if (err)
-    {
-      g_warning ("Error initializing provider: %s\n", err->message);
-      g_error_free (err);
-    }
-
-  spiel_provider_call_get_voices_sync (provider, G_DBUS_CALL_FLAGS_NONE, -1,
-                                       &voices, NULL, &err);
-  if (err)
-    {
-      g_warning ("Error getting voices: %s\n", err->message);
-      g_error_free (err);
-    }
-
-  _add_provider_with_voices (self, provider, voices);
-}
-
 static gboolean
 initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
   SpielRegistry *self = SPIEL_REGISTRY (initable);
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  GHashTable *providers_and_voices = NULL;
+
   GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
-  const char *list_name_methods[] = { "ListActivatableNames", "ListNames",
-                                      NULL };
-  _subscribe_to_activatable_services_changed (self, bus);
-  for (const char **method = list_name_methods; *method; method++)
+
+  providers_and_voices = spiel_collect_providers_sync (bus, cancellable, error);
+
+  if (*error != NULL)
     {
-      GVariant *real_ret = NULL;
-      GVariantIter iter;
-      GVariant *service = NULL;
-      GError *err = NULL;
-      GVariant *ret = g_dbus_connection_call_sync (
-          bus, "org.freedesktop.DBus", "/org/freedesktop/DBus",
-          "org.freedesktop.DBus", *method, NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
-          -1, NULL, &err);
-      if (err)
-        {
-          g_warning ("Error calling list (%s): %s\n", *method, err->message);
-          g_error_free (err);
-          continue;
-        }
-
-      real_ret = g_variant_get_child_value (ret, 0);
-      g_variant_unref (ret);
-
-      g_variant_iter_init (&iter, real_ret);
-      while ((service = g_variant_iter_next_value (&iter)))
-        {
-          _add_provider (self, g_variant_get_string (service, NULL));
-          g_variant_unref (service);
-        }
-      g_variant_unref (real_ret);
+      g_warning ("Error retrieving providers: %s\n", (*error)->message);
+      return FALSE;
     }
+
+  g_hash_table_foreach (providers_and_voices,
+                        (GHFunc) _insert_providers_and_voices, self);
+
+  priv->connection = g_object_ref (bus);
+
+  _subscribe_to_activatable_services_changed (self);
 
   return TRUE;
 }
@@ -806,7 +558,6 @@ spiel_registry_init (SpielRegistry *self)
                                            _provider_entry_destroy);
   priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
   priv->settings = _settings_new ();
-  priv->cancellable = NULL;
 }
 
 static void
@@ -836,35 +587,13 @@ initable_iface_init (GInitableIface *initable_iface)
 
 /* Signal handlers */
 
-static void
-_on_get_voices_maybe_changed (GObject *source,
-                              GAsyncResult *result,
-                              gpointer user_data)
-{
-  SpielRegistry *self = user_data;
-  SpielProvider *provider = SPIEL_PROVIDER (source);
-  GVariant *voices = NULL;
-  GError *error = NULL;
-
-  spiel_provider_call_get_voices_finish (provider, &voices, result, &error);
-
-  if (error != NULL)
-    {
-      g_warning ("Failed to get updated voice list: %s", error->message);
-      g_free (error);
-      return;
-    }
-
-  _add_provider_with_voices (self, provider, voices);
-}
-
 static gboolean
 handle_voices_changed (SpielProvider *provider, gpointer user_data)
 {
   SpielRegistry *self = user_data;
 
-  spiel_provider_call_get_voices (provider, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-                                  _on_get_voices_maybe_changed, self);
+  spiel_collect_provider_voices (
+      provider, NULL, (GAsyncReadyCallback) _on_got_changed_voices, self);
 
   return TRUE;
 }

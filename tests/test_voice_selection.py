@@ -40,34 +40,29 @@ class TestSpeak(BaseSpielTest):
         self.assertIn("hy", utterance.props.voice.props.languages)
         self.assertEqual(utterance.props.voice.props.name, "Armenian (East Armenia)")
 
-    def _test_speak_with_voice(self, speechSynthesis, provider_name, voice_id):
-        voice = self.get_voice(speechSynthesis, provider_name, voice_id)
-
+    def _test_speak_with_voice(self, speechSynthesis, voice):
         utterance = Spiel.Utterance(text="hello world, how are you?", voice=voice)
         self.wait_for_speaking_changed(
             speechSynthesis, lambda: speechSynthesis.speak(utterance)
         )
-        args = self.mock_iface(provider_name).GetLastSpeakArguments()
-        self.assertEqual(str(args[2]), voice_id)
+        args = self.mock_iface(voice.props.provider_name).GetLastSpeakArguments()
+        self.assertEqual(str(args[2]), voice.props.identifier)
 
     def test_speak_with_voice_sync(self):
         speechSynthesis = Spiel.Speaker.new_sync(None)
-        self._test_speak_with_voice(
-            speechSynthesis, "org.mock.Speech.Provider", "sit/yue"
-        )
+        voice = self.get_voice(speechSynthesis, "org.mock.Speech.Provider", "sit/yue")
+        self._test_speak_with_voice(speechSynthesis, voice)
 
     def test_speak_with_voice_sync_autoexit(self):
         speechSynthesis = Spiel.Speaker.new_sync(None)
+        voice = self.get_voice(speechSynthesis, "org.mock3.Speech.Provider", "trk/uz")
         self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
-        self._test_speak_with_voice(
-            speechSynthesis, "org.mock3.Speech.Provider", "trk/uz"
-        )
+        self._test_speak_with_voice(speechSynthesis, voice)
 
     def test_speak_with_voice_async(self):
         speechSynthesis = self.wait_for_async_speaker_init()
-        self._test_speak_with_voice(
-            speechSynthesis, "org.mock.Speech.Provider", "sit/yue"
-        )
+        voice = self.get_voice(speechSynthesis, "org.mock.Speech.Provider", "sit/yue")
+        self._test_speak_with_voice(speechSynthesis, voice)
 
 
 if __name__ == "__main__":
