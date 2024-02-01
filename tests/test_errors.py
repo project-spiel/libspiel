@@ -3,99 +3,67 @@ from _common import *
 
 class TestSpeak(BaseSpielTest):
     def test_provider_dies(self):
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not synth.props.speaking:
-                self.assertEqual(actual_events, expected_events)
-                loop.quit()
-
         def _started_cb(synth, utt):
-            actual_events.append("utterance-started")
-            self.assertEqual(utt, utterance)
-            self.mock_service.Die()
-
-        def _error_cb(synth, utt, err):
-            self.assertTrue(
-                err.matches(Spiel.error_quark(), Spiel.Error.PROVIDER_UNEXPECTEDLY_DIED)
-            )
-            actual_events.append("utterance-error")
-            self.assertEqual(utt, utterance)
-
-        expected_events = [
-            "notify:speaking=True",
-            "utterance-started",
-            "utterance-error",
-            "notify:speaking=False",
-        ]
-
-        actual_events = []
+            GLib.idle_add(lambda: self.mock_service.Die())
 
         self.mock_service.SetInfinite(True)
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        self.assertFalse(speechSynthesis.props.speaking)
-        self.assertFalse(speechSynthesis.props.paused)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("utterance-error", _error_cb)
-        utterance = Spiel.Utterance(text="hello world, how are you?")
-        speechSynthesis.speak(utterance)
+        speaker = Spiel.Speaker.new_sync(None)
 
-        loop = GLib.MainLoop()
-        loop.run()
+        speaker.connect("utterance-started", _started_cb)
+        utterance = Spiel.Utterance(text="hello world, how are you?")
+
+        expected_error = (
+            "spiel-error-quark",
+            int(Spiel.Error.PROVIDER_UNEXPECTEDLY_DIED),
+            "Provider unexpectedly died: org.mock.Speech.Provider",
+        )
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", utterance],
+            ["utterance-error", utterance, expected_error],
+            ["notify:speaking", False],
+        ]
+
+        actual_events = self.capture_speak_sequence(speaker, utterance)
+
+        self.assertEqual(actual_events, expected_events)
 
     def test_bad_voice(self):
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not synth.props.speaking:
-                self.assertEqual(actual_events, expected_events)
-                loop.quit()
+        self.mock_service.SetInfinite(True)
+        speaker = Spiel.Speaker.new_sync(None)
 
-        def _started_cb(synth, utt):
-            actual_events.append("utterance-started")
-
-        def _finished_cb(synth, utt):
-            actual_events.append("utterance-finished")
-
-        def _error_cb(synth, utt, err):
-            self.assertTrue(
-                err.matches(Spiel.error_quark(), Spiel.Error.MISCONFIGURED_VOICE)
-            )
-            actual_events.append("utterance-error")
-
-        expected_events = [
-            "notify:speaking=True",
-            "utterance-started",
-            "utterance-finished",
-            "utterance-error",
-            "utterance-started",
-            "utterance-finished",
-            "notify:speaking=False",
+        voices = [
+            self.get_voice(speaker, *provider_name_and_id)
+            for provider_name_and_id in [
+                ("org.mock2.Speech.Provider", "ine/hyw"),
+                ("org.mock2.Speech.Provider", "gmw/en-GB-scotland#misconfigured"),
+                ("org.mock2.Speech.Provider", "gmw/en-GB-x-gbclan"),
+            ]
         ]
 
-        actual_events = []
+        [one, two, three] = [
+            Spiel.Utterance(text="hello world, how are you?", voice=voice)
+            for voice in voices
+        ]
 
-        self.mock_service.SetInfinite(True)
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        self.assertFalse(speechSynthesis.props.speaking)
-        self.assertFalse(speechSynthesis.props.paused)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("utterance-error", _error_cb)
-        speechSynthesis.connect("utterance-finished", _finished_cb)
+        expected_error = (
+            "spiel-error-quark",
+            int(Spiel.Error.MISCONFIGURED_VOICE),
+            "Voice output format not set correctly: 'nuthin'",
+        )
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", one],
+            ["utterance-finished", one],
+            ["utterance-error", two, expected_error],
+            ["utterance-started", three],
+            ["utterance-finished", three],
+            ["notify:speaking", False],
+        ]
 
-        for provider_name, voice_id in [
-            ("org.mock2.Speech.Provider", "ine/hyw"),
-            ("org.mock2.Speech.Provider", "gmw/en-GB-scotland"),
-            ("org.mock2.Speech.Provider", "gmw/en-GB-x-gbclan"),
-        ]:
-            utterance = Spiel.Utterance(text="hello world, how are you?")
-            utterance.props.voice = self.get_voice(
-                speechSynthesis, provider_name, voice_id
-            )
-            speechSynthesis.speak(utterance)
+        actual_events = self.capture_speak_sequence(speaker, one, two, three)
 
-        loop = GLib.MainLoop()
-        loop.run()
+        self.assertEqual(actual_events, expected_events)
 
 
 if __name__ == "__main__":

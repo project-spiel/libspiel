@@ -14,7 +14,7 @@ STANDARD_VOICES = [
     [
         "org.mock2.Speech.Provider",
         "English (Scotland)",
-        "gmw/en-GB-scotland",
+        "gmw/en-GB-scotland#misconfigured",
         ["en-gb-scotland", "en"],
     ],
     [
@@ -198,6 +198,50 @@ class BaseSpielTest(unittest.TestCase):
                 and v.props.identifier == voice_id
             ):
                 return v
+
+    def capture_speak_sequence(self, speaker, *utterances):
+        event_sequence = []
+
+        def _notify_speaking_cb(synth, val):
+            event_sequence.append(["notify:speaking", synth.props.speaking])
+            if not synth.props.speaking:
+                loop.quit()
+
+        def _notify_paused_cb(synth, val):
+            event_sequence.append(["notify:paused", synth.props.paused])
+
+        def _utterance_started_cb(synth, utt):
+            event_sequence.append(["utterance-started", utt])
+
+        def _utterance_range_started_cb(synth, utt, start, end):
+            event_sequence.append(["range-started", utt, start, end])
+
+        def _utterance_canceled_cb(synth, utt):
+            event_sequence.append(["utterance-canceled", utt])
+
+        def _utterance_finished_cb(synth, utt):
+            event_sequence.append(["utterance-finished", utt])
+
+        def _utterance_error_cb(synth, utt, error):
+            event_sequence.append(
+                ["utterance-error", utt, (error.domain, error.code, error.message)]
+            )
+
+        speaker.connect("notify::speaking", _notify_speaking_cb)
+        speaker.connect("notify::paused", _notify_paused_cb)
+        speaker.connect("utterance-started", _utterance_started_cb)
+        speaker.connect("utterance-canceled", _utterance_canceled_cb)
+        speaker.connect("utterance-finished", _utterance_finished_cb)
+        speaker.connect("utterance-error", _utterance_error_cb)
+        speaker.connect("range-started", _utterance_range_started_cb)
+
+        for utterance in utterances:
+            speaker.speak(utterance)
+
+        loop = GLib.MainLoop()
+        loop.run()
+
+        return event_sequence
 
 
 def test_main():

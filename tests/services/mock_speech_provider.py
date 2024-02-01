@@ -45,7 +45,7 @@ VOICES = {
         {
             "name": "English (Scotland)",
             "output_format": "nuthin",
-            "identifier": "gmw/en-GB-scotland",
+            "identifier": "gmw/en-GB-scotland#misconfigured",
             "languages": ["en-gb-scotland", "en"],
         },
         {
@@ -95,6 +95,12 @@ class RawSynthStream(object):
     def start(self):
         self._pipeline.set_state(Gst.State.PLAYING)
 
+    def end(self):
+        src = self._pipeline.get_by_name("src")
+        src.set_state(Gst.State.NULL)
+        raw_fd = self._pipeline.get_by_name("sink").get_property("fd")
+        os.close(raw_fd)
+
     def _on_eos(self, *args):
         src = self._pipeline.get_by_name("src")
         raw_fd = self._pipeline.get_by_name("sink").get_property("fd")
@@ -134,6 +140,10 @@ class SpielSynthStream(object):
 
         return Gst.FlowReturn.OK
 
+    def end(self):
+        self._pipeline.set_state(Gst.State.NULL)
+        self.stream_writer.close()
+
     def start(self):
         self.stream_writer.send_stream_header()
         self._pipeline.set_state(Gst.State.PLAYING)
@@ -146,7 +156,7 @@ class SomeObject(dbus.service.Object):
     def __init__(self, *args):
         self._last_speak_args = [0, "", "", 0, 0, 0]
         self._infinite = False
-        self._tasks = []
+        self._stream = None
         self._voices = VOICES[NAME][:]
 
         dbus.service.Object.__init__(self, *args)
@@ -165,8 +175,8 @@ class SomeObject(dbus.service.Object):
         if output_format.startswith("audio/x-spiel"):
             synthstream_cls = SpielSynthStream
 
-        stream = synthstream_cls(raw_fd, utterance, self._infinite)
-        stream.start()
+        self.stream = synthstream_cls(raw_fd, utterance, self._infinite)
+        self.stream.start()
 
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
@@ -199,6 +209,7 @@ class SomeObject(dbus.service.Object):
         out_signature="",
     )
     def FlushTasks(self):
+        self.stream = None
         self._last_speak_args = [0, "", "", 0, 0, 0]
 
     @dbus.service.method(
@@ -214,8 +225,9 @@ class SomeObject(dbus.service.Object):
         in_signature="",
         out_signature="",
     )
-    def Step(self):
-        self._do_step()
+    def End(self):
+        if self.stream:
+            self.stream.end()
 
     @dbus.service.method(
         "org.freedesktop.Speech.MockProvider",

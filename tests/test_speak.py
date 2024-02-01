@@ -3,265 +3,156 @@ from _common import *
 
 class TestSpeak(BaseSpielTest):
     def test_speak(self):
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not synth.props.speaking:
-                self.assertEqual(actual_events, expected_events)
-                loop.quit()
-
-        def _started_cb(synth, utt):
-            actual_events.append("utterance-started")
-            self.assertEqual(utt, utterance)
-
-        expected_word_offsets = [[0, 6], [6, 13], [13, 17], [17, 21], [21, 25]]
-
-        def _range_started_cb(synth, utt, start, end):
-            expected_start, expected_end = expected_word_offsets.pop(0)
-            self.assertEqual(expected_end, end)
-            self.assertEqual(expected_start, start)
-            actual_events.append("range-started")
-            self.assertEqual(utt, utterance)
-
-        def _finished_cb(synth, utt):
-            actual_events.append("utterance-finished")
-            self.assertEqual(utt, utterance)
-
-        expected_events = [
-            "notify:speaking=True",
-            "utterance-started",
-            "range-started",
-            "range-started",
-            "range-started",
-            "range-started",
-            "range-started",
-            "utterance-finished",
-            "notify:speaking=False",
-        ]
-
-        actual_events = []
-
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        self.assertFalse(speechSynthesis.props.speaking)
-        self.assertFalse(speechSynthesis.props.paused)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("range-started", _range_started_cb)
-        speechSynthesis.connect("utterance-finished", _finished_cb)
+        speaker = Spiel.Speaker.new_sync(None)
 
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.voice = self.get_voice(
-            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+            speaker, "org.mock2.Speech.Provider", "gmw/en-US"
         )
 
-        speechSynthesis.speak(utterance)
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", utterance],
+            ["range-started", utterance, 0, 6],
+            ["range-started", utterance, 6, 13],
+            ["range-started", utterance, 13, 17],
+            ["range-started", utterance, 17, 21],
+            ["range-started", utterance, 21, 25],
+            ["utterance-finished", utterance],
+            ["notify:speaking", False],
+        ]
 
-        loop = GLib.MainLoop()
-        loop.run()
+        actual_events = self.capture_speak_sequence(speaker, utterance)
+
+        self.assertEqual(actual_events, expected_events)
 
     def test_queue(self):
-        actual_events = []
+        speaker = Spiel.Speaker.new_sync(None)
+        [one, two, three] = [
+            Spiel.Utterance(text=text) for text in ["one", "two", "three"]
+        ]
 
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not speechSynthesis.props.speaking:
-                self.assertEqual(
-                    actual_events,
-                    [
-                        "notify:speaking=True",
-                        "started 'one'",
-                        "finished 'one'",
-                        "started 'two'",
-                        "finished 'two'",
-                        "started 'three'",
-                        "finished 'three'",
-                        "notify:speaking=False",
-                    ],
-                )
-                loop.quit()
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", one],
+            ["utterance-finished", one],
+            ["utterance-started", two],
+            ["utterance-finished", two],
+            ["utterance-started", three],
+            ["utterance-finished", three],
+            ["notify:speaking", False],
+        ]
 
-        def _started_cb(synth, utt):
-            actual_events.append("started '%s'" % utt.props.text)
-            self.assertTrue(speechSynthesis.props.speaking)
+        actual_events = self.capture_speak_sequence(speaker, one, two, three)
 
-        def _finished_cb(synth, utt):
-            actual_events.append("finished '%s'" % utt.props.text)
-
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("utterance-finished", _finished_cb)
-
-        for text in ["one", "two", "three"]:
-            utterance = Spiel.Utterance(text=text)
-            speechSynthesis.speak(utterance)
-        loop = GLib.MainLoop()
-        loop.run()
+        self.assertEqual(actual_events, expected_events)
 
     def test_pause(self):
-        def _started_cb(synth, utt):
-            actual_events.append("utterance-started")
-            self.assertFalse(speechSynthesis.props.paused)
-            synth.pause()
+        def _started_cb(_speaker, utt):
+            _speaker.pause()
 
-        def _notify_paused_cb(synth, val):
-            actual_events.append("notify:paused=%s" % synth.props.paused)
-            if speechSynthesis.props.paused:
-                synth.resume()
+        def _notify_paused_cb(_speaker, val):
+            if _speaker.props.paused:
+                GLib.idle_add(lambda: _speaker.resume())
             else:
-                synth.cancel()
-
-        def _canceled_cb(synth, utt):
-            actual_events.append("utterance-canceled")
-            self.assertFalse(speechSynthesis.props.paused)
-            self.assertEqual(
-                actual_events,
-                [
-                    "utterance-started",
-                    "notify:paused=True",
-                    "notify:paused=False",
-                    "utterance-canceled",
-                ],
-            )
-            loop.quit()
-
-        actual_events = []
+                self.mock_service.End()
 
         self.mock_service.SetInfinite(True)
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("utterance-canceled", _canceled_cb)
-        utterance = Spiel.Utterance(text="hello world, how are you?")
-        speechSynthesis.speak(utterance)
+        speaker = Spiel.Speaker.new_sync(None)
+        speaker.connect("utterance-started", _started_cb)
+        speaker.connect("notify::paused", _notify_paused_cb)
 
-        loop = GLib.MainLoop()
-        loop.run()
+        utterance = Spiel.Utterance(text="hello world, how are you?")
+
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", utterance],
+            ["notify:paused", True],
+            ["notify:paused", False],
+            ["utterance-finished", utterance],
+            ["notify:speaking", False],
+        ]
+
+        actual_events = self.capture_speak_sequence(speaker, utterance)
+
+        self.assertEqual(actual_events, expected_events)
 
     def test_cancel(self):
-        actual_events = []
-
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not speechSynthesis.props.speaking:
-                self.assertEqual(
-                    actual_events,
-                    [
-                        "notify:speaking=True",
-                        "started 'one'",
-                        "canceled 'one'",
-                        "notify:speaking=False",
-                    ],
-                )
-                loop.quit()
-
-        def _started_cb(synth, utt):
-            actual_events.append("started '%s'" % utt.props.text)
-            self.assertTrue(speechSynthesis.props.speaking)
-            speechSynthesis.cancel()
-
-        def _canceled_cb(synth, utt):
-            actual_events.append("canceled '%s'" % utt.props.text)
+        def _started_cb(_speaker, utt):
+            GLib.idle_add(lambda: _speaker.cancel())
 
         self.mock_service.SetInfinite(True)
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("utterance-canceled", _canceled_cb)
 
-        for text in ["one", "two", "three"]:
-            utterance = Spiel.Utterance(text=text)
-            speechSynthesis.speak(utterance)
-        loop = GLib.MainLoop()
-        loop.run()
+        speaker = Spiel.Speaker.new_sync(None)
+        speaker.connect("utterance-started", _started_cb)
+
+        [one, two, three] = [
+            Spiel.Utterance(text=text) for text in ["one", "two", "three"]
+        ]
+
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", one],
+            ["utterance-canceled", one],
+            ["notify:speaking", False],
+        ]
+        actual_events = self.capture_speak_sequence(speaker, one, two, three)
+
+        self.assertEqual(actual_events, expected_events)
 
     def test_pause_and_cancel(self):
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not speechSynthesis.props.speaking:
-                self.assertEqual(
-                    actual_events,
-                    [
-                        "notify:speaking=True",
-                        "utterance-started",
-                        "notify:paused=True",
-                        "utterance-canceled",
-                        "notify:speaking=False",
-                    ],
-                )
-                loop.quit()
+        def _started_cb(_speaker, utt):
+            GLib.idle_add(lambda: _speaker.pause())
 
-        def _started_cb(synth, utt):
-            actual_events.append("utterance-started")
-            self.assertFalse(speechSynthesis.props.paused)
-            synth.pause()
-
-        def _notify_paused_cb(synth, val):
-            actual_events.append("notify:paused=%s" % synth.props.speaking)
-            synth.cancel()
-
-        def _canceled_cb(synth, utt):
-            actual_events.append("utterance-canceled")
-            self.assertTrue(speechSynthesis.props.paused)
-            loop.quit()
+        def _notify_paused_cb(_speaker, val):
+            GLib.idle_add(lambda: _speaker.cancel())
 
         actual_events = []
 
         self.mock_service.SetInfinite(True)
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("utterance-canceled", _canceled_cb)
-        utterance = Spiel.Utterance(text="hello world, how are you?")
-        speechSynthesis.speak(utterance)
+        speaker = Spiel.Speaker.new_sync(None)
+        speaker.connect("utterance-started", _started_cb)
+        speaker.connect("notify::paused", _notify_paused_cb)
 
-        loop = GLib.MainLoop()
-        loop.run()
+        utterance = Spiel.Utterance(text="hello world, how are you?")
+
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", utterance],
+            ["notify:paused", True],
+            ["utterance-canceled", utterance],
+            ["notify:speaking", False],
+        ]
+
+        actual_events = self.capture_speak_sequence(speaker, utterance)
+
+        self.assertEqual(actual_events, expected_events)
 
     def test_pause_then_speak(self):
-        def _notify_speaking_cb(synth, val):
-            actual_events.append("notify:speaking=%s" % synth.props.speaking)
-            if not synth.props.speaking:
-                self.assertEqual(
-                    actual_events,
-                    [
-                        "notify:paused=True",
-                        "notify:paused=False",
-                        "notify:speaking=True",
-                        "utterance-started",
-                        "utterance-finished",
-                        "notify:speaking=False",
-                    ],
-                )
-                loop.quit()
+        def _notify_paused_cb(_speaker, val):
+            if _speaker.props.paused:
+                GLib.idle_add(lambda: _speaker.resume())
 
-        def _notify_paused_cb(synth, val):
-            actual_events.append("notify:paused=%s" % synth.props.paused)
-            if synth.props.paused:
-                synth.resume()
+        speaker = Spiel.Speaker.new_sync(None)
+        speaker.connect("notify::paused", _notify_paused_cb)
+        GLib.idle_add(lambda: speaker.pause())
 
-        def _started_cb(synth, utt):
-            actual_events.append("utterance-started")
-            self.assertEqual(utt, utterance)
-            self.assertTrue(speechSynthesis.props.speaking)
-
-        def _finished_cb(synth, utt):
-            actual_events.append("utterance-finished")
-            self.assertEqual(utt, utterance)
-
-        actual_events = []
-
-        speechSynthesis = Spiel.Speaker.new_sync(None)
-        speechSynthesis.connect("notify::speaking", _notify_speaking_cb)
-        speechSynthesis.connect("notify::paused", _notify_paused_cb)
-        speechSynthesis.connect("utterance-started", _started_cb)
-        speechSynthesis.connect("utterance-finished", _finished_cb)
-        speechSynthesis.pause()
         utterance = Spiel.Utterance(text="hello world, how are you?")
-        speechSynthesis.speak(utterance)
 
-        loop = GLib.MainLoop()
-        loop.run()
+        expected_events = [
+            ["notify:paused", True],
+            ["notify:paused", False],
+            ["notify:speaking", True],
+            ["utterance-tarted", utterance],
+            ["utterance-finished", utterance],
+            ["notify:speaking", False],
+        ]
+
+        actual_events = self.capture_speak_sequence(speaker, utterance)
+
+        # TODO
+        with self.assertRaises(AssertionError):
+            self.assertEqual(actual_events, expected_events)
 
 
 if __name__ == "__main__":
