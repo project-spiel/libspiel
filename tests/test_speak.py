@@ -143,16 +143,14 @@ class TestSpeak(BaseSpielTest):
             ["notify:paused", True],
             ["notify:paused", False],
             ["notify:speaking", True],
-            ["utterance-tarted", utterance],
+            ["utterance-started", utterance],
             ["utterance-finished", utterance],
             ["notify:speaking", False],
         ]
 
         actual_events = self.capture_speak_sequence(speaker, utterance)
 
-        # TODO
-        with self.assertRaises(AssertionError):
-            self.assertEqual(actual_events, expected_events)
+        self.assertEqual(actual_events, expected_events)
 
 
 if __name__ == "__main__":

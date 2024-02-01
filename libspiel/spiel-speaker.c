@@ -825,8 +825,13 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       pending_state == GST_STATE_VOID_PENDING &&
       element == GST_OBJECT (priv->pipeline))
     {
-      if (!priv->paused)
+      if (!priv->paused || !priv->speaking)
         {
+          if (priv->paused)
+            {
+              priv->paused = FALSE;
+              g_object_notify (G_OBJECT (self), "paused");
+            }
           if (!priv->speaking)
             {
               priv->speaking = TRUE;
@@ -973,7 +978,10 @@ _speak_current_entry (SpielSpeaker *self)
   gst_element_link_many (entry->src, entry->parse, entry->volume, priv->convert,
                          NULL);
 
-  gst_element_set_state (priv->pipeline, GST_STATE_PLAYING);
+  if (!priv->paused)
+    {
+      gst_element_set_state (priv->pipeline, GST_STATE_PLAYING);
+    }
 }
 
 static void
