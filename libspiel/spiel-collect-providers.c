@@ -287,7 +287,8 @@ _finish_get_voices_into_slist (SpielProvider *provider,
       voice =
           g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
                         identifier, "languages", languages, "provider-name",
-                        provider_name, "output-format", output_format, NULL);
+                        provider_name, NULL);
+      spiel_voice_set_output_format(voice, output_format);
 
       voices_slist = g_slist_prepend (voices_slist, voice);
       g_free (languages);

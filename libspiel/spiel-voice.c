@@ -55,7 +55,6 @@ enum
   PROP_IDENTIFIER,
   PROP_LANGUAGES,
   PROP_PROVIDER_NAME,
-  PROP_OUTPUT_FORMAT,
   N_PROPS
 };
 
@@ -110,22 +109,6 @@ spiel_voice_get_provider_name (SpielVoice *self)
 }
 
 /**
- * spiel_voice_get_output_format: (get-property output-format)
- * @self: a #SpielVoice
- *
- * Fetches the output format the voice uses
- *
- * Returns: the output format. This string is
- *   owned by the voice and must not be modified or freed.
- */
-const char *
-spiel_voice_get_output_format (SpielVoice *self)
-{
-  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
-  return priv->output_format;
-}
-
-/**
  * spiel_voice_get_languages: (get-property languages)
  * @self: a #SpielVoice
  *
@@ -139,6 +122,21 @@ spiel_voice_get_languages (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
   return (const char *const *) priv->languages;
+}
+
+const char *
+spiel_voice_get_output_format (SpielVoice *self)
+{
+  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  return priv->output_format;
+}
+
+void
+spiel_voice_set_output_format (SpielVoice *self, const char* output_format)
+{
+  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  g_clear_pointer (&priv->output_format, g_free);
+  priv->output_format = g_strdup (output_format);
 }
 
 guint
@@ -251,9 +249,6 @@ spiel_voice_get_property (GObject *object,
     case PROP_PROVIDER_NAME:
       g_value_set_string (value, priv->provider_name);
       break;
-    case PROP_OUTPUT_FORMAT:
-      g_value_set_string (value, priv->output_format);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -288,11 +283,6 @@ spiel_voice_set_property (GObject *object,
       g_clear_pointer (&priv->provider_name, g_free);
       priv->provider_name = g_value_dup_string (value);
       g_object_notify (G_OBJECT (self), "provider-name");
-      break;
-    case PROP_OUTPUT_FORMAT:
-      g_clear_pointer (&priv->output_format, g_free);
-      priv->output_format = g_value_dup_string (value);
-      g_object_notify (G_OBJECT (self), "output-format");
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -351,16 +341,6 @@ spiel_voice_class_init (SpielVoiceClass *klass)
       "provider-name", NULL, NULL, NULL /* default value */,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-  /**
-   * SpielVoice:output-format: (getter get_output_format)
-   *
-   * The audio output format for the voice.
-   *
-   */
-  properties[PROP_OUTPUT_FORMAT] = g_param_spec_string (
-      "output-format", NULL, NULL, NULL /* default value */,
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-
   g_object_class_install_properties (object_class, N_PROPS, properties);
 }
 
@@ -373,4 +353,5 @@ spiel_voice_init (SpielVoice *self)
   priv->identifier = NULL;
   priv->languages = NULL;
   priv->provider_name = NULL;
+  priv->output_format = NULL;
 }
