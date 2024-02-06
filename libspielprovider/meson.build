@@ -1,6 +1,28 @@
+python_module = import('python')
+python = python_module.find_installation(
+  'python3', required : true)
+gen_enums = files(join_paths(meson.project_source_root(), 'interface', 'generate_enums.py'))
+spiel_provider_dbus_enums_h = custom_target(
+    input: join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
+    output: 'spiel-provider-dbus-enums.h',
+    command: [python, gen_enums, 'spiel_provider', '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: join_paths(get_option('includedir'), 'spiel-provider')
+)
+spiel_provider_dbus_enums_c = custom_target(
+    input: join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
+    output: 'spiel-provider-dbus-enums.c',
+    command: [python, gen_enums, 'spiel_provider', '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: join_paths(get_option('includedir'), 'spiel-provider')
+)
+
+
+
 spiel_provider_sources = [
   'spiel-provider-stream-reader.c',
   'spiel-provider-stream-writer.c',
+  spiel_provider_dbus_enums_c,
 ]
 
 spiel_provider_headers = [
@@ -25,8 +47,10 @@ spiel_provider_version_h = configure_file(
     install_dir: join_paths(get_option('includedir'), 'spiel-provider')
 )
 
-spiel_provider_lib_generated_headers = [
+spiel_provider_lib_generated = [
   spiel_provider_version_h,
+  spiel_provider_dbus_enums_h,
+  spiel_provider_dbus_enums_c,
 ]
 
 spiel_provider_deps = [
@@ -40,7 +64,7 @@ spiel_provider_lib = shared_library('spiel-provider-' + api_version,
 )
 
 spiel_provider_lib_dep = declare_dependency(
-  sources: spiel_provider_lib_generated_headers,
+  sources: spiel_provider_lib_generated,
   dependencies: spiel_provider_deps,
   link_with: spiel_provider_lib,
   include_directories: include_directories('.'),
@@ -61,7 +85,7 @@ pkg.generate(
 
 gnome = import('gnome')
 spiel_provider_gir = gnome.generate_gir(spiel_provider_lib,
-            sources: spiel_provider_headers + spiel_provider_sources,
+            sources: spiel_provider_headers + spiel_provider_sources + spiel_provider_dbus_enums_h,
             nsversion: api_version,
             namespace: 'SpielProvider',
             header: 'spiel-provider/spiel-provider.h',
