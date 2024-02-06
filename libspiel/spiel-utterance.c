@@ -43,6 +43,7 @@ typedef struct
   double volume;
   SpielVoice *voice;
   char *language;
+  gboolean is_ssml;
 } SpielUtterancePrivate;
 
 G_DEFINE_FINAL_TYPE_WITH_PRIVATE (SpielUtterance,
@@ -58,6 +59,7 @@ enum
   PROP_VOLUME,
   PROP_VOICE,
   PROP_LANGUAGE,
+  PROP_IS_SSML,
   N_PROPS
 };
 
@@ -273,6 +275,36 @@ spiel_utterance_set_language (SpielUtterance *self, const char *language)
   g_object_notify (G_OBJECT (self), "language");
 }
 
+/**
+ * spiel_utterance_get_is_ssml: (get-property is-ssml)
+ * @self: a #SpielUtterance
+ *
+ * Is the current utterance an SSML snippet
+ *
+ * Returns: the utterance text is SSML
+ */
+gboolean
+spiel_utterance_get_is_ssml (SpielUtterance *self)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  return priv->is_ssml;
+}
+
+/**
+ * spiel_utterance_set_is_ssml: (set-property is-ssml)
+ * @self: a #SpielUtterance
+ * @is_ssml: whether the utterance text is an SSML snippet
+ *
+ * Indicates whether this utterance should be interpreted as SSML
+ *
+ */
+void
+spiel_utterance_set_is_ssml (SpielUtterance *self, gboolean is_ssml)
+{
+  SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+  priv->is_ssml = is_ssml;
+}
+
 static void
 spiel_utterance_finalize (GObject *object)
 {
@@ -313,6 +345,9 @@ spiel_utterance_get_property (GObject *object,
     case PROP_LANGUAGE:
       g_value_set_string (value, spiel_utterance_get_language (self));
       break;
+    case PROP_IS_SSML:
+      g_value_set_boolean (value, spiel_utterance_get_is_ssml (self));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -345,6 +380,9 @@ spiel_utterance_set_property (GObject *object,
       break;
     case PROP_LANGUAGE:
       spiel_utterance_set_language (self, g_value_get_string (value));
+      break;
+    case PROP_IS_SSML:
+      spiel_utterance_set_is_ssml (self, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -420,6 +458,15 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
       g_param_spec_string ("language", NULL, NULL, NULL /* default value */,
                            G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielUtterance:is-ssml: (getter get_is_ssml) (setter set_is_ssml)
+   *
+   * Whether the utterance's text should be interpreted as an SSML snippet.
+   *
+   */
+  properties[PROP_IS_SSML] = g_param_spec_boolean (
+      "is-ssml", NULL, NULL, FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (object_class, N_PROPS, properties);
 }
 
@@ -433,4 +480,5 @@ spiel_utterance_init (SpielUtterance *self)
   priv->pitch = 1;
   priv->voice = NULL;
   priv->language = NULL;
+  priv->is_ssml = FALSE;
 }

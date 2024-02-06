@@ -611,12 +611,13 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   char *text = NULL;
   const char *output_format = NULL;
   const char *stream_type = NULL;
+  gboolean is_ssml = FALSE;
   gdouble pitch, rate, volume;
   SpielVoice *voice = NULL;
   GstStructure *gst_struct;
 
   g_object_get (utterance, "text", &text, "pitch", &pitch, "rate", &rate,
-                "volume", &volume, "voice", &voice, NULL);
+                "volume", &volume, "voice", &voice, "is-ssml", &is_ssml, NULL);
 
   if (voice == NULL)
     {
@@ -637,7 +638,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   spiel_provider_call_synthesize (
       provider, g_variant_new_handle (fd), text,
-      voice ? spiel_voice_get_identifier (voice) : "", pitch, rate,
+      voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
       G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL, _provider_call_synthesize_done,
       self);
 

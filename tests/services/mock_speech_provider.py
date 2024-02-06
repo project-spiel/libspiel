@@ -172,12 +172,12 @@ class SomeObject(dbus.service.Object):
 
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
-        in_signature="hssdd",
+        in_signature="hssddb",
         out_signature="",
     )
-    def Synthesize(self, fd, utterance, voice_id, pitch, rate):
+    def Synthesize(self, fd, utterance, voice_id, pitch, rate, is_ssml):
         raw_fd = fd.take()
-        self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate)
+        self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate, is_ssml)
         voice = dict([[v["identifier"], v] for v in self._voices])[voice_id]
         output_format = voice["output_format"]
         synthstream_cls = RawSynthStream
@@ -213,7 +213,7 @@ class SomeObject(dbus.service.Object):
     @dbus.service.method(
         "org.freedesktop.Speech.MockProvider",
         in_signature="",
-        out_signature="tssdd",
+        out_signature="tssddb",
     )
     def GetLastSpeakArguments(self):
         return self._last_speak_args

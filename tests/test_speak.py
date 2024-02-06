@@ -152,6 +152,21 @@ class TestSpeak(BaseSpielTest):
 
         self.assertEqual(actual_events, expected_events)
 
+    def test_is_ssml(self):
+        speaker = Spiel.Speaker.new_sync(None)
+
+        utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
+        self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
+        is_ssml = self.mock_service.GetLastSpeakArguments()[-1]
+        self.assertFalse(is_ssml)
+
+        utterance = Spiel.Utterance(
+            text="hello world, how are you?", language="hy", is_ssml=True
+        )
+        self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
+        is_ssml = self.mock_service.GetLastSpeakArguments()[-1]
+        self.assertTrue(is_ssml)
+
 
 if __name__ == "__main__":
     test_main()

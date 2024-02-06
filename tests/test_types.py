@@ -74,6 +74,11 @@ class TestTypes(BaseSpielTest):
         self.assertEqual(utterance.props.language, "en-gb")
         utterance.set_language("en-us")
         self.assertEqual(utterance.get_language(), "en-us")
+        self.assertFalse(utterance.props.is_ssml)
+        self.assertFalse(utterance.get_is_ssml())
+        utterance.set_is_ssml(True)
+        self.assertTrue(utterance.props.is_ssml)
+        self.assertTrue(utterance.get_is_ssml())
 
 
 if __name__ == "__main__":
