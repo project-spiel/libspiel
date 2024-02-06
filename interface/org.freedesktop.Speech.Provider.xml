@@ -47,11 +47,12 @@
       <li>A human readable name</li>
       <li>A unique identifier</li>
       <li>Synthesis output format</li>
+      <li>A voice features bit field</li>
       <li>A list of languages the voice support represented as BCP 47 tags</li>
     </ul>
   -->
     <method name="GetVoices">
-      <arg name="voices" direction="out" type="a(sssas)" />
+      <arg name="voices" direction="out" type="a(ssstas)" />
     </method>
 
   <!--

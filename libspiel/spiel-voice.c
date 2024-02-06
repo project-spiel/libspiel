@@ -44,6 +44,7 @@ typedef struct
   char **languages;
   char *provider_name;
   char *output_format;
+  SpielVoiceFeature features;
 } SpielVoicePrivate;
 
 G_DEFINE_FINAL_TYPE_WITH_PRIVATE (SpielVoice, spiel_voice, G_TYPE_OBJECT)
@@ -55,6 +56,7 @@ enum
   PROP_IDENTIFIER,
   PROP_LANGUAGES,
   PROP_PROVIDER_NAME,
+  PROP_FEATURES,
   N_PROPS
 };
 
@@ -124,6 +126,13 @@ spiel_voice_get_languages (SpielVoice *self)
   return (const char *const *) priv->languages;
 }
 
+SpielVoiceFeature
+spiel_voice_get_features (SpielVoice *self)
+{
+  SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  return priv->features;
+}
+
 const char *
 spiel_voice_get_output_format (SpielVoice *self)
 {
@@ -132,7 +141,7 @@ spiel_voice_get_output_format (SpielVoice *self)
 }
 
 void
-spiel_voice_set_output_format (SpielVoice *self, const char* output_format)
+spiel_voice_set_output_format (SpielVoice *self, const char *output_format)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
   g_clear_pointer (&priv->output_format, g_free);
@@ -249,6 +258,9 @@ spiel_voice_get_property (GObject *object,
     case PROP_PROVIDER_NAME:
       g_value_set_string (value, priv->provider_name);
       break;
+    case PROP_FEATURES:
+      g_value_set_flags (value, priv->features);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -283,6 +295,9 @@ spiel_voice_set_property (GObject *object,
       g_clear_pointer (&priv->provider_name, g_free);
       priv->provider_name = g_value_dup_string (value);
       g_object_notify (G_OBJECT (self), "provider-name");
+      break;
+    case PROP_FEATURES:
+      priv->features = g_value_get_flags (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -341,6 +356,11 @@ spiel_voice_class_init (SpielVoiceClass *klass)
       "provider-name", NULL, NULL, NULL /* default value */,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  properties[PROP_FEATURES] = g_param_spec_flags (
+      "features", NULL, NULL, SPIEL_TYPE_VOICE_FEATURE,
+      SPIEL_VOICE_FEATURE_NONE,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (object_class, N_PROPS, properties);
 }
 
@@ -354,4 +374,5 @@ spiel_voice_init (SpielVoice *self)
   priv->languages = NULL;
   priv->provider_name = NULL;
   priv->output_format = NULL;
+  priv->features = 0;
 }
