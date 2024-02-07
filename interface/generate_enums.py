@@ -87,13 +87,11 @@ class DBusXMLEnumParser:
             f"typedef enum /*<underscore_name={full_name.lower()}>*/\n")
         self._writer.write("{\n")
         for val in self._enum_data["values"]:
-            self._writer.write(f"  {self.prefix.upper()}_{
-                               val["name"]} = {val['value']},\n")
+            self._writer.write(f"  {self.prefix.upper()}_{val["name"]} = {val['value']},\n")
         self._writer.write("} %s;\n\n" % camel_case_name)
         self._writer.write(
             f"\nGType {full_name.lower()}_get_type (void) G_GNUC_CONST;\n")
-        self._writer.write(f"#define {self.prefix.upper()}_TYPE_{
-                           self._enum_data['name']} ({full_name.lower()}_get_type ())\n")
+        self._writer.write(f"#define {self.prefix.upper()}_TYPE_{self._enum_data['name']} ({full_name.lower()}_get_type ())\n")
 
     def handle_start_element(self, name, attrs):
         if name == "tp:enum" or name == "tp:flags":
