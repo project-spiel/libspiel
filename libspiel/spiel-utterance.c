@@ -238,7 +238,7 @@ spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
   g_clear_object (&(priv->voice));
 
-  priv->voice = g_object_ref (voice);
+  priv->voice = voice ? g_object_ref (voice) : NULL;
   g_object_notify (G_OBJECT (self), "voice");
 }
 

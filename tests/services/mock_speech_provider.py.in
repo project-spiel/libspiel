@@ -7,8 +7,9 @@ gi.require_version("SpielProvider", "0.1")
 from gi.repository import GLib, Gst, SpielProvider
 
 from dasbus.connection import SessionMessageBus
-from dasbus.signal import Signal
 from dasbus.unix import GLibServerUnix
+from dasbus.typing import Variant
+from dasbus.server.property import PropertiesInterface
 from xml.dom.minidom import parse, parseString
 import re
 import os
@@ -162,7 +163,7 @@ class SpielSynthStream(object):
         self.stream_writer.close()
 
 
-class SomeObject(object):
+class SomeObject(PropertiesInterface):
     __dbus_xml__ = """<node>
 <interface name="org.freedesktop.Speech.MockProvider">
     <method name="GetLastSpeakArguments">
@@ -196,6 +197,7 @@ class SomeObject(object):
         self._infinite = False
         self._stream = None
         self._voices = VOICES[NAME][:]
+        super().__init__()
 
     def Synthesize(self, fd, utterance, voice_id, pitch, rate, is_ssml):
         if utterance == "die":
@@ -211,10 +213,11 @@ class SomeObject(object):
         self.stream = synthstream_cls(fd, utterance, self._infinite)
         self.stream.start()
 
-    def GetVoices(self):
+    @property
+    def Voices(self) -> Variant:
         if AUTOEXIT:
             GLib.idle_add(self.byebye)
-        return [
+        voices = [
             (
                 v["name"],
                 v["identifier"],
@@ -224,8 +227,7 @@ class SomeObject(object):
             )
             for v in self._voices
         ]
-
-    VoicesChanged = Signal()
+        return Variant("a(ssstas)", voices)
 
     def GetLastSpeakArguments(self):
         return self._last_speak_args
@@ -251,14 +253,19 @@ class SomeObject(object):
                 "languages": languages,
             }
         )
-        GLib.idle_add(self.VoicesChanged)
+        GLib.idle_add(self.report_changed_voices)
 
     def RemoveVoice(self, identifier):
         self._voices = [v for v in self._voices if v["identifier"] != identifier]
-        GLib.idle_add(self.VoicesChanged)
+        GLib.idle_add(self.report_changed_voices)
+
+    def report_changed_voices(self):
+        self.report_changed_property("Voices")
+        self.flush_changes()
 
     def byebye(self):
         exit()
+
 
 # Add speech provider interface
 dbus_xml = parseString(SomeObject.__dbus_xml__)

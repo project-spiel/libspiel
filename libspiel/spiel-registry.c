@@ -71,6 +71,7 @@ typedef struct
 } _ProviderEntry;
 
 static gboolean handle_voices_changed (SpielProvider *provider,
+                                       GParamSpec *spec,
                                        gpointer user_data);
 
 static void
@@ -160,9 +161,8 @@ _insert_providers_and_voices (const char *provider_name,
       g_hash_table_insert (priv->providers, g_strdup (provider_name),
                            provider_entry);
 
-      g_object_connect (provider_entry->provider,
-                        "object_signal::voices-changed",
-                        G_CALLBACK (handle_voices_changed), self, NULL);
+      g_signal_connect (provider_entry->provider, "notify::voices",
+                        G_CALLBACK (handle_voices_changed), self);
     }
 
   provider_entry->is_activatable = provider_and_voices->is_activatable;
@@ -230,32 +230,6 @@ _on_new_provider_collected (GObject *source,
   _insert_providers_and_voices (provider_name, provider_and_voices, self);
 
   spiel_collect_free_provider_and_voices (provider_and_voices);
-}
-
-static void
-_on_got_changed_voices (GObject *source, GAsyncResult *res, SpielRegistry *self)
-{
-  SpielProvider *provider = SPIEL_PROVIDER (source);
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  GError *err = NULL;
-  const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
-  _ProviderEntry *provider_entry =
-      g_hash_table_lookup (priv->providers, provider_name);
-  GSList *changed_voices = spiel_collect_provider_voices_finish (res, &err);
-
-  g_assert (provider_entry);
-
-  if (err != NULL)
-    {
-      g_warning ("Error getting changed voices for %s: %s\n", provider_name,
-                 err->message);
-      g_error_free (err);
-      return;
-    }
-
-  _update_voices (self, changed_voices, provider_entry->voices_hashset);
-
-  g_slist_free_full (changed_voices, (GDestroyNotify) g_object_unref);
 }
 
 static void
@@ -591,12 +565,20 @@ initable_iface_init (GInitableIface *initable_iface)
 /* Signal handlers */
 
 static gboolean
-handle_voices_changed (SpielProvider *provider, gpointer user_data)
+handle_voices_changed (SpielProvider *provider,
+                       GParamSpec *spec,
+                       gpointer user_data)
 {
   SpielRegistry *self = user_data;
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
+  GSList *changed_voices = spiel_collect_provider_voices (provider);
+  _ProviderEntry *provider_entry =
+      g_hash_table_lookup (priv->providers, provider_name);
 
-  spiel_collect_provider_voices (
-      provider, NULL, (GAsyncReadyCallback) _on_got_changed_voices, self);
+  _update_voices (self, changed_voices, provider_entry->voices_hashset);
+
+  g_slist_free_full (changed_voices, (GDestroyNotify) g_object_unref);
 
   return TRUE;
 }

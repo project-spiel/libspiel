@@ -603,7 +603,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   GUnixFDList *fd_list = g_unix_fd_list_new ();
   int mypipe[2];
   int fd;
-  char *text = NULL;
+  const char *text = spiel_utterance_get_text (utterance);
   const char *output_format = NULL;
   const char *stream_type = NULL;
   gboolean is_ssml = FALSE;
@@ -611,13 +611,18 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   SpielVoice *voice = NULL;
   GstStructure *gst_struct;
 
-  g_object_get (utterance, "text", &text, "pitch", &pitch, "rate", &rate,
-                "volume", &volume, "voice", &voice, "is-ssml", &is_ssml, NULL);
+  g_object_get (utterance, "pitch", &pitch, "rate", &rate, "volume", &volume,
+                "voice", &voice, "is-ssml", &is_ssml, NULL);
 
   if (voice == NULL)
     {
       voice =
           spiel_registry_get_voice_for_utterance (priv->registry, utterance);
+      if (!voice)
+        {
+          g_warning ("No voice available!");
+          return;
+        }
       spiel_utterance_set_voice (utterance, voice);
       g_object_ref (voice);
     }
@@ -633,7 +638,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   call_synth_data->self = self;
   call_synth_data->utterance = g_object_ref (utterance);
-  
+
   spiel_provider_call_synthesize (
       provider, g_variant_new_handle (fd), text,
       voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
@@ -641,7 +646,6 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
       call_synth_data);
 
   g_object_unref (fd_list);
-  g_free (text);
   g_object_unref (voice);
 
   entry->utterance = g_object_ref (utterance);

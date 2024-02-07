@@ -55,10 +55,4 @@ void spiel_collect_provider (GDBusConnection *connection,
 ProviderAndVoices *spiel_collect_provider_finish (GAsyncResult *res,
                                                   GError **error);
 
-void spiel_collect_provider_voices (SpielProvider *provider,
-                                    GCancellable *cancellable,
-                                    GAsyncReadyCallback callback,
-                                    gpointer user_data);
-
-GSList *spiel_collect_provider_voices_finish (GAsyncResult *res,
-                                              GError **error);
+GSList *spiel_collect_provider_voices (SpielProvider *provider);

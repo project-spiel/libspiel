@@ -77,12 +77,7 @@ static void _on_provider_created (GObject *source,
 static void _create_next_provider (_CollectProvidersClosure *closure,
                                    GTask *task);
 
-static void _on_collect_providers_get_voices (GObject *source,
-                                              GAsyncResult *result,
-                                              gpointer user_data);
-
-static void
-_on_get_voices (GObject *source, GAsyncResult *result, gpointer user_data);
+static void _create_provider (_CollectProvidersClosure *closure, GTask *task);
 
 static void
 _on_list_names (GObject *source, GAsyncResult *result, gpointer user_data);
@@ -111,17 +106,6 @@ spiel_collect_provider (GDBusConnection *connection,
 {
   _spiel_collect_providers (connection, cancellable, provider_name, callback,
                             user_data);
-}
-
-void
-spiel_collect_provider_voices (SpielProvider *provider,
-                               GCancellable *cancellable,
-                               GAsyncReadyCallback callback,
-                               gpointer user_data)
-{
-  GTask *task = g_task_new (provider, cancellable, callback, user_data);
-  spiel_provider_call_get_voices (provider, G_DBUS_CALL_FLAGS_NONE, -1,
-                                  cancellable, _on_get_voices, task);
 }
 
 static void
@@ -192,7 +176,7 @@ _on_list_names (GObject *source, GAsyncResult *result, gpointer user_data)
     }
   else
     {
-      _create_next_provider (closure, task);
+      _create_provider (closure, task);
     }
 }
 
@@ -200,14 +184,48 @@ static void
 _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
 {
   GList *next_provider = closure->providers_to_process;
+  closure->providers_to_process =
+      g_list_remove_link (closure->providers_to_process, next_provider);
+  g_list_free (next_provider);
+
+  if (closure->providers_to_process)
+    {
+      _create_provider (closure, task);
+      return;
+    }
+
+  // All done, lets return from the task
+  if (closure->provider_name)
+    {
+      // If a provider name is specified we return a single result.
+      ProviderAndVoices *pav =
+          g_hash_table_lookup (closure->providers, closure->provider_name);
+      g_hash_table_steal (closure->providers, closure->provider_name);
+      g_assert_cmpint (g_hash_table_size (closure->providers), ==, 0);
+      g_task_return_pointer (
+          task, pav, (GDestroyNotify) spiel_collect_free_provider_and_voices);
+    }
+  else
+    {
+      // If no provider name was specified we return a hash table of
+      // results.
+      g_task_return_pointer (task, g_hash_table_ref (closure->providers),
+                             (GDestroyNotify) g_hash_table_unref);
+    }
+}
+
+static void
+_create_provider (_CollectProvidersClosure *closure, GTask *task)
+{
+  GList *next_provider = closure->providers_to_process;
   const char *service_name = next_provider->data;
   char **split_name = g_strsplit (service_name, ".", 0);
   char *partial_path = g_strjoinv ("/", split_name);
   char *obj_path = g_strdup_printf ("/%s", partial_path);
 
-  spiel_provider_proxy_new_for_bus (
-      G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START_AT_CONSTRUCTION,
-      service_name, obj_path, closure->cancellable, _on_provider_created, task);
+  spiel_provider_proxy_new_for_bus (G_BUS_TYPE_SESSION, 0, service_name,
+                                    obj_path, closure->cancellable,
+                                    _on_provider_created, task);
 
   g_strfreev (split_name);
   g_free (partial_path);
@@ -221,12 +239,8 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
   _CollectProvidersClosure *closure = g_task_get_task_data (task);
   const char *service_name = closure->providers_to_process->data;
   GError *error = NULL;
-  ProviderAndVoices *provider_and_voices =
-      g_hash_table_lookup (closure->providers, service_name);
   SpielProvider *provider =
       spiel_provider_proxy_new_for_bus_finish (result, &error);
-
-  g_assert (provider_and_voices);
 
   if (error != NULL)
     {
@@ -239,52 +253,40 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
       else
         {
           // Otherwise, just warn and move on to the next provider.
-          GList *next_provider = closure->providers_to_process;
           g_warning ("Error creating proxy for '%s': %s\n", service_name,
                      error->message);
           g_error_free (error);
-
-          closure->providers_to_process =
-              g_list_remove_link (closure->providers_to_process, next_provider);
-          g_list_free (next_provider);
-
-          if (closure->providers_to_process)
-            {
-              _create_next_provider (closure, task);
-            }
         }
     }
-  else if (provider_and_voices)
+  else
     {
+      ProviderAndVoices *provider_and_voices =
+          g_hash_table_lookup (closure->providers, service_name);
+
+      g_assert (provider_and_voices);
       g_assert (g_str_equal (g_dbus_proxy_get_name (G_DBUS_PROXY (provider)),
                              service_name));
 
-      // Take over ownership
-      provider_and_voices->provider = provider;
+      if (provider_and_voices)
+        {
+          // Take over ownership
+          provider_and_voices->provider = provider;
+          provider_and_voices->voices =
+              spiel_collect_provider_voices (provider);
+        }
     }
 
-  spiel_provider_call_get_voices (provider, G_DBUS_CALL_FLAGS_NONE, -1,
-                                  closure->cancellable,
-                                  _on_collect_providers_get_voices, task);
+  _create_next_provider (closure, task);
 }
 
-static GSList *
-_finish_get_voices_into_slist (SpielProvider *provider,
-                               GAsyncResult *result,
-                               GError **error)
+GSList *
+spiel_collect_provider_voices (SpielProvider *provider)
 {
   const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
   GSList *voices_slist = NULL;
-  GVariant *voices = NULL;
-  gsize voices_count = 0;
+  GVariant *voices = spiel_provider_get_voices (provider);
+  gsize voices_count = voices ? g_variant_n_children (voices) : 0;
 
-  spiel_provider_call_get_voices_finish (provider, &voices, result, error);
-  if (*error)
-    {
-      return NULL;
-    }
-
-  voices_count = g_variant_n_children (voices);
   for (gsize i = 0; i < voices_count; i++)
     {
       const char *name = NULL;
@@ -311,85 +313,6 @@ _finish_get_voices_into_slist (SpielProvider *provider,
     }
 
   return voices_slist;
-}
-
-static void
-_on_get_voices (GObject *source, GAsyncResult *result, gpointer user_data)
-{
-  GTask *task = user_data;
-  SpielProvider *provider = SPIEL_PROVIDER (source);
-  GError *error = NULL;
-  GSList *voices = _finish_get_voices_into_slist (provider, result, &error);
-  if (error != NULL)
-    {
-      g_task_return_error (task, error);
-      return;
-    }
-
-  g_task_return_pointer (task, voices, (GDestroyNotify) _free_voices_slist);
-}
-
-static void
-_on_collect_providers_get_voices (GObject *source,
-                                  GAsyncResult *result,
-                                  gpointer user_data)
-{
-  GTask *task = user_data;
-  _CollectProvidersClosure *closure = g_task_get_task_data (task);
-  GList *next_provider = closure->providers_to_process;
-  const char *service_name = next_provider->data;
-  SpielProvider *provider = SPIEL_PROVIDER (source);
-  GError *error = NULL;
-  ProviderAndVoices *provider_and_voices =
-      g_hash_table_lookup (closure->providers, service_name);
-  GSList *voices = NULL;
-
-  g_assert (provider_and_voices);
-  g_assert (g_str_equal (g_dbus_proxy_get_name (G_DBUS_PROXY (provider)),
-                         service_name));
-
-  g_assert (next_provider != NULL);
-  voices = _finish_get_voices_into_slist (provider, result, &error);
-  if (error != NULL)
-    {
-      g_warning ("Error retrieving voices for '%s': %s\n", service_name,
-                 error->message);
-      g_error_free (error);
-    }
-  else if (provider_and_voices)
-    {
-      provider_and_voices->voices = voices;
-    }
-
-  closure->providers_to_process =
-      g_list_remove_link (closure->providers_to_process, next_provider);
-  g_list_free (next_provider);
-
-  if (closure->providers_to_process)
-    {
-      _create_next_provider (closure, task);
-    }
-  else
-    {
-      if (closure->provider_name)
-        {
-          // If a provider name is specified we return a single result.
-          ProviderAndVoices *pav =
-              g_hash_table_lookup (closure->providers, closure->provider_name);
-          g_hash_table_steal (closure->providers, closure->provider_name);
-          g_assert_cmpint (g_hash_table_size (closure->providers), ==, 0);
-          g_task_return_pointer (
-              task, pav,
-              (GDestroyNotify) spiel_collect_free_provider_and_voices);
-        }
-      else
-        {
-          // If no provider name was specified we return a hash table of
-          // results.
-          g_task_return_pointer (task, g_hash_table_ref (closure->providers),
-                                 (GDestroyNotify) g_hash_table_unref);
-        }
-    }
 }
 
 static gboolean
@@ -448,12 +371,6 @@ spiel_collect_providers_finish (GAsyncResult *res, GError **error)
 
 ProviderAndVoices *
 spiel_collect_provider_finish (GAsyncResult *res, GError **error)
-{
-  return g_task_propagate_pointer (G_TASK (res), error);
-}
-
-GSList *
-spiel_collect_provider_voices_finish (GAsyncResult *res, GError **error)
 {
   return g_task_propagate_pointer (G_TASK (res), error);
 }
