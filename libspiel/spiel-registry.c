@@ -540,8 +540,11 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
       return FALSE;
     }
 
-  g_hash_table_foreach (providers_and_voices,
-                        (GHFunc) _insert_providers_and_voices, self);
+  if (providers_and_voices)
+    {
+      g_hash_table_foreach (providers_and_voices,
+                            (GHFunc) _insert_providers_and_voices, self);
+    }
 
   priv->connection = g_object_ref (bus);
 

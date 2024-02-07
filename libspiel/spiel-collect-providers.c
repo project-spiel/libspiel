@@ -186,7 +186,14 @@ _on_list_names (GObject *source, GAsyncResult *result, gpointer user_data)
 
   closure->providers_to_process = g_hash_table_get_keys (closure->providers);
 
-  _create_next_provider (closure, task);
+  if (!closure->providers_to_process)
+    {
+      g_task_return_pointer (task, NULL, NULL);
+    }
+  else
+    {
+      _create_next_provider (closure, task);
+    }
 }
 
 static void
@@ -272,6 +279,10 @@ _finish_get_voices_into_slist (SpielProvider *provider,
   gsize voices_count = 0;
 
   spiel_provider_call_get_voices_finish (provider, &voices, result, error);
+  if (*error)
+    {
+      return NULL;
+    }
 
   voices_count = g_variant_n_children (voices);
   for (gsize i = 0; i < voices_count; i++)
