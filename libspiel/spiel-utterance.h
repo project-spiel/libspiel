@@ -54,4 +54,8 @@ const char *spiel_utterance_get_language (SpielUtterance *self);
 
 void spiel_utterance_set_language (SpielUtterance *self, const char *language);
 
+void spiel_utterance_set_is_ssml (SpielUtterance *self, gboolean is_ssml);
+
+gboolean spiel_utterance_get_is_ssml (SpielUtterance *self);
+
 G_END_DECLS

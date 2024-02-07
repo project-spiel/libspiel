@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "spiel-dbus-enums.h"
 #include <glib-object.h>
 
 G_BEGIN_DECLS
@@ -33,6 +34,8 @@ const char *spiel_voice_get_identifier (SpielVoice *self);
 const char *spiel_voice_get_provider_name (SpielVoice *self);
 
 const char *const *spiel_voice_get_languages (SpielVoice *self);
+
+SpielVoiceFeature spiel_voice_get_features (SpielVoice *self);
 
 const char *spiel_voice_get_output_format (SpielVoice *self);
 

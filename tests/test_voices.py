@@ -2,6 +2,13 @@ from _common import *
 
 
 class TestVoices(BaseSpielTest):
+    def test_voice_features(self):
+        speechSynthesis = Spiel.Speaker.new_sync(None)
+        voice = self.get_voice(speechSynthesis, "org.mock.Speech.Provider", "sit/yue")
+        self.assertTrue(voice.get_features() & Spiel.VoiceFeature.SSML_SAY_AS_CARDINAL)
+        voice = self.get_voice(speechSynthesis, "org.mock.Speech.Provider", "ine/hy")
+        self.assertEqual(voice.get_features(), 0)
+
     def test_get_async_voices(self):
         speechSynthesis = self.wait_for_async_speaker_init()
         self._test_get_voices(speechSynthesis)

@@ -26,12 +26,15 @@ VOICES = {
             "name": "Chinese (Cantonese)",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "sit/yue",
+            "features": SpielProvider.VoiceFeature.SSML_SAY_AS_CARDINAL
+            | SpielProvider.VoiceFeature.SSML_SAY_AS_ORDINAL,
             "languages": ["yue", "zh-yue", "zh"],
         },
         {
             "name": "Armenian (East Armenia)",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "ine/hy",
+            "features": 0,
             "languages": ["hy", "hy-arevela"],
         },
     ],
@@ -40,30 +43,35 @@ VOICES = {
             "name": "Armenian (West Armenia)",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "ine/hyw",
+            "features": 0,
             "languages": ["hyw", "hy-arevmda", "hy"],
         },
         {
             "name": "English (Scotland)",
             "output_format": "nuthin",
             "identifier": "gmw/en-GB-scotland#misconfigured",
+            "features": 0,
             "languages": ["en-gb-scotland", "en"],
         },
         {
             "name": "English (Lancaster)",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en-GB-x-gbclan",
+            "features": 0,
             "languages": ["en-gb-x-gbclan", "en-gb", "en"],
         },
         {
             "name": "English (America)",
             "output_format": "audio/x-spiel,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en-US",
+            "features": 0,
             "languages": ["en-us", "en"],
         },
         {
             "name": "English (Great Britain)",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "gmw/en",
+            "features": 0,
             "languages": ["en-gb", "en"],
         },
     ],
@@ -72,6 +80,7 @@ VOICES = {
             "name": "Uzbek",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "trk/uz",
+            "features": 0,
             "languages": ["uz"],
         },
     ],
@@ -163,12 +172,12 @@ class SomeObject(dbus.service.Object):
 
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
-        in_signature="hssdd",
+        in_signature="hssddb",
         out_signature="",
     )
-    def Synthesize(self, fd, utterance, voice_id, pitch, rate):
+    def Synthesize(self, fd, utterance, voice_id, pitch, rate, is_ssml):
         raw_fd = fd.take()
-        self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate)
+        self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate, is_ssml)
         voice = dict([[v["identifier"], v] for v in self._voices])[voice_id]
         output_format = voice["output_format"]
         synthstream_cls = RawSynthStream
@@ -181,13 +190,19 @@ class SomeObject(dbus.service.Object):
     @dbus.service.method(
         "org.freedesktop.Speech.Provider",
         in_signature="",
-        out_signature="a(sssas)",
+        out_signature="a(ssstas)",
     )
     def GetVoices(self):
         if AUTOEXIT:
             GLib.idle_add(self.byebye)
         return [
-            (v["name"], v["identifier"], v["output_format"], v["languages"])
+            (
+                v["name"],
+                v["identifier"],
+                v["output_format"],
+                v["features"],
+                v["languages"],
+            )
             for v in self._voices
         ]
 
@@ -198,7 +213,7 @@ class SomeObject(dbus.service.Object):
     @dbus.service.method(
         "org.freedesktop.Speech.MockProvider",
         in_signature="",
-        out_signature="tssdd",
+        out_signature="tssddb",
     )
     def GetLastSpeakArguments(self):
         return self._last_speak_args
@@ -240,6 +255,7 @@ class SomeObject(dbus.service.Object):
                 "name": name,
                 "identifier": identifier,
                 "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
+                "features": 0,
                 "languages": languages,
             }
         )

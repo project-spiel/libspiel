@@ -280,15 +280,20 @@ _finish_get_voices_into_slist (SpielProvider *provider,
       const char *identifier = NULL;
       const char *output_format = NULL;
       const char **languages = NULL;
+      guint64 features;
       SpielVoice *voice;
 
-      g_variant_get_child (voices, i, "(&s&s&s^a&s)", &name, &identifier,
-                           &output_format, &languages);
-      voice =
-          g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
-                        identifier, "languages", languages, "provider-name",
-                        provider_name, NULL);
-      spiel_voice_set_output_format(voice, output_format);
+      g_variant_get_child (voices, i, "(&s&s&st^a&s)", &name, &identifier,
+                           &output_format, &features, &languages);
+      if (features >> 32)
+        {
+          g_warning ("Voice features past 32 bits are ignored in %s (%s)",
+                     identifier, provider_name);
+        }
+      voice = g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
+                            identifier, "languages", languages, "provider-name",
+                            provider_name, "features", features, NULL);
+      spiel_voice_set_output_format (voice, output_format);
 
       voices_slist = g_slist_prepend (voices_slist, voice);
       g_free (languages);
