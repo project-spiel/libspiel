@@ -235,8 +235,11 @@ class BaseSpielTest(unittest.TestCase):
         speaker.connect("utterance-error", _utterance_error_cb)
         speaker.connect("range-started", _utterance_range_started_cb)
 
-        for utterance in utterances:
-            speaker.speak(utterance)
+        def do_speak():
+            for utterance in utterances:
+                speaker.speak(utterance)
+
+        GLib.idle_add(do_speak)
 
         loop = GLib.MainLoop()
         loop.run()
