@@ -424,18 +424,6 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
       NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_ERROR);
 }
 
-static gboolean handle_provider_died (SpielProvider *provider,
-                                      const char *provider_name,
-                                      gpointer user_data);
-
-static void
-_connect_signals (SpielSpeaker *self)
-{
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  g_object_connect (priv->registry, "object_signal::provider-died",
-                    G_CALLBACK (handle_provider_died), self, NULL);
-}
-
 static gboolean
 _handle_gst_eos (GstBus *bus, GstMessage *msg, SpielSpeaker *self);
 
@@ -492,7 +480,6 @@ _on_registry_get (GObject *source, GAsyncResult *result, gpointer user_data)
     }
   else
     {
-      _connect_signals (self);
       g_task_return_boolean (task, TRUE);
     }
 
@@ -552,7 +539,6 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
       return FALSE;
     }
 
-  _connect_signals (self);
   return TRUE;
 }
 
@@ -590,6 +576,14 @@ static void _speak_current_entry (SpielSpeaker *self);
 static void _advance_to_next_entry_or_finish (SpielSpeaker *self,
                                               gboolean canceled);
 
+typedef struct
+{
+  SpielSpeaker *self;
+  // We use an utterance instead of a queue entry because we can hold a strong
+  // reference.
+  SpielUtterance *utterance;
+} _CallSynthData;
+
 /**
  * spiel_speaker_speak:
  * @self: a #SpielSpeaker
@@ -604,6 +598,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = g_slice_new0 (_QueueEntry);
+  _CallSynthData *call_synth_data = g_slice_new0 (_CallSynthData);
   SpielProvider *provider = NULL;
   GUnixFDList *fd_list = g_unix_fd_list_new ();
   int mypipe[2];
@@ -636,11 +631,14 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   // XXX: Emit error on failure
   close (mypipe[1]);
 
+  call_synth_data->self = self;
+  call_synth_data->utterance = g_object_ref (utterance);
+  
   spiel_provider_call_synthesize (
       provider, g_variant_new_handle (fd), text,
       voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
       G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL, _provider_call_synthesize_done,
-      self);
+      call_synth_data);
 
   g_object_unref (fd_list);
   g_free (text);
@@ -787,32 +785,6 @@ spiel_speaker_cancel (SpielSpeaker *self)
 }
 
 static gboolean
-handle_provider_died (SpielProvider *provider,
-                      const char *provider_name,
-                      gpointer user_data)
-{
-  SpielSpeaker *self = SPIEL_SPEAKER (user_data);
-  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-
-  if (entry != NULL)
-    {
-      SpielVoice *voice = spiel_utterance_get_voice (entry->utterance);
-      g_assert (voice);
-      if (g_str_equal (provider_name, spiel_voice_get_provider_name (voice)))
-        {
-          g_assert (!entry->error);
-          g_set_error (&entry->error, SPIEL_ERROR,
-                       SPIEL_ERROR_PROVIDER_UNEXPECTEDLY_DIED,
-                       "Provider unexpectedly died: %s", provider_name);
-          _advance_to_next_entry_or_finish (self, FALSE);
-        }
-    }
-
-  return TRUE;
-}
-
-static gboolean
 _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
 {
   GstState old_state, new_state, pending_state;
@@ -943,16 +915,41 @@ _provider_call_synthesize_done (GObject *source_object,
                                 GAsyncResult *res,
                                 gpointer user_data)
 {
+  _CallSynthData *call_synth_data = user_data;
   SpielProvider *provider = SPIEL_PROVIDER (source_object);
   GError *err = NULL;
   spiel_provider_call_synthesize_finish (provider, NULL, res, &err);
   if (err != NULL)
     {
-      // XXX: Emit error on associated utterance
-      g_warning ("Synthesis error: %s", err->message);
-      g_error_free (err);
-      return;
+      SpielSpeakerPrivate *priv =
+          spiel_speaker_get_instance_private (call_synth_data->self);
+      GSList *item = priv->queue;
+      while (item)
+        {
+          _QueueEntry *entry = item->data;
+          if (entry->utterance == call_synth_data->utterance)
+            {
+              g_assert (!entry->error);
+              entry->error = err;
+              if (item == priv->queue)
+                {
+                  // Top of queue failed, advance to next.
+                  _advance_to_next_entry_or_finish (call_synth_data->self,
+                                                    FALSE);
+                }
+              break;
+            }
+          item = item->next;
+        }
+
+      if (!item)
+        {
+          g_error_free (err);
+        }
     }
+
+  g_object_unref (call_synth_data->utterance);
+  g_slice_free (_CallSynthData, call_synth_data);
 }
 
 static void
@@ -1018,8 +1015,12 @@ _advance_to_next_entry_or_finish (SpielSpeaker *self, gboolean canceled)
 
   if (!priv->queue->next)
     {
+      gboolean was_speaking = priv->speaking;
       priv->speaking = FALSE;
-      g_object_notify (G_OBJECT (self), "speaking");
+      if (was_speaking)
+        {
+          g_object_notify (G_OBJECT (self), "speaking");
+        }
     }
 
   _queue_entry_destroy (entry);

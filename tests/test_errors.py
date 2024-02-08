@@ -3,25 +3,23 @@ from _common import *
 
 class TestSpeak(BaseSpielTest):
     def test_provider_dies(self):
-        def _started_cb(synth, utt):
-            GLib.idle_add(lambda: self.mock_service.Die())
-
-        self.mock_service.SetInfinite(True)
         speaker = Spiel.Speaker.new_sync(None)
 
-        speaker.connect("utterance-started", _started_cb)
-        utterance = Spiel.Utterance(text="hello world, how are you?")
+        utterance = Spiel.Utterance(text="die")
+        # XXX: fdsrc goes to playing state even when no
+        # data is written to the pipe. So we use a spielsrc.
+        utterance.props.voice = self.get_voice(
+            speaker, "org.mock2.Speech.Provider", "gmw/en-US"
+        )
 
         expected_error = (
-            "spiel-error-quark",
-            int(Spiel.Error.PROVIDER_UNEXPECTEDLY_DIED),
-            "Provider unexpectedly died: org.mock.Speech.Provider",
+            "g-dbus-error-quark",
+            int(Gio.DBusError.NO_REPLY),
+            "GDBus.Error:org.freedesktop.DBus.Error.NoReply: "
+            "Message recipient disconnected from message bus without replying",
         )
         expected_events = [
-            ["notify:speaking", True],
-            ["utterance-started", utterance],
             ["utterance-error", utterance, expected_error],
-            ["notify:speaking", False],
         ]
 
         actual_events = self.capture_speak_sequence(speaker, utterance)

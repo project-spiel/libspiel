@@ -226,6 +226,8 @@ class BaseSpielTest(unittest.TestCase):
             event_sequence.append(
                 ["utterance-error", utt, (error.domain, error.code, error.message)]
             )
+            if not synth.props.speaking:
+                loop.quit()
 
         speaker.connect("notify::speaking", _notify_speaking_cb)
         speaker.connect("notify::paused", _notify_paused_cb)

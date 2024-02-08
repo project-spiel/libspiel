@@ -176,6 +176,8 @@ class SomeObject(dbus.service.Object):
         out_signature="",
     )
     def Synthesize(self, fd, utterance, voice_id, pitch, rate, is_ssml):
+        if utterance == "die":
+            self.byebye()
         raw_fd = fd.take()
         self._last_speak_args = (raw_fd, utterance, voice_id, pitch, rate, is_ssml)
         voice = dict([[v["identifier"], v] for v in self._voices])[voice_id]
@@ -269,14 +271,6 @@ class SomeObject(dbus.service.Object):
     def RemoveVoice(self, identifier):
         self._voices = [v for v in self._voices if v["identifier"] != identifier]
         GLib.idle_add(self.VoicesChanged)
-
-    @dbus.service.method(
-        "org.freedesktop.Speech.MockProvider",
-        in_signature="",
-        out_signature="",
-    )
-    def Die(self):
-        GLib.idle_add(self.byebye)
 
     def byebye(self):
         exit()
