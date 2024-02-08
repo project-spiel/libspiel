@@ -1,11 +1,17 @@
-conf = configuration_data()
-conf.set('service_exec_dir', join_paths(meson.current_source_dir()))
+config = configuration_data()
+config.set('provider_iface', join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'))
+# config.set('python_path', py.full_path())
+
+configure_file(
+  input: 'mock_speech_provider.py.in',
+  output: 'mock_speech_provider.py',
+  configuration: config
+)
 
 service_names = ['mock', 'mock2', 'mock3']
-
 foreach service_name : service_names
     c = configuration_data({
-        'service_exec_dir': meson.current_source_dir(),
+        'service_exec_dir': meson.current_build_dir(),
         'service_name': service_name
     })
     configure_file(
