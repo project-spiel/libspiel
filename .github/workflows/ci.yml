@@ -43,7 +43,7 @@ jobs:
       - name: Build with Ninja
         run: su ubuntu -c "meson compile -C build"
       - name: Test with Ninja
-        run: su ubuntu -c "meson test -C build"
+        run: su ubuntu -c "meson test --verbose -C build"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
