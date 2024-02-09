@@ -8,7 +8,6 @@ from gi.repository import GLib, Gst, SpielProvider
 
 from dasbus.connection import SessionMessageBus
 from dasbus.unix import GLibServerUnix
-from dasbus.typing import Variant
 from dasbus.server.property import PropertiesInterface
 from xml.dom.minidom import parse, parseString
 import re
@@ -214,7 +213,7 @@ class SomeObject(PropertiesInterface):
         self.stream.start()
 
     @property
-    def Voices(self) -> Variant:
+    def Voices(self):
         if AUTOEXIT:
             GLib.idle_add(self.byebye)
         voices = [
@@ -227,7 +226,7 @@ class SomeObject(PropertiesInterface):
             )
             for v in self._voices
         ]
-        return Variant("a(ssstas)", voices)
+        return voices
 
     def GetLastSpeakArguments(self):
         return self._last_speak_args
