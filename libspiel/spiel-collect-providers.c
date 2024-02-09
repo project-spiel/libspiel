@@ -214,21 +214,27 @@ _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
     }
 }
 
+static char*
+_object_path_from_service_name(const char* service_name) {
+  char **split_name = g_strsplit (service_name, ".", 0);
+  char *partial_path = g_strjoinv ("/", split_name);
+  char *obj_path = g_strdup_printf ("/%s", partial_path);
+  g_strfreev (split_name);
+  g_free (partial_path);
+  return obj_path;
+}
+
 static void
 _create_provider (_CollectProvidersClosure *closure, GTask *task)
 {
   GList *next_provider = closure->providers_to_process;
   const char *service_name = next_provider->data;
-  char **split_name = g_strsplit (service_name, ".", 0);
-  char *partial_path = g_strjoinv ("/", split_name);
-  char *obj_path = g_strdup_printf ("/%s", partial_path);
+  char *obj_path = _object_path_from_service_name(service_name);
 
   spiel_provider_proxy_new_for_bus (G_BUS_TYPE_SESSION, 0, service_name,
                                     obj_path, closure->cancellable,
                                     _on_provider_created, task);
 
-  g_strfreev (split_name);
-  g_free (partial_path);
   g_free (obj_path);
 }
 
@@ -375,50 +381,75 @@ spiel_collect_provider_finish (GAsyncResult *res, GError **error)
   return g_task_propagate_pointer (G_TASK (res), error);
 }
 
-typedef struct
-{
-  GMainContext *context;
-  GMainLoop *loop;
-  GAsyncResult *res;
-} InitableAsyncInitableData;
-
-static void
-spiel_collect_providers_sync_cb (GObject *source_object,
-                                 GAsyncResult *res,
-                                 gpointer user_data)
-{
-  InitableAsyncInitableData *data = user_data;
-  data->res = g_object_ref (res);
-  g_main_loop_quit (data->loop);
-}
-
 GHashTable *
 spiel_collect_providers_sync (GDBusConnection *connection,
                               GCancellable *cancellable,
                               GError **error)
 {
-  GHashTable *ret = NULL;
-  InitableAsyncInitableData *data = g_new0 (InitableAsyncInitableData, 1);
+  GHashTable *providers = g_hash_table_new_full (
+      g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) spiel_collect_free_provider_and_voices);
+  const char *list_name_methods[] = { "ListActivatableNames", "ListNames",
+                                      NULL };
+  for (const char **method = list_name_methods; *method; method++)
+    {
+      GVariant *real_ret = NULL;
+      GVariantIter iter;
+      GVariant *service = NULL;
+      GVariant *ret = g_dbus_connection_call_sync (
+          connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
+          "org.freedesktop.DBus", *method, NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+          -1, NULL, error);
+      if (*error)
+        {
+          g_warning ("Error calling list (%s): %s\n", *method, (*error)->message);
+          g_hash_table_unref(providers);
+          return NULL;
+        }
 
-  data = g_new0 (InitableAsyncInitableData, 1);
-  data->context = g_main_context_new ();
-  data->loop = g_main_loop_new (data->context, FALSE);
+      real_ret = g_variant_get_child_value (ret, 0);
+      g_variant_unref (ret);
 
-  g_main_context_push_thread_default (data->context);
+      g_variant_iter_init (&iter, real_ret);
+      while ((service = g_variant_iter_next_value (&iter)) &&
+             !g_cancellable_is_cancelled (cancellable))
+        {
+          const char* service_name = g_variant_get_string (service, NULL);
+          char* obj_path = NULL;
+          ProviderAndVoices *provider_and_voices = NULL;
+          SpielProvider* provider = NULL;
+          GError *err = NULL;
 
-  spiel_collect_providers (connection, cancellable,
-                           spiel_collect_providers_sync_cb, data);
+          if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX) ||
+              g_hash_table_contains (providers, service_name))
+            {
+              continue;
+            }
+          obj_path = _object_path_from_service_name (service_name);
+          provider = spiel_provider_proxy_new_sync (
+              connection, 0, service_name, obj_path, cancellable, &err);
+          g_free (obj_path);
 
-  g_main_loop_run (data->loop);
+          if (err)
+            {
+              g_warning ("Error creating proxy for '%s': %s\n", service_name,
+                         err->message);
+              g_error_free (err);
+              continue;
+            }
 
-  ret = spiel_collect_providers_finish (data->res, error);
+          provider_and_voices = g_slice_new0 (ProviderAndVoices);
+          provider_and_voices->provider = provider;
+          provider_and_voices->voices =
+              spiel_collect_provider_voices (provider);
+          provider_and_voices->is_activatable =
+              g_str_equal (*method, "ListActivatableNames");
+          g_hash_table_insert (providers, g_strdup (service_name),
+                               provider_and_voices);
+          g_variant_unref (service);
+        }
+      g_variant_unref (real_ret);
+    }
 
-  g_main_context_pop_thread_default (data->context);
-
-  g_main_context_unref (data->context);
-  g_main_loop_unref (data->loop);
-  g_object_unref (data->res);
-  g_free (data);
-
-  return ret;
+  return providers;
 }
