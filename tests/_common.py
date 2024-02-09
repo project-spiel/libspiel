@@ -116,7 +116,7 @@ class BaseSpielTest(unittest.TestCase):
                 path="/org/freedesktop/DBus",
                 arg0=name,
             )
-            GLib.timeout_add(500, loop.quit)
+            GLib.idle_add(loop.quit)
 
         speech_providers = self.list_active_providers()
         if name not in speech_providers:
