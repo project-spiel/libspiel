@@ -576,8 +576,9 @@ handle_voices_changed (SpielProvider *provider,
   SpielRegistry *self = user_data;
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
-  _ProviderEntry *provider_entry = g_hash_table_lookup (priv->providers, provider_name);
-  char* name_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (provider));
+  _ProviderEntry *provider_entry =
+      g_hash_table_lookup (priv->providers, provider_name);
+  char *name_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (provider));
   GSList *changed_voices = NULL;
 
   if (name_owner == NULL && provider_entry->is_activatable)

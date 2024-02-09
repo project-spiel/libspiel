@@ -214,8 +214,9 @@ _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
     }
 }
 
-static char*
-_object_path_from_service_name(const char* service_name) {
+static char *
+_object_path_from_service_name (const char *service_name)
+{
   char **split_name = g_strsplit (service_name, ".", 0);
   char *partial_path = g_strjoinv ("/", split_name);
   char *obj_path = g_strdup_printf ("/%s", partial_path);
@@ -229,7 +230,7 @@ _create_provider (_CollectProvidersClosure *closure, GTask *task)
 {
   GList *next_provider = closure->providers_to_process;
   const char *service_name = next_provider->data;
-  char *obj_path = _object_path_from_service_name(service_name);
+  char *obj_path = _object_path_from_service_name (service_name);
 
   spiel_provider_proxy_new_for_bus (G_BUS_TYPE_SESSION, 0, service_name,
                                     obj_path, closure->cancellable,
@@ -402,8 +403,9 @@ spiel_collect_providers_sync (GDBusConnection *connection,
           -1, NULL, error);
       if (*error)
         {
-          g_warning ("Error calling list (%s): %s\n", *method, (*error)->message);
-          g_hash_table_unref(providers);
+          g_warning ("Error calling list (%s): %s\n", *method,
+                     (*error)->message);
+          g_hash_table_unref (providers);
           return NULL;
         }
 
@@ -414,10 +416,10 @@ spiel_collect_providers_sync (GDBusConnection *connection,
       while ((service = g_variant_iter_next_value (&iter)) &&
              !g_cancellable_is_cancelled (cancellable))
         {
-          const char* service_name = g_variant_get_string (service, NULL);
-          char* obj_path = NULL;
+          const char *service_name = g_variant_get_string (service, NULL);
+          char *obj_path = NULL;
           ProviderAndVoices *provider_and_voices = NULL;
-          SpielProvider* provider = NULL;
+          SpielProvider *provider = NULL;
           GError *err = NULL;
 
           if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX) ||
