@@ -8,23 +8,8 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow one concurrent deployment
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     container: ubuntu:lunar
     steps:
@@ -35,19 +20,17 @@ jobs:
       - name: Update repos
         run: apt update
       - name: Install dependencies
-        run: apt install -y git meson gi-docgen libgirepository1.0-dev dbus libdbus-glib-1-dev python3-dasbus python3-tap python3-gi libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
+        run: apt install -y git meson libgirepository1.0-dev dbus libdbus-glib-1-dev python3-dasbus python3-tap python3-gi libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
       - name: Set up permissions
         run: chown ubuntu:ubuntu .
-      - name: Build libspiel
-        run: su ubuntu -c "meson setup build"
-      - name: Build with Ninja
+      - name: Setup Spiel
+        run: su ubuntu -c "meson setup build -Ddocs=false"
+      - name: Compile Spiel
         run: su ubuntu -c "meson compile -C build"
-      - name: Test with Ninja
-        run: su ubuntu -c "meson test --verbose -C build"
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+      - name: Test Spiel
+        run: su ubuntu -c "meson test -v -C build"
+      - uses: actions/upload-artifact@v1
+        if: failure()
         with:
-          path: './build/doc/libspiel'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
+          name: Meson_Testlog
+          path: builddir/meson-logs/testlog.txt
