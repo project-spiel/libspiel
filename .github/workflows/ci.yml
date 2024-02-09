@@ -1,4 +1,4 @@
-name: Build, Text & Docs
+name: Build & Test
 
 on:
   # Runs on pushes targeting the default branch
