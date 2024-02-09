@@ -215,7 +215,7 @@ class SomeObject(PropertiesInterface):
     @property
     def Voices(self):
         if AUTOEXIT:
-            GLib.idle_add(self.byebye)
+            GLib.timeout_add(500, self.byebye)
         voices = [
             (
                 v["name"],
