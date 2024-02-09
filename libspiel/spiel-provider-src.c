@@ -196,54 +196,55 @@ static GstFlowReturn
 spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
 {
   SpielProviderSrc *src;
-  GstBuffer *buf;
-  guint8 *chunk;
-  guint32 chunk_size;
-  gboolean success;
 
   src = SPIEL_PROVIDER_SRC (psrc);
 
   while (TRUE)
     {
+      guint8 *chunk;
+      guint32 chunk_size;
       SpielProviderEventType event_type;
       guint32 range_start;
       guint32 range_end;
       char *mark_name = NULL;
-      success = spiel_provider_stream_reader_get_event (
+      gboolean got_event, got_audio;
+      got_event = spiel_provider_stream_reader_get_event (
           src->reader, &event_type, &range_start, &range_end, &mark_name);
-      if (!success)
+      if (got_event)
         {
-          break;
+          gst_element_post_message (
+              GST_ELEMENT_CAST (src),
+              gst_message_new_element (
+                  GST_OBJECT_CAST (src),
+                  gst_structure_new ("SpielGoingToSpeak", "event_type",
+                                     G_TYPE_UINT, event_type, "range_start",
+                                     G_TYPE_UINT, range_start, "range_end",
+                                     G_TYPE_UINT, range_end, "mark_name",
+                                     G_TYPE_STRING, mark_name, NULL)));
+          g_free (mark_name);
         }
 
-      gst_element_post_message (
-          GST_ELEMENT_CAST (src),
-          gst_message_new_element (
-              GST_OBJECT_CAST (src),
-              gst_structure_new ("SpielGoingToSpeak", "event_type", G_TYPE_UINT,
-                                 event_type, "range_start", G_TYPE_UINT,
-                                 range_start, "range_end", G_TYPE_UINT,
-                                 range_end, "mark_name", G_TYPE_STRING,
-                                 mark_name, NULL)));
-      g_free (mark_name);
+      got_audio = spiel_provider_stream_reader_get_audio (src->reader, &chunk,
+                                                        &chunk_size);
+      if (got_audio && chunk_size > 0)
+        {
+          GstBuffer *buf = gst_buffer_new_wrapped (chunk, chunk_size);
+
+          GST_BUFFER_OFFSET (buf) = src->curoffset;
+          GST_BUFFER_TIMESTAMP (buf) = GST_CLOCK_TIME_NONE;
+          src->curoffset += chunk_size;
+
+          *outbuf = buf;
+
+          return GST_FLOW_OK;
+        }
+
+      if (!got_audio && !got_event)
+        {
+          GST_DEBUG_OBJECT (psrc, "Read 0 bytes. EOS.");
+          return GST_FLOW_EOS;
+        }
     }
-
-  success =
-      spiel_provider_stream_reader_get_audio (src->reader, &chunk, &chunk_size);
-  if (!success)
-    {
-      g_assert (chunk_size == 0);
-      GST_DEBUG_OBJECT (psrc, "Read 0 bytes. EOS.");
-      return GST_FLOW_EOS;
-    }
-
-  buf = gst_buffer_new_wrapped (chunk, chunk_size);
-
-  GST_BUFFER_OFFSET (buf) = src->curoffset;
-  GST_BUFFER_TIMESTAMP (buf) = GST_CLOCK_TIME_NONE;
-  src->curoffset += chunk_size;
-
-  *outbuf = buf;
 
   return GST_FLOW_OK;
 }

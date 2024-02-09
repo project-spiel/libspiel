@@ -143,6 +143,8 @@ class SpielSynthStream(object):
         sample = sink.emit("pull-sample")
         buffer = sample.get_buffer()
         b = buffer.extract_dup(0, buffer.get_size())
+        # Some chaos
+        self.stream_writer.send_audio(b"")
         if self.ranges:
             start, end = self.ranges.pop(0)
             self.stream_writer.send_event(SpielProvider.EventType.WORD, start, end, "")
