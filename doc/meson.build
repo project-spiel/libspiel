@@ -37,7 +37,7 @@ endif
 
 python_module = import('python')
 python = python_module.find_installation(
-  'python3', required : true, modules: 'tap')
+  'python3', required : true)
 overview_doc = custom_target(
     input: join_paths(meson.project_source_root(), 'README.md'),
     output: 'overview.md',
