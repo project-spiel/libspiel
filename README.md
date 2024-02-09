@@ -2,9 +2,7 @@
 
 # Spiel
 
-[![ Build & Test ](https://github.com/eeejay/spiel/actions/workflows/ci.yml/badge.svg)](https://github.com/eeejay/spiel/actions/workflows/ci.yml)
-
-[![ Docs & Website ](https://github.com/eeejay/spiel/actions/workflows/website.yml/badge.svg)](https://github.com/eeejay/spiel/actions/workflows/website.yml)
+[![ Build & Test ](https://github.com/eeejay/spiel/actions/workflows/ci.yml/badge.svg)](https://github.com/eeejay/spiel/actions/workflows/ci.yml) [![ Docs & Website ](https://github.com/eeejay/spiel/actions/workflows/website.yml/badge.svg)](https://github.com/eeejay/spiel/actions/workflows/website.yml)
 
 ## Overview
 
