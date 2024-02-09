@@ -68,6 +68,7 @@ typedef struct
   SpielProvider *provider;
   GHashTable *voices_hashset;
   gboolean is_activatable;
+  gulong voices_changed_handler_id;
 } _ProviderEntry;
 
 static gboolean handle_voices_changed (SpielProvider *provider,
@@ -78,9 +79,12 @@ static void
 _provider_entry_destroy (gpointer data)
 {
   _ProviderEntry *entry = data;
+  g_signal_handler_disconnect (entry->provider,
+                               entry->voices_changed_handler_id);
   g_clear_object (&entry->provider);
   g_hash_table_unref (entry->voices_hashset);
   entry->voices_hashset = NULL;
+  entry->voices_changed_handler_id = 0;
 
   g_slice_free (_ProviderEntry, entry);
 }
@@ -158,11 +162,11 @@ _insert_providers_and_voices (const char *provider_name,
       provider_entry->voices_hashset = g_hash_table_new_full (
           (GHashFunc) spiel_voice_hash, (GCompareFunc) spiel_voice_equal,
           g_object_unref, NULL);
+      provider_entry->voices_changed_handler_id =
+          g_signal_connect (provider_entry->provider, "notify::voices",
+                            G_CALLBACK (handle_voices_changed), self);
       g_hash_table_insert (priv->providers, g_strdup (provider_name),
                            provider_entry);
-
-      g_signal_connect (provider_entry->provider, "notify::voices",
-                        G_CALLBACK (handle_voices_changed), self);
     }
 
   provider_entry->is_activatable = provider_and_voices->is_activatable;
@@ -572,10 +576,21 @@ handle_voices_changed (SpielProvider *provider,
   SpielRegistry *self = user_data;
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
-  GSList *changed_voices = spiel_collect_provider_voices (provider);
-  _ProviderEntry *provider_entry =
-      g_hash_table_lookup (priv->providers, provider_name);
+  _ProviderEntry *provider_entry = g_hash_table_lookup (priv->providers, provider_name);
+  char* name_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (provider));
+  GSList *changed_voices = NULL;
 
+  if (name_owner == NULL && provider_entry->is_activatable)
+    {
+      // Got a change notification because an activatable service left the bus.
+      // Its voices are still valid, though.
+      return TRUE;
+    }
+
+  g_free (name_owner);
+
+  changed_voices = spiel_collect_provider_voices (provider);
+  provider_entry = g_hash_table_lookup (priv->providers, provider_name);
   _update_voices (self, changed_voices, provider_entry->voices_hashset);
 
   g_slist_free_full (changed_voices, (GDestroyNotify) g_object_unref);
