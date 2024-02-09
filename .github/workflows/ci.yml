@@ -33,4 +33,4 @@ jobs:
         if: failure()
         with:
           name: Meson_Testlog
-          path: builddir/meson-logs/testlog.txt
+          path: build/meson-logs/testlog.txt

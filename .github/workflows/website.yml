@@ -1,4 +1,4 @@
-name: Build, Text & Docs
+name: Docs & Website
 
 on:
   # Runs on pushes targeting the default branch
