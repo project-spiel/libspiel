@@ -28,7 +28,7 @@ jobs:
       - name: Compile Spiel
         run: su ubuntu -c "meson compile -C build"
       - name: Test Spiel
-        run: su ubuntu -c "meson test -v -C build"
+        run: su ubuntu -c "meson test -C build"
       - uses: actions/upload-artifact@v1
         if: failure()
         with:
