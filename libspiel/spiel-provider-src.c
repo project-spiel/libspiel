@@ -225,7 +225,7 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
         }
 
       got_audio = spiel_provider_stream_reader_get_audio (src->reader, &chunk,
-                                                        &chunk_size);
+                                                          &chunk_size);
       if (got_audio && chunk_size > 0)
         {
           GstBuffer *buf = gst_buffer_new_wrapped (chunk, chunk_size);

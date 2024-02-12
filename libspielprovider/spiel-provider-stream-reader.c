@@ -191,17 +191,6 @@ spiel_provider_stream_reader_get_event (SpielProviderStreamReader *self,
 }
 
 static void
-spiel_provider_stream_reader_finalize (GObject *object)
-{
-  SpielProviderStreamReader *self = (SpielProviderStreamReader *) object;
-  SpielProviderStreamReaderPrivate *priv =
-      spiel_provider_stream_reader_get_instance_private (self);
-
-  close (priv->fd);
-  G_OBJECT_CLASS (spiel_provider_stream_reader_parent_class)->finalize (object);
-}
-
-static void
 spiel_provider_stream_reader_get_property (GObject *object,
                                            guint prop_id,
                                            GValue *value,
@@ -246,7 +235,6 @@ spiel_provider_stream_reader_class_init (SpielProviderStreamReaderClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = spiel_provider_stream_reader_finalize;
   object_class->get_property = spiel_provider_stream_reader_get_property;
   object_class->set_property = spiel_provider_stream_reader_set_property;
 

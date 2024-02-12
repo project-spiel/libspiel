@@ -89,9 +89,10 @@ VOICES = {
 
 
 class RawSynthStream(object):
-    def __init__(self, fd, text, indefinite=False):
+    def __init__(self, fd, text, indefinite, silent):
         elements = [
-            "audiotestsrc num-buffers=%d name=src" % (-1 if indefinite else 10),
+            "audiotestsrc num-buffers=%d wave=%s name=src"
+            % (-1 if indefinite else 10, "silence" if silent else "sine"),
             "audioconvert",
             "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "fdsink name=sink",
@@ -119,7 +120,7 @@ class RawSynthStream(object):
 
 
 class SpielSynthStream(object):
-    def __init__(self, fd, text, indefinite=False):
+    def __init__(self, fd, text, indefinite, silent):
         self.ranges = ranges = [
             [m.start(), m.end()] for m in re.finditer(r".*?\b\W\s?", text, re.MULTILINE)
         ]
@@ -127,7 +128,8 @@ class SpielSynthStream(object):
         if not indefinite:
             num_buffers = max(10, len(self.ranges) + 1)
         elements = [
-            f"audiotestsrc num-buffers={num_buffers} name=src",
+            "audiotestsrc num-buffers=%d wave=%s name=src"
+            % (-1 if indefinite else 10, "silence" if silent else "sine"),
             "audioconvert",
             "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "appsink emit-signals=True name=sink",
@@ -211,7 +213,9 @@ class SomeObject(PropertiesInterface):
         if output_format.startswith("audio/x-spiel"):
             synthstream_cls = SpielSynthStream
 
-        self.stream = synthstream_cls(fd, utterance, self._infinite)
+        self.stream = synthstream_cls(
+            fd, utterance, self._infinite, utterance == "silent"
+        )
         self.stream.start()
 
     @property

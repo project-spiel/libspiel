@@ -78,6 +78,32 @@ class TestSpeak(BaseSpielTest):
 
         loop.run()
 
+    def test_queue(self):
+        # Tests the proper disposal/closing of 'audio/x-spiel' utterances in a queue
+        speaker = Spiel.Speaker.new_sync(None)
+
+        sink = Gst.ElementFactory.make("autoaudiosink", "sink")
+        # Override usual test fakesink
+        speaker.props.sink = sink
+
+        voice = self.get_voice(speaker, "org.mock2.Speech.Provider", "gmw/en-US")
+        [one, two] = [
+            Spiel.Utterance(text=text, voice=voice) for text in ["silent", "silent"]
+        ]
+
+        expected_events = [
+            ["notify:speaking", True],
+            ["utterance-started", one],
+            ["utterance-finished", one],
+            ["utterance-started", two],
+            ["utterance-finished", two],
+            ["notify:speaking", False],
+        ]
+
+        actual_events = self.capture_speak_sequence(speaker, one, two)
+
+        self.assertEqual(actual_events, expected_events)
+
 
 if __name__ == "__main__":
     test_main()
