@@ -1,0 +1,78 @@
+
+#pragma once
+
+#if !defined(SPEECH_PROVIDER_INSIDE) && !defined(SPEECH_PROVIDER_COMPILATION)
+#error "Only <speech-provider.h> can be included directly."
+#endif
+
+/**
+ * SECTION:speech-providerversion
+ * @short_description: speech-provider version checking
+ *
+ * speech-provider provides macros to check the version of the library
+ * at compile-time
+ */
+
+/**
+ * SPEECH_PROVIDER_MAJOR_VERSION:
+ *
+ * speech-provider major version component (e.g. 1 if %SPEECH_PROVIDER_VERSION is 1.2.3)
+ */
+#define SPEECH_PROVIDER_MAJOR_VERSION (@MAJOR_VERSION @)
+
+/**
+ * SPEECH_PROVIDER_MINOR_VERSION:
+ *
+ * speech-provider minor version component (e.g. 2 if %SPEECH_PROVIDER_VERSION is 1.2.3)
+ */
+#define SPEECH_PROVIDER_MINOR_VERSION (@MINOR_VERSION @)
+
+/**
+ * SPEECH_PROVIDER_MICRO_VERSION:
+ *
+ * speech-provider micro version component (e.g. 3 if %SPEECH_PROVIDER_VERSION is 1.2.3)
+ */
+#define SPEECH_PROVIDER_MICRO_VERSION (@MICRO_VERSION @)
+
+/**
+ * SPEECH_PROVIDER_VERSION
+ *
+ * speech-provider version.
+ */
+#define SPEECH_PROVIDER_VERSION (@VERSION @)
+
+/**
+ * SPEECH_PROVIDER_VERSION_S:
+ *
+ * speech-provider version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define SPEECH_PROVIDER_VERSION_S "@VERSION@"
+
+#define SPEECH_PROVIDER_ENCODE_VERSION(major, minor, micro)                              \
+  ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * SPEECH_PROVIDER_VERSION_HEX:
+ *
+ * speech-provider version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define SPEECH_PROVIDER_VERSION_HEX                                                      \
+  (SPEECH_PROVIDER_ENCODE_VERSION (SPEECH_PROVIDER_MAJOR_VERSION, SPEECH_PROVIDER_MINOR_VERSION,             \
+                         SPEECH_PROVIDER_MICRO_VERSION))
+
+/**
+ * SPEECH_PROVIDER_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of speech-provider is greater than the required one.
+ */
+#define SPEECH_PROVIDER_CHECK_VERSION(major, minor, micro)                               \
+  (SPEECH_PROVIDER_MAJOR_VERSION > (major) ||                                            \
+   (SPEECH_PROVIDER_MAJOR_VERSION == (major) && SPEECH_PROVIDER_MINOR_VERSION > (minor)) ||        \
+   (SPEECH_PROVIDER_MAJOR_VERSION == (major) && SPEECH_PROVIDER_MINOR_VERSION == (minor) &&        \
+    SPEECH_PROVIDER_MICRO_VERSION >= (micro)))

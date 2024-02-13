@@ -1,4 +1,4 @@
 option('libspiel', type: 'boolean', value: true, description: 'Enable libspiel')
-option('libspielprovider', type: 'boolean', value: true, description: 'Enable libspielprovider')
+option('libspeechprovider', type: 'boolean', value: true, description: 'Enable libspeechprovider')
 option('tests', type: 'boolean', value: true, description: 'Enable tests')
 option('docs', type: 'boolean', value: true, description: 'Enable docs')

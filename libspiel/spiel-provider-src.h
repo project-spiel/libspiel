@@ -21,7 +21,7 @@
 
 #include <gst/base/gstpushsrc.h>
 #include <gst/gst.h>
-#include <spiel-provider.h>
+#include <speech-provider.h>
 
 G_BEGIN_DECLS
 
@@ -54,7 +54,7 @@ struct _SpielProviderSrc
 
   gulong curoffset; /* current offset in file */
 
-  SpielProviderStreamReader *reader;
+  SpeechProviderStreamReader *reader;
 };
 
 struct _SpielProviderSrcClass

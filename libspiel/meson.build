@@ -81,7 +81,7 @@ spiel_deps = [
   dependency('gio-unix-2.0'),
   dependency('gstreamer-1.0'),
   dependency('gstreamer-audio-1.0'),
-  spiel_provider_lib_dep
+  speech_provider_lib_dep
 ]
 
 spiel_lib = shared_library('spiel-' + api_version,

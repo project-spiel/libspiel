@@ -865,7 +865,7 @@ _process_going_to_speak_message (GstMessage *msg, SpielSpeaker *self)
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
   const GstStructure *strct = gst_message_get_structure (msg);
-  guint event_type = SPIEL_PROVIDER_EVENT_TYPE_NONE;
+  guint event_type = SPEECH_PROVIDER_EVENT_TYPE_NONE;
   guint32 range_start = 0;
   guint32 range_end = 0;
 
