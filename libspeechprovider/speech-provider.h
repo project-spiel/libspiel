@@ -1,4 +1,4 @@
-/* spiel-provider.h
+/* speech-provider.h
  *
  * Copyright (C) 2024 Eitan Isaacson <eitan@monotonous.org>
  *
@@ -23,10 +23,10 @@
 
 G_BEGIN_DECLS
 
-#define SPIEL_PROVIDER_INSIDE
-#include "spiel-provider-common.h"
-#include "spiel-provider-stream-reader.h"
-#include "spiel-provider-stream-writer.h"
-#undef SPIEL_PROVIDER_INSIDE
+#define SPEECH_PROVIDER_INSIDE
+#include "speech-provider-common.h"
+#include "speech-provider-stream-reader.h"
+#include "speech-provider-stream-writer.h"
+#undef SPEECH_PROVIDER_INSIDE
 
 G_END_DECLS

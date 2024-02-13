@@ -1,4 +1,4 @@
-/* spiel-provider-common.h
+/* speech-provider-common.h
  *
  * Copyright (C) 2024 Eitan Isaacson <eitan@monotonous.org>
  *
@@ -21,28 +21,28 @@
 
 G_BEGIN_DECLS
 
-#define SPIEL_PROVIDER_STREAM_PROTOCOL_VERSION "0.01"
+#define SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION "0.01"
 
 typedef struct __attribute__ ((__packed__))
 {
   char version[4];
-} SpielProviderStreamHeader;
+} SpeechProviderStreamHeader;
 
 typedef enum __attribute__ ((__packed__))
 {
-  SPIEL_PROVIDER_CHUNK_TYPE_NONE,
-  SPIEL_PROVIDER_CHUNK_TYPE_AUDIO,
-  SPIEL_PROVIDER_CHUNK_TYPE_EVENT,
-} SpielProviderChunkType;
+  SPEECH_PROVIDER_CHUNK_TYPE_NONE,
+  SPEECH_PROVIDER_CHUNK_TYPE_AUDIO,
+  SPEECH_PROVIDER_CHUNK_TYPE_EVENT,
+} SpeechProviderChunkType;
 
 typedef enum __attribute__ ((__packed__))
 {
-  SPIEL_PROVIDER_EVENT_TYPE_NONE,
-  SPIEL_PROVIDER_EVENT_TYPE_WORD,
-  SPIEL_PROVIDER_EVENT_TYPE_SENTENCE,
-  SPIEL_PROVIDER_EVENT_TYPE_RANGE,
-  SPIEL_PROVIDER_EVENT_TYPE_MARK,
-} SpielProviderEventType;
+  SPEECH_PROVIDER_EVENT_TYPE_NONE,
+  SPEECH_PROVIDER_EVENT_TYPE_WORD,
+  SPEECH_PROVIDER_EVENT_TYPE_SENTENCE,
+  SPEECH_PROVIDER_EVENT_TYPE_RANGE,
+  SPEECH_PROVIDER_EVENT_TYPE_MARK,
+} SpeechProviderEventType;
 
 typedef struct __attribute__ ((__packed__))
 {
@@ -50,6 +50,6 @@ typedef struct __attribute__ ((__packed__))
   guint32 range_start;
   guint32 range_end;
   guint32 mark_name_length;
-} SpielProviderEventData;
+} SpeechProviderEventData;
 
 G_END_DECLS

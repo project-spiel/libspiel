@@ -124,7 +124,7 @@ spiel_provider_src_start (GstBaseSrc *bsrc)
 {
   SpielProviderSrc *src = SPIEL_PROVIDER_SRC (bsrc);
   gboolean got_header =
-      spiel_provider_stream_reader_get_stream_header (src->reader);
+      speech_provider_stream_reader_get_stream_header (src->reader);
   return got_header;
 }
 
@@ -164,7 +164,7 @@ spiel_provider_src_set_property (GObject *object,
       GST_OBJECT_LOCK (object);
       g_assert (src->reader == NULL);
       src->fd = g_value_get_int (value);
-      src->reader = spiel_provider_stream_reader_new (src->fd);
+      src->reader = speech_provider_stream_reader_new (src->fd);
       GST_OBJECT_UNLOCK (object);
       break;
     default:
@@ -203,12 +203,12 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
     {
       guint8 *chunk;
       guint32 chunk_size;
-      SpielProviderEventType event_type;
+      SpeechProviderEventType event_type;
       guint32 range_start;
       guint32 range_end;
       char *mark_name = NULL;
       gboolean got_event, got_audio;
-      got_event = spiel_provider_stream_reader_get_event (
+      got_event = speech_provider_stream_reader_get_event (
           src->reader, &event_type, &range_start, &range_end, &mark_name);
       if (got_event)
         {
@@ -224,8 +224,8 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
           g_free (mark_name);
         }
 
-      got_audio = spiel_provider_stream_reader_get_audio (src->reader, &chunk,
-                                                          &chunk_size);
+      got_audio = speech_provider_stream_reader_get_audio (src->reader, &chunk,
+                                                           &chunk_size);
       if (got_audio && chunk_size > 0)
         {
           GstBuffer *buf = gst_buffer_new_wrapped (chunk, chunk_size);

@@ -3,8 +3,8 @@
 import gi
 
 gi.require_version("Gst", "1.0")
-gi.require_version("SpielProvider", "0.1")
-from gi.repository import GLib, Gst, SpielProvider
+gi.require_version("SpeechProvider", "0.1")
+from gi.repository import GLib, Gst, SpeechProvider
 
 from dasbus.connection import SessionMessageBus
 from dasbus.unix import GLibServerUnix
@@ -27,8 +27,8 @@ VOICES = {
             "name": "Chinese (Cantonese)",
             "output_format": "audio/x-raw,format=S16LE,channels=1,rate=22050",
             "identifier": "sit/yue",
-            "features": SpielProvider.VoiceFeature.SSML_SAY_AS_CARDINAL
-            | SpielProvider.VoiceFeature.SSML_SAY_AS_ORDINAL,
+            "features": SpeechProvider.VoiceFeature.SSML_SAY_AS_CARDINAL
+            | SpeechProvider.VoiceFeature.SSML_SAY_AS_ORDINAL,
             "languages": ["yue", "zh-yue", "zh"],
         },
         {
@@ -139,7 +139,7 @@ class SpielSynthStream(object):
         sink.connect("new-sample", self._on_new_sample)
         sink.connect("eos", self._on_eos)
 
-        self.stream_writer = SpielProvider.StreamWriter.new(fd)
+        self.stream_writer = SpeechProvider.StreamWriter.new(fd)
 
     def _on_new_sample(self, sink):
         sample = sink.emit("pull-sample")
@@ -149,7 +149,7 @@ class SpielSynthStream(object):
         self.stream_writer.send_audio(b"")
         if self.ranges:
             start, end = self.ranges.pop(0)
-            self.stream_writer.send_event(SpielProvider.EventType.WORD, start, end, "")
+            self.stream_writer.send_event(SpeechProvider.EventType.WORD, start, end, "")
         self.stream_writer.send_audio(b)
 
         return Gst.FlowReturn.OK
