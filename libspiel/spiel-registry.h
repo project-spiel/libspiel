@@ -23,6 +23,8 @@
 #include "spiel-provider-proxy.h"
 #include "spiel-voice.h"
 
+typedef struct _SpielVoicesListModel SpielVoicesListModel;
+
 G_BEGIN_DECLS
 
 #define SPIEL_TYPE_REGISTRY (spiel_registry_get_type ())
@@ -44,6 +46,6 @@ SpielProviderProxy *spiel_registry_get_provider_for_voice (SpielRegistry *self,
 SpielVoice *spiel_registry_get_voice_for_utterance (SpielRegistry *self,
                                                     SpielUtterance *utterance);
 
-GListStore *spiel_registry_get_voices (SpielRegistry *self);
+GListModel *spiel_registry_get_voices (SpielRegistry *self);
 
 G_END_DECLS

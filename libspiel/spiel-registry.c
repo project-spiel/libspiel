@@ -19,7 +19,9 @@
 #include "spiel.h"
 
 #include "spiel-collect-providers.h"
+#include "spiel-provider-private.h"
 #include "spiel-registry.h"
+#include "spiel-voices-list-model.h"
 
 #include <gio/gio.h>
 #include <gst/gst.h>
@@ -35,8 +37,8 @@ typedef struct
 {
   GDBusConnection *connection;
   guint subscription_ids[2];
-  GHashTable *providers;
-  GListStore *voices;
+  GListStore *providers;
+  SpielVoicesListModel *voices;
   GSettings *settings;
 } SpielRegistryPrivate;
 
@@ -63,129 +65,61 @@ enum
 
 static guint registry_signals[LAST_SIGNAL] = { 0 };
 
-typedef struct
+static SpielProvider *
+_get_provider_by_name (GListStore *providers,
+                       const char *provider_name,
+                       guint *position)
 {
-  SpielProviderProxy *provider;
-  GHashTable *voices_hashset;
-  gboolean is_activatable;
-  gulong voices_changed_handler_id;
-} _ProviderEntry;
+  guint providers_count = g_list_model_get_n_items (G_LIST_MODEL (providers));
 
-static gboolean handle_voices_changed (SpielProviderProxy *provider,
-                                       GParamSpec *spec,
-                                       gpointer user_data);
-
-static void
-_provider_entry_destroy (gpointer data)
-{
-  _ProviderEntry *entry = data;
-  g_signal_handler_disconnect (entry->provider,
-                               entry->voices_changed_handler_id);
-  g_clear_object (&entry->provider);
-  g_hash_table_unref (entry->voices_hashset);
-  entry->voices_hashset = NULL;
-  entry->voices_changed_handler_id = 0;
-
-  g_slice_free (_ProviderEntry, entry);
-}
-
-static void
-_update_voices (SpielRegistry *self,
-                GSList *new_voices,
-                GHashTable *voices_hashset)
-{
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  GHashTable *new_voices_hashset = NULL;
-
-  if (g_hash_table_size (voices_hashset) > 0)
+  for (guint i = 0; i < providers_count; i++)
     {
-      // We are adding voices to an already populated provider, store
-      // new voices in a hashset for easy purge of ones that were removed.
-      new_voices_hashset = g_hash_table_new ((GHashFunc) spiel_voice_hash,
-                                             (GCompareFunc) spiel_voice_equal);
-    }
-
-  if (new_voices)
-    {
-      for (GSList *item = new_voices; item; item = item->next)
+      SpielProvider *provider = SPIEL_PROVIDER (
+          g_list_model_get_object (G_LIST_MODEL (providers), i));
+      g_object_unref (provider); // Just want to borrow a ref.
+      if (g_str_equal (provider_name,
+                       spiel_provider_get_well_known_name (provider)))
         {
-          SpielVoice *voice = item->data;
-          if (!g_hash_table_contains (voices_hashset, voice))
+          if (position)
             {
-              g_hash_table_insert (voices_hashset, g_object_ref (voice), NULL);
-              g_list_store_insert_sorted (
-                  priv->voices, g_object_ref (voice),
-                  (GCompareDataFunc) spiel_voice_compare, NULL);
+              *position = i;
             }
-          if (new_voices_hashset)
-            {
-              g_hash_table_insert (new_voices_hashset, voice, NULL);
-            }
+          return provider;
         }
     }
 
-  if (new_voices_hashset)
-    {
-      GHashTableIter voices_iter;
-      SpielVoice *old_voice;
-      g_hash_table_iter_init (&voices_iter, voices_hashset);
-      while (
-          g_hash_table_iter_next (&voices_iter, (gpointer *) &old_voice, NULL))
-        {
-          if (!g_hash_table_contains (new_voices_hashset, old_voice))
-            {
-              guint position = 0;
-              if (g_list_store_find (priv->voices, old_voice, &position))
-                {
-                  g_list_store_remove (priv->voices, position);
-                }
-              g_hash_table_iter_remove (&voices_iter);
-            }
-        }
-      g_hash_table_unref (new_voices_hashset);
-    }
+  return NULL;
 }
 
 static void
-_insert_providers_and_voices (const char *provider_name,
-                              ProviderAndVoices *provider_and_voices,
-                              SpielRegistry *self)
+_insert_providers (const char *provider_name,
+                   SpielProvider *new_provider,
+                   SpielRegistry *self)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  _ProviderEntry *provider_entry =
-      g_hash_table_lookup (priv->providers, provider_name);
+  SpielProvider *provider =
+      _get_provider_by_name (priv->providers, provider_name, NULL);
 
-  if (!provider_entry)
+  if (!provider)
     {
-      provider_entry = g_slice_new0 (_ProviderEntry);
-      provider_entry->provider = g_object_ref (provider_and_voices->provider);
-      provider_entry->voices_hashset = g_hash_table_new_full (
-          (GHashFunc) spiel_voice_hash, (GCompareFunc) spiel_voice_equal,
-          g_object_unref, NULL);
-      provider_entry->voices_changed_handler_id =
-          g_signal_connect (provider_entry->provider, "notify::voices",
-                            G_CALLBACK (handle_voices_changed), self);
-      g_hash_table_insert (priv->providers, g_strdup (provider_name),
-                           provider_entry);
+      g_list_store_insert_sorted (priv->providers, new_provider,
+                                  (GCompareDataFunc) spiel_provider_compare,
+                                  NULL);
     }
-
-  provider_entry->is_activatable = provider_and_voices->is_activatable;
-
-  _update_voices (self, provider_and_voices->voices,
-                  provider_entry->voices_hashset);
+  else
+    {
+      spiel_provider_set_is_activatable (
+          provider, spiel_provider_get_is_activatable (new_provider));
+    }
 }
 
 static void
-_on_providers_and_voices_updated (GObject *source,
-                                  GAsyncResult *res,
-                                  SpielRegistry *self)
+_on_providers_updated (GObject *source, GAsyncResult *res, SpielRegistry *self)
 {
   GError *err = NULL;
-  GHashTable *providers_and_voices = spiel_collect_providers_finish (res, &err);
+  GHashTable *new_providers = spiel_collect_providers_finish (res, &err);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  GHashTableIter current_providers_iter;
-  const char *provider_name;
-  _ProviderEntry *provider_entry;
+  guint providers_count = 0;
 
   if (err != NULL)
     {
@@ -194,22 +128,23 @@ _on_providers_and_voices_updated (GObject *source,
       return;
     }
 
-  g_hash_table_foreach (providers_and_voices,
-                        (GHFunc) _insert_providers_and_voices, self);
+  g_hash_table_foreach (new_providers, (GHFunc) _insert_providers, self);
 
-  g_hash_table_iter_init (&current_providers_iter, priv->providers);
-  while (g_hash_table_iter_next (&current_providers_iter,
-                                 (gpointer *) &provider_name,
-                                 (gpointer *) &provider_entry))
+  providers_count = g_list_model_get_n_items (G_LIST_MODEL (priv->providers));
+
+  for (gint i = providers_count - 1; i >= 0; i--)
     {
-      if (!g_hash_table_contains (providers_and_voices, provider_name))
+      SpielProvider *provider = SPIEL_PROVIDER (
+          g_list_model_get_object (G_LIST_MODEL (priv->providers), i));
+      g_object_unref (provider); // Just want to borrow a ref.
+      if (!g_hash_table_contains (
+              new_providers, spiel_provider_get_well_known_name (provider)))
         {
-          _update_voices (self, NULL, provider_entry->voices_hashset);
-          g_hash_table_iter_remove (&current_providers_iter);
+          g_list_store_remove (priv->providers, i);
         }
     }
 
-  g_hash_table_unref (providers_and_voices);
+  g_hash_table_unref (new_providers);
 }
 
 static void
@@ -218,8 +153,7 @@ _on_new_provider_collected (GObject *source,
                             SpielRegistry *self)
 {
   GError *err = NULL;
-  ProviderAndVoices *provider_and_voices =
-      spiel_collect_provider_finish (res, &err);
+  SpielProvider *provider = spiel_collect_provider_finish (res, &err);
   const char *provider_name;
 
   if (err != NULL)
@@ -229,11 +163,10 @@ _on_new_provider_collected (GObject *source,
       return;
     }
 
-  provider_name =
-      g_dbus_proxy_get_name (G_DBUS_PROXY (provider_and_voices->provider));
-  _insert_providers_and_voices (provider_name, provider_and_voices, self);
+  provider_name = spiel_provider_get_well_known_name (provider);
+  _insert_providers (provider_name, provider, self);
 
-  spiel_collect_free_provider_and_voices (provider_and_voices);
+  g_object_unref (provider);
 }
 
 static void
@@ -248,9 +181,8 @@ _maybe_activatable_providers_changed (GDBusConnection *connection,
   SpielRegistry *self = user_data;
 
   // No arguments given, so update the whole providers cache.
-  spiel_collect_providers (
-      connection, NULL, (GAsyncReadyCallback) _on_providers_and_voices_updated,
-      self);
+  spiel_collect_providers (connection, NULL,
+                           (GAsyncReadyCallback) _on_providers_updated, self);
 }
 
 static void
@@ -271,22 +203,20 @@ _maybe_running_providers_changed (GDBusConnection *connection,
   if (g_str_has_suffix (service_name, PROVIDER_SUFFIX))
     {
       gboolean provider_removed = strlen (new_owner) == 0;
-
+      guint position = 0;
+      SpielProvider *provider =
+          _get_provider_by_name (priv->providers, service_name, &position);
       if (provider_removed)
         {
-          _ProviderEntry *entry =
-              g_hash_table_lookup (priv->providers, service_name);
-
-          if (entry && !entry->is_activatable)
+          if (provider && !spiel_provider_get_is_activatable (provider))
             {
-              _update_voices (self, NULL, entry->voices_hashset);
-              g_hash_table_remove (priv->providers, service_name);
+              g_list_store_remove (priv->providers, position);
             }
 
           g_signal_emit (self, registry_signals[PROVIDER_DIED], 0,
                          service_name);
         }
-      else if (!g_hash_table_contains (priv->providers, service_name))
+      else if (!provider)
         {
           spiel_collect_provider (
               connection, NULL, service_name,
@@ -313,14 +243,12 @@ _subscribe_to_activatable_services_changed (SpielRegistry *self)
 }
 
 static void
-_on_providers_and_voices_collected (GObject *source,
-                                    GAsyncResult *res,
-                                    gpointer user_data)
+_on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
 {
   GTask *task = user_data;
   GError *err = NULL;
   SpielRegistry *self = g_task_get_source_object (task);
-  GHashTable *providers_and_voices = spiel_collect_providers_finish (res, &err);
+  GHashTable *providers = spiel_collect_providers_finish (res, &err);
 
   if (err != NULL)
     {
@@ -329,8 +257,7 @@ _on_providers_and_voices_collected (GObject *source,
       return;
     }
 
-  g_hash_table_foreach (providers_and_voices,
-                        (GHFunc) _insert_providers_and_voices, self);
+  g_hash_table_foreach (providers, (GHFunc) _insert_providers, self);
 
   _subscribe_to_activatable_services_changed (self);
 
@@ -357,8 +284,7 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
 
   priv->connection = g_object_ref (bus);
 
-  spiel_collect_providers (bus, cancellable, _on_providers_and_voices_collected,
-                           task);
+  spiel_collect_providers (bus, cancellable, _on_providers_collected, task);
 }
 
 void
@@ -457,9 +383,8 @@ async_initable_init_async (GAsyncInitable *initable,
   SpielRegistry *self = SPIEL_REGISTRY (initable);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
-  priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-                                           _provider_entry_destroy);
-  priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
+  priv->providers = g_list_store_new (SPIEL_TYPE_PROVIDER);
+  priv->voices = spiel_voices_list_model_new (G_LIST_MODEL (priv->providers));
   priv->settings = _settings_new ();
 
   if (cancellable != NULL)
@@ -485,7 +410,8 @@ spiel_registry_finalize (GObject *object)
   SpielRegistry *self = (SpielRegistry *) object;
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
-  g_hash_table_unref (priv->providers);
+  g_clear_object (&priv->providers);
+  g_clear_object (&priv->voices);
   g_clear_object (&priv->settings);
   if (priv->connection)
     {
@@ -506,11 +432,11 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
   SpielRegistry *self = SPIEL_REGISTRY (initable);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  GHashTable *providers_and_voices = NULL;
+  GHashTable *providers = NULL;
 
   GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
 
-  providers_and_voices = spiel_collect_providers_sync (bus, cancellable, error);
+  providers = spiel_collect_providers_sync (bus, cancellable, error);
 
   if (*error != NULL)
     {
@@ -518,10 +444,9 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
       return FALSE;
     }
 
-  if (providers_and_voices)
+  if (providers)
     {
-      g_hash_table_foreach (providers_and_voices,
-                            (GHFunc) _insert_providers_and_voices, self);
+      g_hash_table_foreach (providers, (GHFunc) _insert_providers, self);
     }
 
   priv->connection = g_object_ref (bus);
@@ -535,9 +460,8 @@ static void
 spiel_registry_init (SpielRegistry *self)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  priv->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-                                           _provider_entry_destroy);
-  priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
+  priv->providers = g_list_store_new (SPIEL_TYPE_PROVIDER);
+  priv->voices = spiel_voices_list_model_new (G_LIST_MODEL (priv->providers));
   priv->settings = _settings_new ();
 }
 
@@ -566,39 +490,6 @@ initable_iface_init (GInitableIface *initable_iface)
   initable_iface->init = initable_init;
 }
 
-/* Signal handlers */
-
-static gboolean
-handle_voices_changed (SpielProviderProxy *provider,
-                       GParamSpec *spec,
-                       gpointer user_data)
-{
-  SpielRegistry *self = user_data;
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
-  _ProviderEntry *provider_entry =
-      g_hash_table_lookup (priv->providers, provider_name);
-  char *name_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (provider));
-  GSList *changed_voices = NULL;
-
-  if (name_owner == NULL && provider_entry->is_activatable)
-    {
-      // Got a change notification because an activatable service left the bus.
-      // Its voices are still valid, though.
-      return TRUE;
-    }
-
-  g_free (name_owner);
-
-  changed_voices = spiel_collect_provider_voices (provider);
-  provider_entry = g_hash_table_lookup (priv->providers, provider_name);
-  _update_voices (self, changed_voices, provider_entry->voices_hashset);
-
-  g_slist_free_full (changed_voices, (GDestroyNotify) g_object_unref);
-
-  return TRUE;
-}
-
 /* Public API */
 
 SpielProviderProxy *
@@ -606,16 +497,16 @@ spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
-  _ProviderEntry *provider_entry = g_hash_table_lookup (
-      priv->providers, spiel_voice_get_provider_name (voice));
+  SpielProvider *provider = _get_provider_by_name (
+      priv->providers, spiel_voice_get_provider_name (voice), NULL);
 
-  if (!provider_entry)
+  if (!provider)
     {
-      g_warning ("No provider for voice");
+      g_warning ("No provider_proxy for voice");
       return NULL;
     }
 
-  return provider_entry->provider;
+  return spiel_provider_get_proxy (provider);
 }
 
 static SpielVoice *
@@ -624,53 +515,37 @@ _get_voice_from_provider_and_name (SpielRegistry *self,
                                    const char *voice_id)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  _ProviderEntry *provider_entry =
-      g_hash_table_lookup (priv->providers, provider_name);
-  SpielVoice **voices = NULL;
-  SpielVoice *voice = NULL;
-  if (provider_entry == NULL)
-    {
-      return NULL;
-    }
+  SpielProvider *provider =
+      _get_provider_by_name (priv->providers, provider_name, NULL);
+  g_return_val_if_fail (provider, NULL);
 
-  voices = (SpielVoice **) g_hash_table_get_keys_as_array (
-      provider_entry->voices_hashset, NULL);
-  for (SpielVoice **v = voices; *v; v++)
-    {
-      if (g_str_equal (spiel_voice_get_identifier (*v), voice_id))
-        {
-          voice = *v;
-        }
-    }
-
-  return voice;
-}
-
-static gboolean
-_match_voice_with_language (SpielVoice *voice,
-                            gconstpointer unused,
-                            const char *language)
-{
-  return g_strv_contains (spiel_voice_get_languages (voice), language);
+  return spiel_provider_get_voice_by_id (provider, voice_id);
 }
 
 static SpielVoice *
 _get_fallback_voice (SpielRegistry *self, const char *language)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  SpielVoice *voice = NULL;
-  guint position = 0;
 
   if (language)
     {
-      g_list_store_find_with_equal_func_full (
-          priv->voices, NULL, (GEqualFuncFull) _match_voice_with_language,
-          (gpointer) language, &position);
+      guint voices_count =
+          g_list_model_get_n_items (G_LIST_MODEL (priv->voices));
+
+      for (guint i = 0; i < voices_count; i++)
+        {
+          SpielVoice *voice = SPIEL_VOICE (
+              g_list_model_get_object (G_LIST_MODEL (priv->voices), i));
+          if (g_strv_contains (spiel_voice_get_languages (voice), language))
+            {
+              return voice;
+            }
+          g_object_unref (voice); // Just want to borrow a ref.
+        }
     }
 
-  voice = g_list_model_get_item ((GListModel *) priv->voices, position);
-
-  return voice;
+  return g_list_model_get_item ((GListModel *) priv->voices, 0);
+  ;
 }
 
 SpielVoice *
@@ -734,9 +609,9 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
   return _get_fallback_voice (self, language);
 }
 
-GListStore *
+GListModel *
 spiel_registry_get_voices (SpielRegistry *self)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  return priv->voices;
+  return G_LIST_MODEL (priv->voices);
 }

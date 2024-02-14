@@ -18,8 +18,8 @@
 
 #include "spiel-collect-providers.h"
 
+#include "spiel-provider-private.h"
 #include "spiel-provider-proxy.h"
-#include "spiel-voice.h"
 
 typedef struct
 {
@@ -46,19 +46,6 @@ _collect_providers_closure_destroy (gpointer data)
     }
 
   g_slice_free (_CollectProvidersClosure, closure);
-}
-
-static void
-_free_voices_slist (GSList *voices)
-{
-  g_slist_free_full (voices, (GDestroyNotify) g_object_unref);
-}
-
-void
-spiel_collect_free_provider_and_voices (ProviderAndVoices *provider_and_voices)
-{
-  g_clear_object (&provider_and_voices->provider);
-  _free_voices_slist (provider_and_voices->voices);
 }
 
 static void _on_list_activatable_names (GObject *source,
@@ -118,9 +105,8 @@ _spiel_collect_providers (GDBusConnection *connection,
   GTask *task = g_task_new (connection, cancellable, callback, user_data);
   _CollectProvidersClosure *closure = g_slice_new0 (_CollectProvidersClosure);
 
-  closure->providers = g_hash_table_new_full (
-      g_str_hash, g_str_equal, g_free,
-      (GDestroyNotify) spiel_collect_free_provider_and_voices);
+  closure->providers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+                                              (GDestroyNotify) g_object_unref);
   closure->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
 
   if (provider_name)
@@ -198,12 +184,11 @@ _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
   if (closure->provider_name)
     {
       // If a provider name is specified we return a single result.
-      ProviderAndVoices *pav =
+      SpielProvider *provider =
           g_hash_table_lookup (closure->providers, closure->provider_name);
       g_hash_table_steal (closure->providers, closure->provider_name);
       g_assert_cmpint (g_hash_table_size (closure->providers), ==, 0);
-      g_task_return_pointer (
-          task, pav, (GDestroyNotify) spiel_collect_free_provider_and_voices);
+      g_task_return_pointer (task, provider, (GDestroyNotify) g_object_unref);
     }
   else
     {
@@ -246,7 +231,7 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
   _CollectProvidersClosure *closure = g_task_get_task_data (task);
   const char *service_name = closure->providers_to_process->data;
   GError *error = NULL;
-  SpielProviderProxy *provider =
+  SpielProviderProxy *provider_proxy =
       spiel_provider_proxy_proxy_new_for_bus_finish (result, &error);
 
   if (error != NULL)
@@ -267,59 +252,22 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
     }
   else
     {
-      ProviderAndVoices *provider_and_voices =
+      SpielProvider *provider =
           g_hash_table_lookup (closure->providers, service_name);
 
-      g_assert (provider_and_voices);
-      g_assert (g_str_equal (g_dbus_proxy_get_name (G_DBUS_PROXY (provider)),
-                             service_name));
+      g_assert (provider);
+      g_assert (g_str_equal (
+          g_dbus_proxy_get_name (G_DBUS_PROXY (provider_proxy)), service_name));
 
-      if (provider_and_voices)
+      if (provider)
         {
-          // Take over ownership
-          provider_and_voices->provider = provider;
-          provider_and_voices->voices =
-              spiel_collect_provider_voices (provider);
+          spiel_provider_set_proxy (provider, provider_proxy);
         }
     }
+
+  g_object_unref (provider_proxy);
 
   _create_next_provider (closure, task);
-}
-
-GSList *
-spiel_collect_provider_voices (SpielProviderProxy *provider)
-{
-  const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
-  GSList *voices_slist = NULL;
-  GVariant *voices = spiel_provider_proxy_get_voices (provider);
-  gsize voices_count = voices ? g_variant_n_children (voices) : 0;
-
-  for (gsize i = 0; i < voices_count; i++)
-    {
-      const char *name = NULL;
-      const char *identifier = NULL;
-      const char *output_format = NULL;
-      const char **languages = NULL;
-      guint64 features;
-      SpielVoice *voice;
-
-      g_variant_get_child (voices, i, "(&s&s&st^a&s)", &name, &identifier,
-                           &output_format, &features, &languages);
-      if (features >> 32)
-        {
-          g_warning ("Voice features past 32 bits are ignored in %s (%s)",
-                     identifier, provider_name);
-        }
-      voice = g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
-                            identifier, "languages", languages, "provider-name",
-                            provider_name, "features", features, NULL);
-      spiel_voice_set_output_format (voice, output_format);
-
-      voices_slist = g_slist_prepend (voices_slist, voice);
-      g_free (languages);
-    }
-
-  return voices_slist;
 }
 
 static gboolean
@@ -353,15 +301,18 @@ _collect_provider_names (GObject *source,
           (!closure->provider_name ||
            g_str_equal (closure->provider_name, service_name)))
         {
-          ProviderAndVoices *provider_and_voices =
+          SpielProvider *provider =
               g_hash_table_lookup (closure->providers, service_name);
-          if (!provider_and_voices)
+          if (!provider)
             {
-              provider_and_voices = g_slice_new0 (ProviderAndVoices);
+              provider = spiel_provider_new ();
               g_hash_table_insert (closure->providers, g_strdup (service_name),
-                                   provider_and_voices);
+                                   provider);
             }
-          provider_and_voices->is_activatable |= activatable;
+          if (activatable)
+            {
+              spiel_provider_set_is_activatable (provider, TRUE);
+            }
         }
       g_variant_unref (service);
     }
@@ -376,7 +327,7 @@ spiel_collect_providers_finish (GAsyncResult *res, GError **error)
   return g_task_propagate_pointer (G_TASK (res), error);
 }
 
-ProviderAndVoices *
+SpielProvider *
 spiel_collect_provider_finish (GAsyncResult *res, GError **error)
 {
   return g_task_propagate_pointer (G_TASK (res), error);
@@ -388,8 +339,7 @@ spiel_collect_providers_sync (GDBusConnection *connection,
                               GError **error)
 {
   GHashTable *providers = g_hash_table_new_full (
-      g_str_hash, g_str_equal, g_free,
-      (GDestroyNotify) spiel_collect_free_provider_and_voices);
+      g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_object_unref);
   const char *list_name_methods[] = { "ListActivatableNames", "ListNames",
                                       NULL };
   for (const char **method = list_name_methods; *method; method++)
@@ -418,8 +368,8 @@ spiel_collect_providers_sync (GDBusConnection *connection,
         {
           const char *service_name = g_variant_get_string (service, NULL);
           char *obj_path = NULL;
-          ProviderAndVoices *provider_and_voices = NULL;
-          SpielProviderProxy *provider = NULL;
+          SpielProvider *provider = NULL;
+          SpielProviderProxy *provider_proxy = NULL;
           GError *err = NULL;
 
           if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX) ||
@@ -428,7 +378,7 @@ spiel_collect_providers_sync (GDBusConnection *connection,
               continue;
             }
           obj_path = _object_path_from_service_name (service_name);
-          provider = spiel_provider_proxy_proxy_new_sync (
+          provider_proxy = spiel_provider_proxy_proxy_new_sync (
               connection, 0, service_name, obj_path, cancellable, &err);
           g_free (obj_path);
 
@@ -440,14 +390,11 @@ spiel_collect_providers_sync (GDBusConnection *connection,
               continue;
             }
 
-          provider_and_voices = g_slice_new0 (ProviderAndVoices);
-          provider_and_voices->provider = provider;
-          provider_and_voices->voices =
-              spiel_collect_provider_voices (provider);
-          provider_and_voices->is_activatable =
-              g_str_equal (*method, "ListActivatableNames");
-          g_hash_table_insert (providers, g_strdup (service_name),
-                               provider_and_voices);
+          provider = spiel_provider_new ();
+          spiel_provider_set_proxy (provider, provider_proxy);
+          spiel_provider_set_is_activatable (
+              provider, g_str_equal (*method, "ListActivatableNames"));
+          g_hash_table_insert (providers, g_strdup (service_name), provider);
           g_variant_unref (service);
         }
       g_variant_unref (real_ret);

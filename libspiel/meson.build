@@ -33,6 +33,8 @@ spiel_public_sources = [
   'spiel-utterance.c',
   'spiel-voice.c',
   'spiel-speaker.c',
+  'spiel-provider.c',
+  'spiel-voices-list-model.c',
 ]
 
 spiel_sources = [
@@ -49,6 +51,8 @@ spiel_public_headers = [
   'spiel-utterance.h',
   'spiel-voice.h',
   'spiel-speaker.h',
+  'spiel-provider.h',
+  'spiel-voices-list-model.h',
 ]
 
 spiel_headers = [
@@ -56,6 +60,7 @@ spiel_headers = [
   'spiel-registry.h',
   'spiel-collect-providers.h',
   'spiel-provider-src.h',
+  'spiel-provider-private.h',
 ]
 
 version_split = meson.project_version().split('.')
