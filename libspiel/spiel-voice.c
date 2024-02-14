@@ -280,12 +280,10 @@ spiel_voice_set_property (GObject *object,
     case PROP_NAME:
       g_clear_pointer (&priv->name, g_free);
       priv->name = g_value_dup_string (value);
-      g_object_notify (G_OBJECT (self), "name");
       break;
     case PROP_IDENTIFIER:
       g_clear_pointer (&priv->identifier, g_free);
       priv->identifier = g_value_dup_string (value);
-      g_object_notify (G_OBJECT (self), "identifier");
       break;
     case PROP_LANGUAGES:
       g_strfreev (priv->languages);
@@ -294,7 +292,6 @@ spiel_voice_set_property (GObject *object,
     case PROP_PROVIDER_NAME:
       g_clear_pointer (&priv->provider_name, g_free);
       priv->provider_name = g_value_dup_string (value);
-      g_object_notify (G_OBJECT (self), "provider-name");
       break;
     case PROP_FEATURES:
       priv->features = g_value_get_flags (value);
