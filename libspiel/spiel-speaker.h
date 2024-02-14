@@ -46,6 +46,10 @@ void spiel_speaker_resume (SpielSpeaker *self);
 
 void spiel_speaker_cancel (SpielSpeaker *self);
 
+GListModel *spiel_speaker_get_voices (SpielSpeaker *self);
+
+GListModel *spiel_speaker_get_providers (SpielSpeaker *self);
+
 GQuark spiel_error_quark (void);
 
 /**

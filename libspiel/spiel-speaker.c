@@ -95,6 +95,7 @@ enum
   PROP_SPEAKING,
   PROP_PAUSED,
   PROP_VOICES,
+  PROP_PROVIDERS,
   PROP_SINK,
   N_PROPS
 };
@@ -268,7 +269,10 @@ spiel_speaker_get_property (GObject *object,
       g_value_set_boolean (value, priv->paused);
       break;
     case PROP_VOICES:
-      g_value_set_object (value, spiel_registry_get_voices (priv->registry));
+      g_value_set_object (value, spiel_speaker_get_voices (self));
+      break;
+    case PROP_PROVIDERS:
+      g_value_set_object (value, spiel_speaker_get_providers (self));
       break;
     case PROP_SINK:
       g_value_set_object (value, priv->sink);
@@ -344,6 +348,16 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    */
   properties[PROP_VOICES] =
       g_param_spec_object ("voices", NULL, NULL, G_TYPE_LIST_MODEL,
+                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  /**
+   * SpielSpeaker:providers:
+   *
+   * The list of available [class@Provider]s that offer voices.
+   *
+   */
+  properties[PROP_PROVIDERS] =
+      g_param_spec_object ("providers", NULL, NULL, G_TYPE_LIST_MODEL,
                            G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   /**
@@ -708,6 +722,38 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
     {
       _speak_current_entry (self);
     }
+}
+
+/**
+ * spiel_speaker_get_voices: (get-property voices)
+ * @self: a #SpielSpeaker
+ *
+ * Fetches the voices available to this speaker
+ *
+ * Returns: (transfer none): A live #ListModel of voices
+ */
+GListModel *
+spiel_speaker_get_voices (SpielSpeaker *self)
+{
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+
+  return spiel_registry_get_voices (priv->registry);
+}
+
+/**
+ * spiel_speaker_get_providers: (get-property providers)
+ * @self: a #SpielSpeaker
+ *
+ * Fetches the speech providers that offer voices to this speaker
+ *
+ * Returns: (transfer none): A live #ListModel of providers
+ */
+GListModel *
+spiel_speaker_get_providers (SpielSpeaker *self)
+{
+  SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+
+  return spiel_registry_get_providers (priv->registry);
 }
 
 /**

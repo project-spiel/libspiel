@@ -48,4 +48,6 @@ SpielVoice *spiel_registry_get_voice_for_utterance (SpielRegistry *self,
 
 GListModel *spiel_registry_get_voices (SpielRegistry *self);
 
+GListModel *spiel_registry_get_providers (SpielRegistry *self);
+
 G_END_DECLS

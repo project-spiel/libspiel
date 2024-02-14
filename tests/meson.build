@@ -30,7 +30,7 @@ tests = ['test_speak.py',
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()
-  tests += ['test_install_provider.py']
+  tests += ['test_provider.py']
 endif
 
 conf = configuration_data()
@@ -60,7 +60,7 @@ if dbus_run_session.found() and python.found()
       ],
       env : test_env,
       protocol : 'tap',
-      is_parallel : test_name != 'test_install_provider.py'
+      is_parallel : test_name != 'test_provider.py'
     )
   endforeach
 

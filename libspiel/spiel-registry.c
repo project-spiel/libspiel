@@ -615,3 +615,10 @@ spiel_registry_get_voices (SpielRegistry *self)
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   return G_LIST_MODEL (priv->voices);
 }
+
+GListModel *
+spiel_registry_get_providers (SpielRegistry *self)
+{
+  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  return G_LIST_MODEL (priv->providers);
+}
