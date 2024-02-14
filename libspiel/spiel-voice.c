@@ -94,9 +94,9 @@ spiel_voice_get_identifier (SpielVoice *self)
   return priv->identifier;
 }
 
+// clang-format off
 /**
- * spiel_voice_get_provider_well_known_name: (get-property
- * provider-well-known-name)
+ * spiel_voice_get_provider_well_known_name: (get-property provider-well-known-name)
  * @self: a #SpielVoice
  *
  * Fetches the provider well known name in the form of a unique DBus name.
@@ -110,6 +110,7 @@ spiel_voice_get_provider_well_known_name (SpielVoice *self)
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
   return priv->provider_well_known_name;
 }
+// clang-format on
 
 /**
  * spiel_voice_get_languages: (get-property languages)

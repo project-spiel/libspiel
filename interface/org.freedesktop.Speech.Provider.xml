@@ -21,6 +21,7 @@
     @pitch: The voice pitch in which the text should be spoken.
     @rate: The rate in which the text should be spoken.
     @is_ssml: True if the text should be interpretted as an SSML snippet.
+    @language: The language the utterance should be spoken in. Some voices support more than one language.
 
     This is the basic synthesis method.
     When called, the speech provider will send the synthesized output to the given file descriptor.
@@ -35,9 +36,10 @@
       <arg direction="in"  type="d" name="pitch" />
       <arg direction="in"  type="d" name="rate" />
       <arg direction="in"  type="b" name="is_ssml" />
+      <arg direction="in"  type="s" name="language" />
     </method>
 
-  <!--
+    <!--
     Voices:
 
     A list of voices the provider can use.
@@ -53,7 +55,7 @@
   -->
     <property name="Voices" type="a(ssstas)" access="read"/>
 
-  <!--
+    <!--
     Name:
 
     A localizable, human readable, name for this provider.

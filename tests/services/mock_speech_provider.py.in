@@ -202,7 +202,7 @@ class SomeObject(PropertiesInterface):
         self._voices = VOICES[NAME][:]
         super().__init__()
 
-    def Synthesize(self, fd, utterance, voice_id, pitch, rate, is_ssml):
+    def Synthesize(self, fd, utterance, voice_id, pitch, rate, is_ssml, language):
         if utterance == "die":
             # special utterance text that makes us die
             self.byebye()
