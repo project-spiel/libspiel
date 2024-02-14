@@ -65,13 +65,13 @@ static guint registry_signals[LAST_SIGNAL] = { 0 };
 
 typedef struct
 {
-  SpielProvider *provider;
+  SpielProviderProxy *provider;
   GHashTable *voices_hashset;
   gboolean is_activatable;
   gulong voices_changed_handler_id;
 } _ProviderEntry;
 
-static gboolean handle_voices_changed (SpielProvider *provider,
+static gboolean handle_voices_changed (SpielProviderProxy *provider,
                                        GParamSpec *spec,
                                        gpointer user_data);
 
@@ -569,7 +569,7 @@ initable_iface_init (GInitableIface *initable_iface)
 /* Signal handlers */
 
 static gboolean
-handle_voices_changed (SpielProvider *provider,
+handle_voices_changed (SpielProviderProxy *provider,
                        GParamSpec *spec,
                        gpointer user_data)
 {
@@ -601,7 +601,7 @@ handle_voices_changed (SpielProvider *provider,
 
 /* Public API */
 
-SpielProvider *
+SpielProviderProxy *
 spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);

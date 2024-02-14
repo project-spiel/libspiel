@@ -20,10 +20,10 @@
 
 #include "spiel-speaker.h"
 
+#include "spiel-provider-proxy.h"
 #include "spiel-provider-src.h"
 #include "spiel-registry.h"
 #include "spiel-voice.h"
-#include "spieldbusgenerated.h"
 #include <fcntl.h>
 #include <gio/gio.h>
 #include <glib-unix.h>
@@ -599,7 +599,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = g_slice_new0 (_QueueEntry);
   _CallSynthData *call_synth_data = g_slice_new0 (_CallSynthData);
-  SpielProvider *provider = NULL;
+  SpielProviderProxy *provider = NULL;
   GUnixFDList *fd_list = g_unix_fd_list_new ();
   int mypipe[2];
   int fd;
@@ -639,7 +639,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   call_synth_data->self = self;
   call_synth_data->utterance = g_object_ref (utterance);
 
-  spiel_provider_call_synthesize (
+  spiel_provider_proxy_call_synthesize (
       provider, g_variant_new_handle (fd), text,
       voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
       G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL, _provider_call_synthesize_done,
@@ -920,9 +920,9 @@ _provider_call_synthesize_done (GObject *source_object,
                                 gpointer user_data)
 {
   _CallSynthData *call_synth_data = user_data;
-  SpielProvider *provider = SPIEL_PROVIDER (source_object);
+  SpielProviderProxy *provider = SPIEL_PROVIDER_PROXY (source_object);
   GError *err = NULL;
-  spiel_provider_call_synthesize_finish (provider, NULL, res, &err);
+  spiel_provider_proxy_call_synthesize_finish (provider, NULL, res, &err);
   if (err != NULL)
     {
       SpielSpeakerPrivate *priv =

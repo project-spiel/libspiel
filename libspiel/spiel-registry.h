@@ -20,8 +20,8 @@
 
 #include <glib-object.h>
 
+#include "spiel-provider-proxy.h"
 #include "spiel-voice.h"
-#include "spieldbusgenerated.h"
 
 G_BEGIN_DECLS
 
@@ -38,8 +38,8 @@ SpielRegistry *spiel_registry_get_finish (GAsyncResult *result, GError **error);
 SpielRegistry *spiel_registry_get_sync (GCancellable *cancellable,
                                         GError **error);
 
-SpielProvider *spiel_registry_get_provider_for_voice (SpielRegistry *self,
-                                                      SpielVoice *voice);
+SpielProviderProxy *spiel_registry_get_provider_for_voice (SpielRegistry *self,
+                                                           SpielVoice *voice);
 
 SpielVoice *spiel_registry_get_voice_for_utterance (SpielRegistry *self,
                                                     SpielUtterance *utterance);

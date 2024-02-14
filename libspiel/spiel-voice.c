@@ -18,8 +18,8 @@
 
 #include "spiel.h"
 
+#include "spiel-provider-proxy.h"
 #include "spiel-voice.h"
-#include "spieldbusgenerated.h"
 
 /**
  * SpielVoice:

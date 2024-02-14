@@ -1,10 +1,13 @@
 gnome = import('gnome')
 
 spiel_iface_sources = gnome.gdbus_codegen(
-    'spieldbusgenerated',
+    'spiel-provider-proxy',
     join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
     interface_prefix: 'org.freedesktop.Speech.',
     namespace: 'Spiel',
+    annotations : [
+      ['org.freedesktop.Speech.Provider', 'org.gtk.GDBus.C.Name', 'ProviderProxy']
+    ],
     extra_args: '--glib-min-required=2.64')
 
 python_module = import('python')

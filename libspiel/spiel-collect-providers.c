@@ -18,8 +18,8 @@
 
 #include "spiel-collect-providers.h"
 
+#include "spiel-provider-proxy.h"
 #include "spiel-voice.h"
-#include "spieldbusgenerated.h"
 
 typedef struct
 {
@@ -232,9 +232,9 @@ _create_provider (_CollectProvidersClosure *closure, GTask *task)
   const char *service_name = next_provider->data;
   char *obj_path = _object_path_from_service_name (service_name);
 
-  spiel_provider_proxy_new_for_bus (G_BUS_TYPE_SESSION, 0, service_name,
-                                    obj_path, closure->cancellable,
-                                    _on_provider_created, task);
+  spiel_provider_proxy_proxy_new_for_bus (G_BUS_TYPE_SESSION, 0, service_name,
+                                          obj_path, closure->cancellable,
+                                          _on_provider_created, task);
 
   g_free (obj_path);
 }
@@ -246,8 +246,8 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
   _CollectProvidersClosure *closure = g_task_get_task_data (task);
   const char *service_name = closure->providers_to_process->data;
   GError *error = NULL;
-  SpielProvider *provider =
-      spiel_provider_proxy_new_for_bus_finish (result, &error);
+  SpielProviderProxy *provider =
+      spiel_provider_proxy_proxy_new_for_bus_finish (result, &error);
 
   if (error != NULL)
     {
@@ -287,11 +287,11 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
 }
 
 GSList *
-spiel_collect_provider_voices (SpielProvider *provider)
+spiel_collect_provider_voices (SpielProviderProxy *provider)
 {
   const char *provider_name = g_dbus_proxy_get_name (G_DBUS_PROXY (provider));
   GSList *voices_slist = NULL;
-  GVariant *voices = spiel_provider_get_voices (provider);
+  GVariant *voices = spiel_provider_proxy_get_voices (provider);
   gsize voices_count = voices ? g_variant_n_children (voices) : 0;
 
   for (gsize i = 0; i < voices_count; i++)
@@ -419,7 +419,7 @@ spiel_collect_providers_sync (GDBusConnection *connection,
           const char *service_name = g_variant_get_string (service, NULL);
           char *obj_path = NULL;
           ProviderAndVoices *provider_and_voices = NULL;
-          SpielProvider *provider = NULL;
+          SpielProviderProxy *provider = NULL;
           GError *err = NULL;
 
           if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX) ||
@@ -428,7 +428,7 @@ spiel_collect_providers_sync (GDBusConnection *connection,
               continue;
             }
           obj_path = _object_path_from_service_name (service_name);
-          provider = spiel_provider_proxy_new_sync (
+          provider = spiel_provider_proxy_proxy_new_sync (
               connection, 0, service_name, obj_path, cancellable, &err);
           g_free (obj_path);
 

@@ -21,13 +21,13 @@
 #include <gio/gio.h>
 
 typedef struct _SpielVoice SpielVoice;
-typedef struct _SpielProvider SpielProvider;
+typedef struct _SpielProviderProxy SpielProviderProxy;
 
 #define PROVIDER_SUFFIX ".Speech.Provider"
 
 typedef struct
 {
-  SpielProvider *provider;
+  SpielProviderProxy *provider;
   GSList *voices;
   gboolean is_activatable;
 } ProviderAndVoices;
@@ -55,4 +55,4 @@ void spiel_collect_provider (GDBusConnection *connection,
 ProviderAndVoices *spiel_collect_provider_finish (GAsyncResult *res,
                                                   GError **error);
 
-GSList *spiel_collect_provider_voices (SpielProvider *provider);
+GSList *spiel_collect_provider_voices (SpielProviderProxy *provider);
