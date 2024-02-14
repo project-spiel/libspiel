@@ -45,7 +45,9 @@ class TestSpeak(BaseSpielTest):
         self.wait_for_speaking_changed(
             speechSynthesis, lambda: speechSynthesis.speak(utterance)
         )
-        args = self.mock_iface(voice.props.provider_name).GetLastSpeakArguments()
+        args = self.mock_iface(
+            voice.props.provider_well_known_name
+        ).GetLastSpeakArguments()
         self.assertEqual(str(args[2]), voice.props.identifier)
 
     def test_speak_with_voice_sync(self):

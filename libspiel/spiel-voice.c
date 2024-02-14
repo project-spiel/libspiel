@@ -42,7 +42,7 @@ typedef struct
   char *name;
   char *identifier;
   char **languages;
-  char *provider_name;
+  char *provider_well_known_name;
   char *output_format;
   SpielVoiceFeature features;
 } SpielVoicePrivate;
@@ -55,7 +55,7 @@ enum
   PROP_NAME,
   PROP_IDENTIFIER,
   PROP_LANGUAGES,
-  PROP_PROVIDER_NAME,
+  PROP_PROVIDER_WELL_KNOWN_NAME,
   PROP_FEATURES,
   N_PROPS
 };
@@ -95,19 +95,20 @@ spiel_voice_get_identifier (SpielVoice *self)
 }
 
 /**
- * spiel_voice_get_provider_name: (get-property provider-name)
+ * spiel_voice_get_provider_well_known_name: (get-property
+ * provider-well-known-name)
  * @self: a #SpielVoice
  *
- * Fetches the provider name in the form of a unique DBus name.
+ * Fetches the provider well known name in the form of a unique DBus name.
  *
- * Returns: the provider name. This string is
+ * Returns: the provider well known name. This string is
  *   owned by the voice and must not be modified or freed.
  */
 const char *
-spiel_voice_get_provider_name (SpielVoice *self)
+spiel_voice_get_provider_well_known_name (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
-  return priv->provider_name;
+  return priv->provider_well_known_name;
 }
 
 /**
@@ -156,7 +157,7 @@ spiel_voice_hash (SpielVoice *self)
 
   hash = g_str_hash (priv->name);
   hash = (hash << 5) - hash + g_str_hash (priv->identifier);
-  hash = (hash << 5) - hash + g_str_hash (priv->provider_name);
+  hash = (hash << 5) - hash + g_str_hash (priv->provider_well_known_name);
 
   for (char **language = priv->languages; *language; language++)
     {
@@ -172,7 +173,8 @@ spiel_voice_equal (SpielVoice *self, SpielVoice *other)
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
 
-  if (!g_str_equal (self_priv->provider_name, other_priv->provider_name))
+  if (!g_str_equal (self_priv->provider_well_known_name,
+                    other_priv->provider_well_known_name))
     {
       return FALSE;
     }
@@ -203,7 +205,8 @@ spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
   gint cmp = 0;
 
-  if ((cmp = g_strcmp0 (self_priv->provider_name, other_priv->provider_name)))
+  if ((cmp = g_strcmp0 (self_priv->provider_well_known_name,
+                        other_priv->provider_well_known_name)))
     {
       return cmp;
     }
@@ -230,7 +233,7 @@ spiel_voice_finalize (GObject *object)
   g_free (priv->name);
   g_free (priv->identifier);
   g_strfreev (priv->languages);
-  g_free (priv->provider_name);
+  g_free (priv->provider_well_known_name);
 
   G_OBJECT_CLASS (spiel_voice_parent_class)->finalize (object);
 }
@@ -255,8 +258,8 @@ spiel_voice_get_property (GObject *object,
     case PROP_LANGUAGES:
       g_value_set_boxed (value, priv->languages);
       break;
-    case PROP_PROVIDER_NAME:
-      g_value_set_string (value, priv->provider_name);
+    case PROP_PROVIDER_WELL_KNOWN_NAME:
+      g_value_set_string (value, priv->provider_well_known_name);
       break;
     case PROP_FEATURES:
       g_value_set_flags (value, priv->features);
@@ -289,9 +292,9 @@ spiel_voice_set_property (GObject *object,
       g_strfreev (priv->languages);
       priv->languages = g_value_dup_boxed (value);
       break;
-    case PROP_PROVIDER_NAME:
-      g_clear_pointer (&priv->provider_name, g_free);
-      priv->provider_name = g_value_dup_string (value);
+    case PROP_PROVIDER_WELL_KNOWN_NAME:
+      g_clear_pointer (&priv->provider_well_known_name, g_free);
+      priv->provider_well_known_name = g_value_dup_string (value);
       break;
     case PROP_FEATURES:
       priv->features = g_value_get_flags (value);
@@ -344,13 +347,13 @@ spiel_voice_class_init (SpielVoiceClass *klass)
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   /**
-   * SpielVoice:provider-name: (getter get_provider_name)
+   * SpielVoice:provider-well-known-name: (getter get_provider_well_known_name)
    *
    * The speech provider that implements this voice's DBus name.
    *
    */
-  properties[PROP_PROVIDER_NAME] = g_param_spec_string (
-      "provider-name", NULL, NULL, NULL /* default value */,
+  properties[PROP_PROVIDER_WELL_KNOWN_NAME] = g_param_spec_string (
+      "provider-well-known-name", NULL, NULL, NULL /* default value */,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   properties[PROP_FEATURES] = g_param_spec_flags (
@@ -369,7 +372,7 @@ spiel_voice_init (SpielVoice *self)
   priv->name = NULL;
   priv->identifier = NULL;
   priv->languages = NULL;
-  priv->provider_name = NULL;
+  priv->provider_well_known_name = NULL;
   priv->output_format = NULL;
   priv->features = 0;
 }

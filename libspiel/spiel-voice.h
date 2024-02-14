@@ -31,7 +31,7 @@ const char *spiel_voice_get_name (SpielVoice *self);
 
 const char *spiel_voice_get_identifier (SpielVoice *self);
 
-const char *spiel_voice_get_provider_name (SpielVoice *self);
+const char *spiel_voice_get_provider_well_known_name (SpielVoice *self);
 
 const char *const *spiel_voice_get_languages (SpielVoice *self);
 

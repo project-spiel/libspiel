@@ -20,7 +20,12 @@ class TestVoices(BaseSpielTest):
     def _test_get_voices(self, speechSynthesis, expected_voices=STANDARD_VOICES):
         voices = speechSynthesis.props.voices
         voices_info = [
-            [v.props.provider_name, v.props.name, v.props.identifier, v.props.languages]
+            [
+                v.props.provider_well_known_name,
+                v.props.name,
+                v.props.identifier,
+                v.props.languages,
+            ]
             for v in voices
         ]
         _expected_voices = expected_voices[:]

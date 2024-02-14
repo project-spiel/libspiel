@@ -498,7 +498,7 @@ spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
 
   SpielProvider *provider = _get_provider_by_name (
-      priv->providers, spiel_voice_get_provider_name (voice), NULL);
+      priv->providers, spiel_voice_get_provider_well_known_name (voice), NULL);
 
   if (!provider)
     {

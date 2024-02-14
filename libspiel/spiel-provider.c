@@ -201,8 +201,9 @@ _create_provider_voices (SpielProviderProxy *provider_proxy)
                      identifier, provider_name);
         }
       voice = g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
-                            identifier, "languages", languages, "provider-name",
-                            provider_name, "features", features, NULL);
+                            identifier, "languages", languages,
+                            "provider-well-known-name", provider_name,
+                            "features", features, NULL);
       spiel_voice_set_output_format (voice, output_format);
 
       voices_slist = g_slist_prepend (voices_slist, voice);
