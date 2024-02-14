@@ -53,6 +53,13 @@
   -->
     <property name="Voices" type="a(ssstas)" access="read"/>
 
+  <!--
+    Name:
+
+    A localizable, human readable, name for this provider.
+  -->
+  <property name="Name" type="s" access="read"/>
+
     <tp:flags name="VOICE_FEATURE" type="t">
       <tp:docstring>
         A bitfield of potential voice features that can be advertised to consumers.

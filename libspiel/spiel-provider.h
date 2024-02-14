@@ -26,6 +26,8 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (SpielProvider, spiel_provider, SPIEL, PROVIDER, GObject)
 
+const char *spiel_provider_get_name (SpielProvider *self);
+
 const char *spiel_provider_get_well_known_name (SpielProvider *self);
 
 GListModel *spiel_provider_get_voices (SpielProvider *self);

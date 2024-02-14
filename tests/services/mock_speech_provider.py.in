@@ -234,6 +234,10 @@ class SomeObject(PropertiesInterface):
         ]
         return voices
 
+    @property
+    def Name(self):
+        return NAME
+
     def GetLastSpeakArguments(self):
         return self._last_speak_args
 

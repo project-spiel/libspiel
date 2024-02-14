@@ -16,6 +16,10 @@ class TestInstallProvider(BaseSpielTest):
             [len(p.get_voices()) for p in speaker.get_providers()],
             [2, 5, 1],
         )
+        self.assertEqual(
+            [p.props.name for p in speaker.get_providers()],
+            ["mock", "mock2", "mock3"],
+        )
 
     def test_install_provider_service(self):
         speaker = Spiel.Speaker.new_sync(None)

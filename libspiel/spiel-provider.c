@@ -50,6 +50,7 @@ enum
 {
   PROP_0,
   PROP_WELL_KNOWN_NAME,
+  PROP_NAME,
   PROP_VOICES,
   N_PROPS
 };
@@ -108,6 +109,23 @@ spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
       g_object_unref (voice); // Just want to borrow a ref.
     }
   return NULL;
+}
+
+/**
+ * spiel_provider_proxy_get_name: (get-property name)
+ * @self: a #SpielProvider
+ *
+ * Fetches a human readable name of this provider
+ *
+ * Returns: (transfer none): the human readable name.
+ */
+const char *
+spiel_provider_get_name (SpielProvider *self)
+{
+  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+  g_return_val_if_fail (priv->provider_proxy, NULL);
+
+  return spiel_provider_proxy_get_name (priv->provider_proxy);
 }
 
 /**
@@ -314,6 +332,9 @@ spiel_provider_get_property (GObject *object,
 
   switch (prop_id)
     {
+    case PROP_NAME:
+      g_value_set_string (value, spiel_provider_get_name (self));
+      break;
     case PROP_WELL_KNOWN_NAME:
       g_value_set_string (value, spiel_provider_get_well_known_name (self));
       break;
@@ -332,6 +353,16 @@ spiel_provider_class_init (SpielProviderClass *klass)
 
   object_class->finalize = spiel_provider_finalize;
   object_class->get_property = spiel_provider_get_property;
+
+  /**
+   * SpielProvider:name: (getter get_name)
+   *
+   * The provider's human readable name
+   *
+   */
+  properties[PROP_NAME] =
+      g_param_spec_string ("name", NULL, NULL, NULL /* default value */,
+                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   /**
    * SpielProvider:well-known-name: (getter get_well_known_name)
