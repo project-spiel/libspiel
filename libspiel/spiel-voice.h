@@ -21,6 +21,8 @@
 #include "spiel-dbus-enums.h"
 #include <glib-object.h>
 
+typedef struct _SpielProvider SpielProvider;
+
 G_BEGIN_DECLS
 
 #define SPIEL_TYPE_VOICE (spiel_voice_get_type ())
@@ -31,7 +33,7 @@ const char *spiel_voice_get_name (SpielVoice *self);
 
 const char *spiel_voice_get_identifier (SpielVoice *self);
 
-const char *spiel_voice_get_provider_well_known_name (SpielVoice *self);
+SpielProvider *spiel_voice_get_provider (SpielVoice *self);
 
 const char *const *spiel_voice_get_languages (SpielVoice *self);
 

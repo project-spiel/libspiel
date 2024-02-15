@@ -21,7 +21,6 @@ class TestTypes(BaseSpielTest):
             name="English",
             identifier="en",
             languages=["en", "es", "he"],
-            provider_well_known_name="org.mock2.Speech.Provider",
             features=Spiel.VoiceFeature.SSML_SAY_AS_CARDINAL,
         )
         self.assertEqual(voice.props.name, "English")
@@ -30,12 +29,6 @@ class TestTypes(BaseSpielTest):
         self.assertEqual(voice.get_identifier(), "en")
         self.assertEqual(voice.props.languages, ["en", "es", "he"])
         self.assertEqual(voice.get_languages(), ["en", "es", "he"])
-        self.assertEqual(
-            voice.props.provider_well_known_name, "org.mock2.Speech.Provider"
-        )
-        self.assertEqual(
-            voice.get_provider_well_known_name(), "org.mock2.Speech.Provider"
-        )
         self.assertEqual(voice.get_features(), Spiel.VoiceFeature.SSML_SAY_AS_CARDINAL)
 
     def test_utterance(self):

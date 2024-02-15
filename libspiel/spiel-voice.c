@@ -18,7 +18,7 @@
 
 #include "spiel.h"
 
-#include "spiel-provider-proxy.h"
+#include "spiel-provider.h"
 #include "spiel-voice.h"
 
 /**
@@ -42,9 +42,9 @@ typedef struct
   char *name;
   char *identifier;
   char **languages;
-  char *provider_well_known_name;
   char *output_format;
   SpielVoiceFeature features;
+  GWeakRef provider;
 } SpielVoicePrivate;
 
 G_DEFINE_FINAL_TYPE_WITH_PRIVATE (SpielVoice, spiel_voice, G_TYPE_OBJECT)
@@ -55,7 +55,7 @@ enum
   PROP_NAME,
   PROP_IDENTIFIER,
   PROP_LANGUAGES,
-  PROP_PROVIDER_WELL_KNOWN_NAME,
+  PROP_PROVIDER,
   PROP_FEATURES,
   N_PROPS
 };
@@ -94,23 +94,20 @@ spiel_voice_get_identifier (SpielVoice *self)
   return priv->identifier;
 }
 
-// clang-format off
 /**
- * spiel_voice_get_provider_well_known_name: (get-property provider-well-known-name)
+ * spiel_voice_get_provider: (get-property provider)
  * @self: a #SpielVoice
  *
- * Fetches the provider well known name in the form of a unique DBus name.
+ * Fetches the provider associated with this voice
  *
- * Returns: the provider well known name. This string is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none): a #SpielProvider
  */
-const char *
-spiel_voice_get_provider_well_known_name (SpielVoice *self)
+SpielProvider *
+spiel_voice_get_provider (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
-  return priv->provider_well_known_name;
+  return g_weak_ref_get (&priv->provider);
 }
-// clang-format on
 
 /**
  * spiel_voice_get_languages: (get-property languages)
@@ -154,11 +151,16 @@ guint
 spiel_voice_hash (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+  SpielProvider *provider = spiel_voice_get_provider (self);
   guint hash = 0;
 
   hash = g_str_hash (priv->name);
   hash = (hash << 5) - hash + g_str_hash (priv->identifier);
-  hash = (hash << 5) - hash + g_str_hash (priv->provider_well_known_name);
+  if (provider)
+    {
+      hash = (hash << 5) - hash +
+             g_str_hash (spiel_provider_get_well_known_name (provider));
+    }
 
   for (char **language = priv->languages; *language; language++)
     {
@@ -174,8 +176,8 @@ spiel_voice_equal (SpielVoice *self, SpielVoice *other)
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
 
-  if (!g_str_equal (self_priv->provider_well_known_name,
-                    other_priv->provider_well_known_name))
+  if (g_weak_ref_get (&self_priv->provider) !=
+      g_weak_ref_get (&other_priv->provider))
     {
       return FALSE;
     }
@@ -204,10 +206,15 @@ spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
 {
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
+  SpielProvider *self_provider = g_weak_ref_get (&self_priv->provider);
+  SpielProvider *other_provider = g_weak_ref_get (&other_priv->provider);
   gint cmp = 0;
 
-  if ((cmp = g_strcmp0 (self_priv->provider_well_known_name,
-                        other_priv->provider_well_known_name)))
+  if ((cmp = g_strcmp0 (
+           self_provider ? spiel_provider_get_well_known_name (self_provider)
+                         : "",
+           other_provider ? spiel_provider_get_well_known_name (other_provider)
+                          : "")))
     {
       return cmp;
     }
@@ -234,7 +241,6 @@ spiel_voice_finalize (GObject *object)
   g_free (priv->name);
   g_free (priv->identifier);
   g_strfreev (priv->languages);
-  g_free (priv->provider_well_known_name);
 
   G_OBJECT_CLASS (spiel_voice_parent_class)->finalize (object);
 }
@@ -259,8 +265,8 @@ spiel_voice_get_property (GObject *object,
     case PROP_LANGUAGES:
       g_value_set_boxed (value, priv->languages);
       break;
-    case PROP_PROVIDER_WELL_KNOWN_NAME:
-      g_value_set_string (value, priv->provider_well_known_name);
+    case PROP_PROVIDER:
+      g_value_set_object (value, spiel_voice_get_provider (self));
       break;
     case PROP_FEATURES:
       g_value_set_flags (value, priv->features);
@@ -293,9 +299,8 @@ spiel_voice_set_property (GObject *object,
       g_strfreev (priv->languages);
       priv->languages = g_value_dup_boxed (value);
       break;
-    case PROP_PROVIDER_WELL_KNOWN_NAME:
-      g_clear_pointer (&priv->provider_well_known_name, g_free);
-      priv->provider_well_known_name = g_value_dup_string (value);
+    case PROP_PROVIDER:
+      g_weak_ref_set (&priv->provider, g_value_get_object (value));
       break;
     case PROP_FEATURES:
       priv->features = g_value_get_flags (value);
@@ -348,13 +353,13 @@ spiel_voice_class_init (SpielVoiceClass *klass)
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   /**
-   * SpielVoice:provider-well-known-name: (getter get_provider_well_known_name)
+   * SpielVoice:provider: (getter get_provider)
    *
-   * The speech provider that implements this voice's DBus name.
+   * The speech provider that implements this voice.
    *
    */
-  properties[PROP_PROVIDER_WELL_KNOWN_NAME] = g_param_spec_string (
-      "provider-well-known-name", NULL, NULL, NULL /* default value */,
+  properties[PROP_PROVIDER] = g_param_spec_object (
+      "provider", NULL, NULL, SPIEL_TYPE_PROVIDER,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   properties[PROP_FEATURES] = g_param_spec_flags (
@@ -373,7 +378,6 @@ spiel_voice_init (SpielVoice *self)
   priv->name = NULL;
   priv->identifier = NULL;
   priv->languages = NULL;
-  priv->provider_well_known_name = NULL;
   priv->output_format = NULL;
   priv->features = 0;
 }

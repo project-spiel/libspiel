@@ -21,7 +21,7 @@ class TestVoices(BaseSpielTest):
         voices = speechSynthesis.props.voices
         voices_info = [
             [
-                v.props.provider_well_known_name,
+                v.props.provider.props.well_known_name,
                 v.props.name,
                 v.props.identifier,
                 v.props.languages,

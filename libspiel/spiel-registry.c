@@ -495,16 +495,9 @@ initable_iface_init (GInitableIface *initable_iface)
 SpielProviderProxy *
 spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
-  SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+  SpielProvider *provider = spiel_voice_get_provider (voice);
 
-  SpielProvider *provider = _get_provider_by_name (
-      priv->providers, spiel_voice_get_provider_well_known_name (voice), NULL);
-
-  if (!provider)
-    {
-      g_warning ("No provider_proxy for voice");
-      return NULL;
-    }
+  g_return_val_if_fail (provider, NULL);
 
   return spiel_provider_get_proxy (provider);
 }

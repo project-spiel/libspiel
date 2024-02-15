@@ -176,12 +176,11 @@ spiel_provider_get_is_activatable (SpielProvider *self)
 }
 
 static GSList *
-_create_provider_voices (SpielProviderProxy *provider_proxy)
+_create_provider_voices (SpielProvider *self)
 {
-  const char *provider_name =
-      g_dbus_proxy_get_name (G_DBUS_PROXY (provider_proxy));
+  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
   GSList *voices_slist = NULL;
-  GVariant *voices = spiel_provider_proxy_get_voices (provider_proxy);
+  GVariant *voices = spiel_provider_proxy_get_voices (priv->provider_proxy);
   gsize voices_count = voices ? g_variant_n_children (voices) : 0;
 
   for (gsize i = 0; i < voices_count; i++)
@@ -198,12 +197,11 @@ _create_provider_voices (SpielProviderProxy *provider_proxy)
       if (features >> 32)
         {
           g_warning ("Voice features past 32 bits are ignored in %s (%s)",
-                     identifier, provider_name);
+                     identifier, spiel_provider_get_well_known_name (self));
         }
       voice = g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
-                            identifier, "languages", languages,
-                            "provider-well-known-name", provider_name,
-                            "features", features, NULL);
+                            identifier, "languages", languages, "provider",
+                            self, "features", features, NULL);
       spiel_voice_set_output_format (voice, output_format);
 
       voices_slist = g_slist_prepend (voices_slist, voice);
@@ -222,7 +220,7 @@ _spiel_provider_update_voices (SpielProvider *self)
 
   g_return_if_fail (priv->provider_proxy);
 
-  new_voices = _create_provider_voices (priv->provider_proxy);
+  new_voices = _create_provider_voices (self);
   if (g_hash_table_size (priv->voices_hashset) > 0)
     {
       // We are adding voices to an already populated provider_proxy, store

@@ -46,7 +46,7 @@ class TestSpeak(BaseSpielTest):
             speechSynthesis, lambda: speechSynthesis.speak(utterance)
         )
         args = self.mock_iface(
-            voice.props.provider_well_known_name
+            voice.props.provider.get_well_known_name()
         ).GetLastSpeakArguments()
         self.assertEqual(str(args[2]), voice.props.identifier)
 
