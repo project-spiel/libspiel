@@ -80,10 +80,13 @@ G_DEFINE_FINAL_TYPE_WITH_CODE (
 enum
 {
   UTTURANCE_STARTED,
-  RANGE_STARTED,
   UTTERANCE_FINISHED,
   UTTERANCE_CANCELED,
   UTTERANCE_ERROR,
+  RANGE_STARTED,
+  WORD_STARTED,
+  SENTENCE_STARTED,
+  MARK_REACHED,
   LAST_SIGNAL
 };
 
@@ -384,22 +387,6 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
       NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
   /**
-   * SpielSpeaker::range-started:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
-   * @start: Character start offset of speech range
-   * @end: Character end offset of speech range
-   *
-   * Emitted when a range will be spoken in a given utterance. Not all
-   * voices are capable of notifying when a range will be spoken.
-   *
-   */
-  speaker_signals[RANGE_STARTED] =
-      g_signal_new ("range-started", G_TYPE_FROM_CLASS (klass),
-                    G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
-                    SPIEL_TYPE_UTTERANCE, G_TYPE_UINT64, G_TYPE_UINT64);
-
-  /**
    * SpielSpeaker::utterance-finished:
    * @speaker: A #SpielSpeaker
    * @utterance: A #SpielUtterance
@@ -436,6 +423,67 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
   speaker_signals[UTTERANCE_ERROR] = g_signal_new (
       "utterance-error", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_ERROR);
+
+  /**
+   * SpielSpeaker::word-started:
+   * @speaker: A #SpielSpeaker
+   * @utterance: A #SpielUtterance
+   * @start: Character start offset of speech word
+   * @end: Character end offset of speech word
+   *
+   * Emitted when a word will be spoken in a given utterance. Not all
+   * voices are capable of notifying when a word will be spoken.
+   *
+   */
+  speaker_signals[WORD_STARTED] =
+      g_signal_new ("word-started", G_TYPE_FROM_CLASS (klass),
+                    G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
+                    SPIEL_TYPE_UTTERANCE, G_TYPE_UINT64, G_TYPE_UINT64);
+
+  /**
+   * SpielSpeaker::sentence-started:
+   * @speaker: A #SpielSpeaker
+   * @utterance: A #SpielUtterance
+   * @start: Character start offset of speech sentence
+   * @end: Character end offset of speech sentence
+   *
+   * Emitted when a sentence will be spoken in a given utterance. Not all
+   * voices are capable of notifying when a sentence will be spoken.
+   *
+   */
+  speaker_signals[SENTENCE_STARTED] =
+      g_signal_new ("sentence-started", G_TYPE_FROM_CLASS (klass),
+                    G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
+                    SPIEL_TYPE_UTTERANCE, G_TYPE_UINT64, G_TYPE_UINT64);
+
+  /**
+   * SpielSpeaker::range-started:
+   * @speaker: A #SpielSpeaker
+   * @utterance: A #SpielUtterance
+   * @start: Character start offset of speech range
+   * @end: Character end offset of speech range
+   *
+   * Emitted when a range will be spoken in a given utterance. Not all
+   * voices are capable of notifying when a range will be spoken.
+   *
+   */
+  speaker_signals[RANGE_STARTED] =
+      g_signal_new ("range-started", G_TYPE_FROM_CLASS (klass),
+                    G_SIGNAL_RUN_FIRST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
+                    SPIEL_TYPE_UTTERANCE, G_TYPE_UINT64, G_TYPE_UINT64);
+
+  /**
+   * SpielSpeaker::mark-reached:
+   * @speaker: A #SpielSpeaker
+   * @utterance: A #SpielUtterance
+   * @name: Name of mark reached
+   *
+   * Emitted when an SSML mark element is reached
+   *
+   */
+  speaker_signals[MARK_REACHED] = g_signal_new (
+      "mark-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 2, SPIEL_TYPE_UTTERANCE, G_TYPE_STRING);
 }
 
 static gboolean
@@ -915,6 +963,7 @@ _process_going_to_speak_message (GstMessage *msg, SpielSpeaker *self)
   guint event_type = SPEECH_PROVIDER_EVENT_TYPE_NONE;
   guint32 range_start = 0;
   guint32 range_end = 0;
+  const char *mark_name = gst_structure_get_string (strct, "name");
 
   if (!gst_structure_get_uint (strct, "event_type", &event_type))
     {
@@ -931,8 +980,29 @@ _process_going_to_speak_message (GstMessage *msg, SpielSpeaker *self)
       g_warning ("No 'range_end' in message structure");
     }
 
-  g_signal_emit (self, speaker_signals[RANGE_STARTED], 0, entry->utterance,
-                 range_start, range_end);
+  switch (event_type)
+    {
+    case SPEECH_PROVIDER_EVENT_TYPE_WORD:
+      g_signal_emit (self, speaker_signals[WORD_STARTED], 0, entry->utterance,
+                     range_start, range_end);
+      break;
+    case SPEECH_PROVIDER_EVENT_TYPE_SENTENCE:
+      g_signal_emit (self, speaker_signals[SENTENCE_STARTED], 0,
+                     entry->utterance, range_start, range_end);
+      break;
+    case SPEECH_PROVIDER_EVENT_TYPE_RANGE:
+      g_signal_emit (self, speaker_signals[RANGE_STARTED], 0, entry->utterance,
+                     range_start, range_end);
+      break;
+    case SPEECH_PROVIDER_EVENT_TYPE_MARK:
+      g_warn_if_fail (mark_name);
+      g_signal_emit (self, speaker_signals[MARK_REACHED], 0, entry->utterance,
+                     mark_name);
+      break;
+    default:
+      g_warning ("Event type not recognized (%d)", event_type);
+      break;
+    }
 }
 
 static gboolean

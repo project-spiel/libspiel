@@ -13,11 +13,13 @@ class TestSpeak(BaseSpielTest):
         expected_events = [
             ["notify:speaking", True],
             ["utterance-started", utterance],
-            ["range-started", utterance, 0, 6],
-            ["range-started", utterance, 6, 13],
-            ["range-started", utterance, 13, 17],
-            ["range-started", utterance, 17, 21],
-            ["range-started", utterance, 21, 25],
+            ["word-started", utterance, 0, 6],
+            ["sentence-started", utterance, 6, 13],
+            ["word-started", utterance, 6, 13],
+            ["word-started", utterance, 13, 17],
+            ["sentence-started", utterance, 17, 21],
+            ["word-started", utterance, 17, 21],
+            ["word-started", utterance, 21, 25],
             ["utterance-finished", utterance],
             ["notify:speaking", False],
         ]

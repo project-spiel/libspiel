@@ -149,6 +149,10 @@ class SpielSynthStream(object):
         self.stream_writer.send_audio(b"")
         if self.ranges:
             start, end = self.ranges.pop(0)
+            if len(self.ranges) % 2:
+                self.stream_writer.send_event(
+                    SpeechProvider.EventType.SENTENCE, start, end, ""
+                )
             self.stream_writer.send_event(SpeechProvider.EventType.WORD, start, end, "")
         self.stream_writer.send_audio(b)
 

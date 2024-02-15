@@ -213,8 +213,11 @@ class BaseSpielTest(unittest.TestCase):
         def _utterance_started_cb(synth, utt):
             event_sequence.append(["utterance-started", utt])
 
-        def _utterance_range_started_cb(synth, utt, start, end):
-            event_sequence.append(["range-started", utt, start, end])
+        def _utterance_word_started_cb(synth, utt, start, end):
+            event_sequence.append(["word-started", utt, start, end])
+
+        def _utterance_sentence_started_cb(synth, utt, start, end):
+            event_sequence.append(["sentence-started", utt, start, end])
 
         def _utterance_canceled_cb(synth, utt):
             event_sequence.append(["utterance-canceled", utt])
@@ -235,7 +238,8 @@ class BaseSpielTest(unittest.TestCase):
         speaker.connect("utterance-canceled", _utterance_canceled_cb)
         speaker.connect("utterance-finished", _utterance_finished_cb)
         speaker.connect("utterance-error", _utterance_error_cb)
-        speaker.connect("range-started", _utterance_range_started_cb)
+        speaker.connect("word-started", _utterance_word_started_cb)
+        speaker.connect("sentence-started", _utterance_sentence_started_cb)
 
         def do_speak():
             for utterance in utterances:
