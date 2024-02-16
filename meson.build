@@ -79,9 +79,7 @@ foreach arg: test_c_args
 endforeach
 add_project_arguments(project_c_args, language: 'c')
 
-if get_option('libspeechprovider')
-  subdir('libspeechprovider')
-endif
+subdir('libspeechprovider')
 
 if get_option('libspiel')
   subdir('libspiel')
