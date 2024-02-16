@@ -56,6 +56,7 @@ G_DEFINE_FINAL_TYPE_WITH_CODE (
                                    async_initable_iface_init))
 
 static SpielRegistry *sRegistry = NULL;
+static GSList *sPendingTasks = NULL;
 
 enum
 {
@@ -245,15 +246,23 @@ _subscribe_to_activatable_services_changed (SpielRegistry *self)
 static void
 _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
 {
-  GTask *task = user_data;
+  GTask *top_task = user_data;
   GError *err = NULL;
-  SpielRegistry *self = g_task_get_source_object (task);
+  SpielRegistry *self = g_task_get_source_object (top_task);
   GHashTable *providers = spiel_collect_providers_finish (res, &err);
+  g_assert (sPendingTasks->data == top_task);
 
   if (err != NULL)
     {
       g_warning ("Error retrieving providers: %s\n", err->message);
-      g_task_return_error (task, err);
+      while (sPendingTasks)
+        {
+          GTask *task = sPendingTasks->data;
+          g_task_return_error (task, g_error_copy (err));
+          g_object_unref (task);
+          sPendingTasks = g_slist_delete_link (sPendingTasks, sPendingTasks);
+        }
+      g_error_free (err);
       return;
     }
 
@@ -261,8 +270,13 @@ _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
 
   _subscribe_to_activatable_services_changed (self);
 
-  g_task_return_boolean (task, TRUE);
-  g_object_unref (task);
+  while (sPendingTasks)
+    {
+      GTask *task = sPendingTasks->data;
+      g_task_return_boolean (task, TRUE);
+      g_object_unref (task);
+      sPendingTasks = g_slist_delete_link (sPendingTasks, sPendingTasks);
+    }
 }
 
 static void
@@ -298,6 +312,13 @@ spiel_registry_get (GCancellable *cancellable,
                                 user_data);
       g_task_return_boolean (task, TRUE);
       g_object_unref (task);
+    }
+  else if (sPendingTasks)
+    {
+      GObject *source_object = g_task_get_source_object (sPendingTasks->data);
+      GTask *task = g_task_new (g_object_ref (source_object), cancellable,
+                                callback, user_data);
+      sPendingTasks = g_slist_append (sPendingTasks, task);
     }
   else
     {
@@ -382,6 +403,9 @@ async_initable_init_async (GAsyncInitable *initable,
   GTask *task = g_task_new (initable, cancellable, callback, user_data);
   SpielRegistry *self = SPIEL_REGISTRY (initable);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+
+  g_assert (!sPendingTasks);
+  sPendingTasks = g_slist_append (sPendingTasks, task);
 
   priv->providers = g_list_store_new (SPIEL_TYPE_PROVIDER);
   priv->voices = spiel_voices_list_model_new (G_LIST_MODEL (priv->providers));

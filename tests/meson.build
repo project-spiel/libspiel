@@ -48,6 +48,12 @@ test_simple_speak = executable('test-simple-speak', 'test-simple-speak.c',
   dependencies: test_deps
 )
 
+test_simultaneous_init = executable(
+  'test-simultaneous-init',
+  'test-simultaneous-init.c',
+  dependencies: test_deps
+)
+
 if dbus_run_session.found() and python.found()
   foreach test_name : tests
     test(
@@ -68,6 +74,14 @@ test('test-simple-speak', dbus_run_session,
       args : [
         '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
         '--', test_simple_speak
+        ],
+      env : test_env
+    )
+
+test('test-simultaneous-init', dbus_run_session,
+      args : [
+        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+        '--', test_simultaneous_init
         ],
       env : test_env
     )
