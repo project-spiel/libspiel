@@ -462,7 +462,7 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 
   providers = spiel_collect_providers_sync (bus, cancellable, error);
 
-  if (*error != NULL)
+  if (error && *error != NULL)
     {
       g_warning ("Error retrieving providers: %s\n", (*error)->message);
       return FALSE;

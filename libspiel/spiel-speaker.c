@@ -589,15 +589,18 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
   SpielSpeaker *self = SPIEL_SPEAKER (initable);
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  priv->registry = spiel_registry_get_sync (cancellable, error);
-  if (*error == NULL)
+  GError *err = NULL;
+
+  priv->registry = spiel_registry_get_sync (cancellable, &err);
+  if (err == NULL)
     {
-      _setup_pipeline (self, error);
+      _setup_pipeline (self, &err);
     }
 
-  if (*error)
+  if (err != NULL)
     {
       g_warning ("Error initializing speaker: %s\n", (*error)->message);
+      g_propagate_error (error, err);
       return FALSE;
     }
 

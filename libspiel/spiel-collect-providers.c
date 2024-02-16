@@ -351,7 +351,7 @@ spiel_collect_providers_sync (GDBusConnection *connection,
           connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
           "org.freedesktop.DBus", *method, NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
           -1, NULL, error);
-      if (*error)
+      if (error && *error)
         {
           g_warning ("Error calling list (%s): %s\n", *method,
                      (*error)->message);
