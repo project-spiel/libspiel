@@ -383,7 +383,7 @@ _settings_new (void)
   schema = g_settings_schema_source_lookup (source, GSETTINGS_SCHEMA, TRUE);
   if (!schema)
     {
-      g_warning ("libspiel settings schema is not installed");
+      g_debug ("libspiel settings schema is not installed");
       return NULL;
     }
 
