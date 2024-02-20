@@ -159,6 +159,7 @@ _on_list_names (GObject *source, GAsyncResult *result, gpointer user_data)
   if (!closure->providers_to_process)
     {
       g_task_return_pointer (task, NULL, NULL);
+      g_object_unref (task);
     }
   else
     {
@@ -189,6 +190,7 @@ _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
       g_hash_table_steal (closure->providers, closure->provider_name);
       g_assert_cmpint (g_hash_table_size (closure->providers), ==, 0);
       g_task_return_pointer (task, provider, (GDestroyNotify) g_object_unref);
+      g_object_unref (task);
     }
   else
     {
@@ -196,6 +198,7 @@ _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
       // results.
       g_task_return_pointer (task, g_hash_table_ref (closure->providers),
                              (GDestroyNotify) g_hash_table_unref);
+      g_object_unref (task);
     }
 }
 

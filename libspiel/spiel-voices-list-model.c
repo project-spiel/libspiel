@@ -75,6 +75,8 @@ spiel_voices_list_model_finalize (GObject *object)
 
   g_clear_object (&(self->providers));
 
+  g_clear_object (&(self->mirrored_providers));
+
   G_OBJECT_CLASS (spiel_voices_list_model_parent_class)->finalize (object);
 }
 

@@ -312,6 +312,7 @@ spiel_utterance_finalize (GObject *object)
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
   g_free (priv->text);
+  g_free (priv->language);
   g_clear_object (&(priv->voice));
 
   G_OBJECT_CLASS (spiel_utterance_parent_class)->finalize (object);

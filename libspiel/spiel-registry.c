@@ -277,6 +277,8 @@ _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
       g_object_unref (task);
       sPendingTasks = g_slist_delete_link (sPendingTasks, sPendingTasks);
     }
+
+  g_hash_table_unref (providers);
 }
 
 static void
@@ -602,6 +604,7 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
       while (found);
 
       g_free (_lang);
+      g_variant_unref (mapping);
     }
 
   if (!provider_name && priv->settings)
