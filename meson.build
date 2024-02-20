@@ -92,3 +92,7 @@ endif
 if get_option('tests') and get_option('libspiel')
   subdir('tests')
 endif
+
+if get_option('utils')
+  subdir('utils')
+endif
