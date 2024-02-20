@@ -58,7 +58,7 @@ speech_provider_deps = [
 ]
 
 speech_provider_lib = shared_library('speech-provider-' + api_version,
-  speech_provider_sources,
+  [speech_provider_sources, speech_provider_lib_generated],
   dependencies: speech_provider_deps,
   install: true,
 )
