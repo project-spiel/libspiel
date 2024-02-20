@@ -22,12 +22,12 @@
 
 G_BEGIN_DECLS
 
-#define SPEECH_PROVIDER_INSIDE
+#define LIBSPIEL_INSIDE
 #include "spiel-dbus-enums.h"
 #include "spiel-speaker.h"
 #include "spiel-utterance.h"
 #include "spiel-version.h"
 #include "spiel-voice.h"
-#undef SPEECH_PROVIDER_INSIDE
+#undef LIBSPIEL_INSIDE
 
 G_END_DECLS

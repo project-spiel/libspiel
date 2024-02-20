@@ -23,10 +23,10 @@
 
 G_BEGIN_DECLS
 
-#define SPEECH_PROVIDER_INSIDE
+#define LIBSPEECHPROVIDER_INSIDE
 #include "speech-provider-common.h"
 #include "speech-provider-stream-reader.h"
 #include "speech-provider-stream-writer.h"
-#undef SPEECH_PROVIDER_INSIDE
+#undef LIBSPEECHPROVIDER_INSIDE
 
 G_END_DECLS

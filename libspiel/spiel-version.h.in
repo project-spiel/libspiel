@@ -1,7 +1,7 @@
 
 #pragma once
 
-#if !defined(SPEECH_PROVIDER_INSIDE) && !defined(SPIEL_COMPILATION)
+#if !defined(LIBSPIEL_INSIDE) && !defined(SPIEL_COMPILATION)
 #error "Only <spiel.h> can be included directly."
 #endif
 

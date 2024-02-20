@@ -1,7 +1,7 @@
 
 #pragma once
 
-#if !defined(SPEECH_PROVIDER_INSIDE) && !defined(SPEECH_PROVIDER_COMPILATION)
+#if !defined(LIBSPEECHPROVIDER_INSIDE) && !defined(SPEECH_PROVIDER_COMPILATION)
 #error "Only <speech-provider.h> can be included directly."
 #endif
 
