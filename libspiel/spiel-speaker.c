@@ -55,7 +55,6 @@ struct _SpielSpeaker
 
 typedef struct
 {
-  gboolean speaking;
   gboolean paused;
   SpielRegistry *registry;
   GSList *queue;
@@ -266,7 +265,7 @@ spiel_speaker_get_property (GObject *object,
   switch (prop_id)
     {
     case PROP_SPEAKING:
-      g_value_set_boolean (value, priv->speaking);
+      g_value_set_boolean (value, priv->queue != NULL);
       break;
     case PROP_PAUSED:
       g_value_set_boolean (value, priv->paused);
@@ -559,7 +558,6 @@ async_initable_init_async (GAsyncInitable *initable,
   SpielSpeaker *self = SPIEL_SPEAKER (initable);
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
 
-  priv->speaking = FALSE;
   priv->paused = FALSE;
   priv->queue = NULL;
 
@@ -617,7 +615,6 @@ static void
 spiel_speaker_init (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  priv->speaking = FALSE;
   priv->paused = FALSE;
   priv->queue = NULL;
 }
@@ -772,6 +769,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   if (!priv->queue->next)
     {
+      g_object_notify (G_OBJECT (self), "speaking");
       _speak_current_entry (self);
     }
 }
@@ -900,18 +898,14 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       pending_state == GST_STATE_VOID_PENDING &&
       element == GST_OBJECT (priv->pipeline))
     {
-      if (!priv->paused || !priv->speaking)
+      if (priv->paused)
         {
-          if (priv->paused)
-            {
-              priv->paused = FALSE;
-              g_object_notify (G_OBJECT (self), "paused");
-            }
-          if (!priv->speaking)
-            {
-              priv->speaking = TRUE;
-              g_object_notify (G_OBJECT (self), "speaking");
-            }
+          priv->paused = FALSE;
+          g_object_notify (G_OBJECT (self), "paused");
+        }
+
+      if (!entry->started)
+        {
           entry->started = TRUE;
           g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0,
                          entry->utterance);
@@ -922,11 +916,6 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
               g_slist_free_full (g_steal_pointer (&entry->deferred_messages),
                                  (GDestroyNotify) gst_message_unref);
             }
-        }
-      else
-        {
-          priv->paused = FALSE;
-          g_object_notify (G_OBJECT (self), "paused");
         }
     }
   if (new_state == GST_STATE_PAUSED &&
@@ -1137,20 +1126,14 @@ _advance_to_next_entry_or_finish (SpielSpeaker *self, gboolean canceled)
                            entry->volume, NULL);
     }
 
-  if (!priv->queue->next)
-    {
-      gboolean was_speaking = priv->speaking;
-      priv->speaking = FALSE;
-      if (was_speaking)
-        {
-          g_object_notify (G_OBJECT (self), "speaking");
-        }
-    }
-
   _queue_entry_destroy (entry);
   priv->queue = g_slist_delete_link (priv->queue, priv->queue);
   if (priv->queue)
     {
       _speak_current_entry (self);
+    }
+  else
+    {
+      g_object_notify (G_OBJECT (self), "speaking");
     }
 }

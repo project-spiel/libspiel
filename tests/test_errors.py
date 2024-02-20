@@ -19,7 +19,9 @@ class TestSpeak(BaseSpielTest):
             "Message recipient disconnected from message bus without replying",
         )
         expected_events = [
+            ["notify:speaking", True],
             ["utterance-error", utterance, expected_error],
+            ["notify:speaking", False],
         ]
 
         actual_events = self.capture_speak_sequence(speaker, utterance)

@@ -152,16 +152,6 @@ class BaseSpielTest(unittest.TestCase):
         loop = GLib.MainLoop()
         loop.run()
 
-    def wait_for_speaking_changed(self, speaker, action):
-        def _cb(*args):
-            speaker.disconnect_by_func(_cb)
-            loop.quit()
-
-        speaker.connect("notify::speaking", _cb)
-        action()
-        loop = GLib.MainLoop()
-        loop.run()
-
     def wait_for_speaking_done(self, speaker, action):
         def _cb(*args):
             if not speaker.props.speaking:

@@ -143,8 +143,8 @@ class TestSpeak(BaseSpielTest):
 
         expected_events = [
             ["notify:paused", True],
-            ["notify:paused", False],
             ["notify:speaking", True],
+            ["notify:paused", False],
             ["utterance-started", utterance],
             ["utterance-finished", utterance],
             ["notify:speaking", False],

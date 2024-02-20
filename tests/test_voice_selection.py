@@ -42,9 +42,7 @@ class TestSpeak(BaseSpielTest):
 
     def _test_speak_with_voice(self, speechSynthesis, voice):
         utterance = Spiel.Utterance(text="hello world, how are you?", voice=voice)
-        self.wait_for_speaking_changed(
-            speechSynthesis, lambda: speechSynthesis.speak(utterance)
-        )
+        speechSynthesis.speak(utterance)
         args = self.mock_iface(
             voice.props.provider.get_well_known_name()
         ).GetLastSpeakArguments()
