@@ -24,6 +24,7 @@ G_BEGIN_DECLS
 
 #define LIBSPIEL_INSIDE
 #include "spiel-dbus-enums.h"
+#include "spiel-provider.h"
 #include "spiel-speaker.h"
 #include "spiel-utterance.h"
 #include "spiel-version.h"
