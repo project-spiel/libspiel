@@ -4,7 +4,7 @@ from gi.repository import GLib
 import gi
 import sys
 
-gi.require_version("Spiel", "0.1")
+gi.require_version("Spiel", "1.0")
 from gi.repository import Spiel
 
 def speak_and_wait(speaker, voice, text):

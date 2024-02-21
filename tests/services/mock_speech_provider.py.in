@@ -3,7 +3,7 @@
 import gi
 
 gi.require_version("Gst", "1.0")
-gi.require_version("SpeechProvider", "0.1")
+gi.require_version("SpeechProvider", "1.0")
 from gi.repository import GLib, Gst, SpeechProvider
 
 from dasbus.connection import SessionMessageBus

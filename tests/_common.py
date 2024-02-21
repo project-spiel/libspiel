@@ -4,7 +4,7 @@ from gi.repository import GLib, Gio
 
 import gi
 
-gi.require_version("Spiel", "0.1")
+gi.require_version("Spiel", "1.0")
 from gi.repository import Spiel
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)

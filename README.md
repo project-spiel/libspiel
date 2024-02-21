@@ -25,7 +25,7 @@ Language bindings are available through GObject Introspection. So this should wo
 A minimal python example would look like this:
 ```python
 import gi
-gi.require_version("Spiel", "0.1")
+gi.require_version("Spiel", "1.0")
 from gi.repository import GLib, Spiel
 
 loop = GLib.MainLoop()

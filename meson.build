@@ -1,10 +1,10 @@
 project('spiel', 'c',
-          version: '0.1.0',
+          version: '1.0.0',
     meson_version: '>= 0.64.0',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
 
-api_version = '0.1'
+api_version = '1.0'
 
 cc = meson.get_compiler('c')
 

@@ -1,7 +1,7 @@
 import unittest, os
 import gi
 
-gi.require_version("SpeechProvider", "0.1")
+gi.require_version("SpeechProvider", "1.0")
 from gi.repository import SpeechProvider
 
 from _common import test_main
