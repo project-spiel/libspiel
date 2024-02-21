@@ -101,7 +101,8 @@ speech_provider_stream_reader_get_stream_header (
   g_assert (!priv->stream_header_recieved);
   read (priv->fd, &header, sizeof (SpeechProviderStreamHeader));
   priv->stream_header_recieved = TRUE;
-  return g_str_equal (header.version, SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION);
+  return strncmp (header.version, SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION, 4) ==
+         0;
 }
 
 static SpeechProviderChunkType

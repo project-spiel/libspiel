@@ -475,6 +475,8 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
       g_hash_table_foreach (providers, (GHFunc) _insert_providers, self);
     }
 
+  g_hash_table_unref (providers);
+
   priv->connection = g_object_ref (bus);
 
   _subscribe_to_activatable_services_changed (self);
