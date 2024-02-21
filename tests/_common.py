@@ -9,6 +9,8 @@ from gi.repository import Spiel
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
+LOG_EVENTS = False
+
 STANDARD_VOICES = [
     ["org.mock2.Speech.Provider", "English (Great Britain)", "gmw/en", ["en-gb", "en"]],
     [
@@ -192,31 +194,36 @@ class BaseSpielTest(unittest.TestCase):
     def capture_speak_sequence(self, speaker, *utterances):
         event_sequence = []
 
+        def _append_to_sequence(signal_and_args):
+            event_sequence.append(signal_and_args)
+            if LOG_EVENTS:
+                print(signal_and_args)
+
         def _notify_speaking_cb(synth, val):
-            event_sequence.append(["notify:speaking", synth.props.speaking])
+            _append_to_sequence(["notify:speaking", synth.props.speaking])
             if not synth.props.speaking:
                 loop.quit()
 
         def _notify_paused_cb(synth, val):
-            event_sequence.append(["notify:paused", synth.props.paused])
+            _append_to_sequence(["notify:paused", synth.props.paused])
 
         def _utterance_started_cb(synth, utt):
-            event_sequence.append(["utterance-started", utt])
+            _append_to_sequence(["utterance-started", utt])
 
         def _utterance_word_started_cb(synth, utt, start, end):
-            event_sequence.append(["word-started", utt, start, end])
+            _append_to_sequence(["word-started", utt, start, end])
 
         def _utterance_sentence_started_cb(synth, utt, start, end):
-            event_sequence.append(["sentence-started", utt, start, end])
+            _append_to_sequence(["sentence-started", utt, start, end])
 
         def _utterance_canceled_cb(synth, utt):
-            event_sequence.append(["utterance-canceled", utt])
+            _append_to_sequence(["utterance-canceled", utt])
 
         def _utterance_finished_cb(synth, utt):
-            event_sequence.append(["utterance-finished", utt])
+            _append_to_sequence(["utterance-finished", utt])
 
         def _utterance_error_cb(synth, utt, error):
-            event_sequence.append(
+            _append_to_sequence(
                 ["utterance-error", utt, (error.domain, error.code, error.message)]
             )
             if not synth.props.speaking:
