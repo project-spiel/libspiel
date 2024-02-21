@@ -100,13 +100,12 @@ spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
 
   for (guint i = 0; i < voices_count; i++)
     {
-      SpielVoice *voice = SPIEL_VOICE (
+      g_autoptr (SpielVoice) voice = SPIEL_VOICE (
           g_list_model_get_object (G_LIST_MODEL (priv->voices), i));
       if (g_str_equal (spiel_voice_get_identifier (voice), voice_id))
         {
-          return voice;
+          return g_steal_pointer (&voice);
         }
-      g_object_unref (voice); // Just want to borrow a ref.
     }
   return NULL;
 }
@@ -188,7 +187,7 @@ _create_provider_voices (SpielProvider *self)
       const char *name = NULL;
       const char *identifier = NULL;
       const char *output_format = NULL;
-      const char **languages = NULL;
+      g_autofree char **languages = NULL;
       guint64 features;
       SpielVoice *voice;
 
@@ -205,7 +204,6 @@ _create_provider_voices (SpielProvider *self)
       spiel_voice_set_output_format (voice, output_format);
 
       voices_slist = g_slist_prepend (voices_slist, voice);
-      g_free (languages);
     }
 
   return voices_slist;
@@ -216,7 +214,7 @@ _spiel_provider_update_voices (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
   GSList *new_voices = NULL;
-  GHashTable *new_voices_hashset = NULL;
+  g_autoptr (GHashTable) new_voices_hashset = NULL;
 
   g_return_if_fail (priv->provider_proxy);
 
@@ -267,7 +265,6 @@ _spiel_provider_update_voices (SpielProvider *self)
               g_hash_table_iter_remove (&voices_iter);
             }
         }
-      g_hash_table_unref (new_voices_hashset);
     }
 
   g_slist_free_full (new_voices, (GDestroyNotify) g_object_unref);
@@ -280,7 +277,7 @@ handle_voices_changed (SpielProviderProxy *provider_proxy,
 {
   SpielProvider *self = user_data;
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-  char *name_owner =
+  g_autofree char *name_owner =
       g_dbus_proxy_get_name_owner (G_DBUS_PROXY (priv->provider_proxy));
 
   if (name_owner == NULL && priv->is_activatable)
@@ -289,8 +286,6 @@ handle_voices_changed (SpielProviderProxy *provider_proxy,
       // Its voices are still valid, though.
       return TRUE;
     }
-
-  g_free (name_owner);
 
   _spiel_provider_update_voices (self);
 

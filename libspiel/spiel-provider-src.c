@@ -206,7 +206,7 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
       SpeechProviderEventType event_type;
       guint32 range_start;
       guint32 range_end;
-      char *mark_name = NULL;
+      g_autofree char *mark_name = NULL;
       gboolean got_event, got_audio;
       got_event = speech_provider_stream_reader_get_event (
           src->reader, &event_type, &range_start, &range_end, &mark_name);
@@ -221,7 +221,6 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
                                      G_TYPE_UINT, range_start, "range_end",
                                      G_TYPE_UINT, range_end, "mark_name",
                                      G_TYPE_STRING, mark_name, NULL)));
-          g_free (mark_name);
         }
 
       got_audio = speech_provider_stream_reader_get_audio (src->reader, &chunk,

@@ -198,15 +198,12 @@ SpielSpeaker *
 spiel_speaker_new_finish (GAsyncResult *result, GError **error)
 {
   GObject *object;
-  GObject *source_object;
+  g_autoptr (GObject) source_object = g_async_result_get_source_object (result);
 
-  source_object = g_async_result_get_source_object (result);
-  g_assert (source_object != NULL);
+  g_return_val_if_fail (source_object != NULL, NULL);
 
   object = g_async_initable_new_finish (G_ASYNC_INITABLE (source_object),
                                         result, error);
-  g_object_unref (source_object);
-
   if (object != NULL)
     return SPIEL_SPEAKER (object);
   else
@@ -670,7 +667,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   const char *stream_type = NULL;
   gboolean is_ssml = FALSE;
   gdouble pitch, rate, volume;
-  SpielVoice *voice = NULL;
+  g_autoptr (SpielVoice) voice = NULL;
   GstStructure *gst_struct;
 
   g_object_get (utterance, "pitch", &pitch, "rate", &rate, "volume", &volume,
@@ -709,7 +706,6 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
       call_synth_data);
 
   g_object_unref (fd_list);
-  g_object_unref (voice);
 
   entry->utterance = g_object_ref (utterance);
 

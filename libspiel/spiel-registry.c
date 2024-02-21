@@ -75,9 +75,8 @@ _get_provider_by_name (GListStore *providers,
 
   for (guint i = 0; i < providers_count; i++)
     {
-      SpielProvider *provider = SPIEL_PROVIDER (
+      g_autoptr (SpielProvider) provider = SPIEL_PROVIDER (
           g_list_model_get_object (G_LIST_MODEL (providers), i));
-      g_object_unref (provider); // Just want to borrow a ref.
       if (g_str_equal (provider_name,
                        spiel_provider_get_well_known_name (provider)))
         {
@@ -117,15 +116,15 @@ _insert_providers (const char *provider_name,
 static void
 _on_providers_updated (GObject *source, GAsyncResult *res, SpielRegistry *self)
 {
-  GError *err = NULL;
-  GHashTable *new_providers = spiel_collect_providers_finish (res, &err);
+  g_autoptr (GError) err = NULL;
+  g_autoptr (GHashTable) new_providers =
+      spiel_collect_providers_finish (res, &err);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   guint providers_count = 0;
 
   if (err != NULL)
     {
       g_warning ("Error updating providers: %s\n", err->message);
-      g_error_free (err);
       return;
     }
 
@@ -135,17 +134,14 @@ _on_providers_updated (GObject *source, GAsyncResult *res, SpielRegistry *self)
 
   for (gint i = providers_count - 1; i >= 0; i--)
     {
-      SpielProvider *provider = SPIEL_PROVIDER (
+      g_autoptr (SpielProvider) provider = SPIEL_PROVIDER (
           g_list_model_get_object (G_LIST_MODEL (priv->providers), i));
-      g_object_unref (provider); // Just want to borrow a ref.
       if (!g_hash_table_contains (
               new_providers, spiel_provider_get_well_known_name (provider)))
         {
           g_list_store_remove (priv->providers, i);
         }
     }
-
-  g_hash_table_unref (new_providers);
 }
 
 static void
@@ -153,21 +149,19 @@ _on_new_provider_collected (GObject *source,
                             GAsyncResult *res,
                             SpielRegistry *self)
 {
-  GError *err = NULL;
-  SpielProvider *provider = spiel_collect_provider_finish (res, &err);
+  g_autoptr (GError) err = NULL;
+  g_autoptr (SpielProvider) provider =
+      spiel_collect_provider_finish (res, &err);
   const char *provider_name;
 
   if (err != NULL)
     {
       g_warning ("Error collecting provider: %s\n", err->message);
-      g_error_free (err);
       return;
     }
 
   provider_name = spiel_provider_get_well_known_name (provider);
   _insert_providers (provider_name, provider, self);
-
-  g_object_unref (provider);
 }
 
 static void
@@ -247,9 +241,9 @@ static void
 _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
 {
   GTask *top_task = user_data;
-  GError *err = NULL;
+  g_autoptr (GError) err = NULL;
   SpielRegistry *self = g_task_get_source_object (top_task);
-  GHashTable *providers = spiel_collect_providers_finish (res, &err);
+  g_autoptr (GHashTable) providers = spiel_collect_providers_finish (res, &err);
   g_assert (sPendingTasks->data == top_task);
 
   if (err != NULL)
@@ -262,7 +256,6 @@ _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
           g_object_unref (task);
           sPendingTasks = g_slist_delete_link (sPendingTasks, sPendingTasks);
         }
-      g_error_free (err);
       return;
     }
 
@@ -277,8 +270,6 @@ _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
       g_object_unref (task);
       sPendingTasks = g_slist_delete_link (sPendingTasks, sPendingTasks);
     }
-
-  g_hash_table_unref (providers);
 }
 
 static void
@@ -333,15 +324,11 @@ SpielRegistry *
 spiel_registry_get_finish (GAsyncResult *result, GError **error)
 {
   GObject *object;
-  GObject *source_object;
-
-  source_object = g_async_result_get_source_object (result);
+  g_autoptr (GObject) source_object = g_async_result_get_source_object (result);
   g_assert (source_object != NULL);
 
   object = g_async_initable_new_finish (G_ASYNC_INITABLE (source_object),
                                         result, error);
-  g_object_unref (source_object);
-
   if (object != NULL)
     {
       if (sRegistry == NULL)
@@ -458,9 +445,14 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
   SpielRegistry *self = SPIEL_REGISTRY (initable);
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  GHashTable *providers = NULL;
+  g_autoptr (GHashTable) providers = NULL;
+  GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, error);
 
-  GDBusConnection *bus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, NULL);
+  if (error && *error != NULL)
+    {
+      g_warning ("Error retrieving session bus: %s\n", (*error)->message);
+      return FALSE;
+    }
 
   providers = spiel_collect_providers_sync (bus, cancellable, error);
 
@@ -474,8 +466,6 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
     {
       g_hash_table_foreach (providers, (GHFunc) _insert_providers, self);
     }
-
-  g_hash_table_unref (providers);
 
   priv->connection = g_object_ref (bus);
 
@@ -574,8 +564,8 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
                                         SpielUtterance *utterance)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
-  char *provider_name = NULL;
-  char *voice_id = NULL;
+  g_autofree char *provider_name = NULL;
+  g_autofree char *voice_id = NULL;
   const char *language = spiel_utterance_get_language (utterance);
 
   SpielVoice *voice = spiel_utterance_get_voice (utterance);
@@ -586,9 +576,9 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
 
   if (language && priv->settings)
     {
-      GVariant *mapping =
+      g_autoptr (GVariant) mapping =
           g_settings_get_value (priv->settings, "language-voice-mapping");
-      char *_lang = g_strdup (language);
+      g_autofree char *_lang = g_strdup (language);
       char *found = _lang + g_utf8_strlen (_lang, -1);
       gssize boundary = -1;
 
@@ -604,9 +594,6 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
           boundary = found - _lang - 1;
         }
       while (found);
-
-      g_free (_lang);
-      g_variant_unref (mapping);
     }
 
   if (!provider_name && priv->settings)
@@ -619,8 +606,6 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
     {
       g_assert (voice_id != NULL);
       voice = _get_voice_from_provider_and_name (self, provider_name, voice_id);
-      g_free (provider_name);
-      g_free (voice_id);
     }
 
   if (voice)

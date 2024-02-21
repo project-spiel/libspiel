@@ -110,11 +110,10 @@ spiel_voices_list_model_get_n_items (GListModel *list)
 
   for (guint i = 0; i < providers_count; i++)
     {
-      SpielProvider *provider =
+      g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
       GListModel *voices = G_LIST_MODEL (spiel_provider_get_voices (provider));
       total += g_list_model_get_n_items (voices);
-      g_object_unref (provider); // Just want to borrow a ref.
     }
 
   return total;
@@ -129,11 +128,10 @@ spiel_voices_list_model_get_item (GListModel *list, guint position)
 
   for (guint i = 0; i < providers_count; i++)
     {
-      SpielProvider *provider =
+      g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
       GListModel *voices = spiel_provider_get_voices (provider);
       guint voice_count = g_list_model_get_n_items (voices);
-      g_object_unref (provider); // Just want to borrow a ref.
 
       if (position >= total && position < (total + voice_count))
         {
@@ -167,9 +165,8 @@ handle_voices_changed (GListModel *voices,
 
   for (guint i = 0; i < providers_count; i++)
     {
-      SpielProvider *provider =
+      g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
-      g_object_unref (provider); // Just want to borrow a ref.
       if (voices == spiel_provider_get_voices (provider))
         {
           g_list_model_items_changed (G_LIST_MODEL (self), position + offset,
@@ -209,34 +206,31 @@ handle_providers_changed (GListModel *providers,
 
   for (guint i = position; i < position + removed; i++)
     {
-      SpielProvider *provider = SPIEL_PROVIDER (
+      g_autoptr (SpielProvider) provider = SPIEL_PROVIDER (
           g_list_model_get_object (G_LIST_MODEL (self->mirrored_providers), i));
       GListModel *voices = spiel_provider_get_voices (provider);
       removed_voices_count += g_list_model_get_n_items (voices);
       _disconnect_signals (self, provider);
-      g_object_unref (provider);
     }
 
   g_list_store_splice (self->mirrored_providers, position, removed, NULL, 0);
 
   for (guint i = position; i < position + added; i++)
     {
-      SpielProvider *provider =
+      g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
       GListModel *voices = spiel_provider_get_voices (provider);
       added_voices_count += g_list_model_get_n_items (voices);
       _connect_signals (self, provider);
       g_list_store_insert (self->mirrored_providers, i, provider);
-      g_object_unref (provider);
     }
 
   for (guint i = 0; i < position; i++)
     {
-      SpielProvider *provider =
+      g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
       GListModel *voices = spiel_provider_get_voices (provider);
       offset += g_list_model_get_n_items (voices);
-      g_object_unref (provider);
     }
 
   g_list_model_items_changed (G_LIST_MODEL (self), offset, removed_voices_count,
