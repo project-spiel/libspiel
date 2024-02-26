@@ -498,7 +498,7 @@ static void
 _setup_pipeline (SpielSpeaker *self, GError **error)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  GstBus *bus;
+  g_autoptr (GstBus) bus = NULL;
   GstElement *convert = NULL;
   GstElement *sink = NULL;
 
@@ -556,8 +556,8 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
                     self, "signal::message::element",
                     _handle_gst_element_message, self, NULL);
 
-  priv->convert = g_object_ref (convert);
-  priv->sink = g_object_ref (sink);
+  priv->convert = gst_object_ref_sink (convert);
+  priv->sink = gst_object_ref_sink (sink);
 }
 
 static void
