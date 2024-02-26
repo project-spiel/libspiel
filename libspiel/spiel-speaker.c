@@ -499,13 +499,54 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   GstBus *bus;
-  GstElement *convert = gst_element_factory_make ("audioconvert", "convert");
-  GstElement *sink = gst_element_factory_make (
+  GstElement *convert = NULL;
+  GstElement *sink = NULL;
+
+  convert = gst_element_factory_make ("audioconvert", "convert");
+  if (convert == NULL)
+    {
+      if (error != NULL && *error == NULL)
+        {
+          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                               "Failed to create 'convert' element");
+        }
+
+      return;
+    }
+
+  sink = gst_element_factory_make (
       g_getenv ("SPIEL_TEST") ? "fakesink" : "autoaudiosink", "sink");
+  if (sink == NULL)
+    {
+      if (error != NULL && *error == NULL)
+        {
+          g_set_error_literal (error,
+                               GST_CORE_ERROR,
+                               GST_CORE_ERROR_FAILED,
+                               "Failed to create 'autoaudiosink' element; "
+                               "ensure GStreamer Good Plug-ins are installed");
+        }
+
+      gst_object_unref (gst_object_ref_sink (convert));
+      return;
+    }
+
   priv->pipeline = gst_pipeline_new ("pipeline");
 
   gst_bin_add_many (GST_BIN (priv->pipeline), convert, sink, NULL);
-  gst_element_link (convert, sink);
+  if (!gst_element_link (convert, sink))
+    {
+      if (error != NULL && *error == NULL)
+        {
+          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                               "Failed to link 'convert' and 'sink' elements");
+        }
+
+      gst_object_unref (gst_object_ref_sink (convert));
+      gst_object_unref (gst_object_ref_sink (sink));
+      g_clear_pointer (&priv->pipeline, gst_object_unref);
+      return;
+    }
 
   bus = gst_element_get_bus (priv->pipeline);
 
@@ -594,7 +635,7 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 
   if (err != NULL)
     {
-      g_warning ("Error initializing speaker: %s\n", (*error)->message);
+      g_warning ("Error initializing speaker: %s\n", err->message);
       g_propagate_error (error, err);
       return FALSE;
     }
