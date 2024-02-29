@@ -179,6 +179,8 @@ spiel_speaker_new (GCancellable *cancellable,
                    GAsyncReadyCallback callback,
                    gpointer user_data)
 {
+  g_return_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable));
+
   g_async_initable_new_async (SPIEL_TYPE_SPEAKER, G_PRIORITY_DEFAULT,
                               cancellable, callback, user_data, NULL);
 }
@@ -200,7 +202,8 @@ spiel_speaker_new_finish (GAsyncResult *result, GError **error)
   GObject *object;
   g_autoptr (GObject) source_object = g_async_result_get_source_object (result);
 
-  g_return_val_if_fail (source_object != NULL, NULL);
+  g_return_val_if_fail (G_IS_ASYNC_INITABLE (source_object), NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   object = g_async_initable_new_finish (G_ASYNC_INITABLE (source_object),
                                         result, error);
@@ -227,6 +230,9 @@ spiel_speaker_new_finish (GAsyncResult *result, GError **error)
 SpielSpeaker *
 spiel_speaker_new_sync (GCancellable *cancellable, GError **error)
 {
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable), NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
   return g_initable_new (SPIEL_TYPE_SPEAKER, cancellable, error, NULL);
 }
 
@@ -711,6 +717,9 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   g_autoptr (SpielVoice) voice = NULL;
   GstStructure *gst_struct;
 
+  g_return_if_fail (SPIEL_IS_SPEAKER (self));
+  g_return_if_fail (SPIEL_IS_UTTERANCE (utterance));
+
   g_object_get (utterance, "pitch", &pitch, "rate", &rate, "volume", &volume,
                 "voice", &voice, "is-ssml", &is_ssml, NULL);
 
@@ -824,6 +833,8 @@ spiel_speaker_get_voices (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_SPEAKER (self), NULL);
+
   return spiel_registry_get_voices (priv->registry);
 }
 
@@ -839,6 +850,8 @@ GListModel *
 spiel_speaker_get_providers (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_SPEAKER (self), NULL);
 
   return spiel_registry_get_providers (priv->registry);
 }
@@ -856,10 +869,18 @@ void
 spiel_speaker_pause (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  _QueueEntry *entry = NULL;
+
+  g_return_if_fail (SPIEL_IS_SPEAKER (self));
+
   if (priv->paused)
     {
       return;
+    }
+
+  if (priv->queue)
+    {
+      entry = priv->queue->data;
     }
 
   if (!entry)
@@ -883,10 +904,18 @@ void
 spiel_speaker_resume (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
-  _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
+  _QueueEntry *entry = NULL;
+
+  g_return_if_fail (SPIEL_IS_SPEAKER (self));
+
   if (!priv->paused)
     {
       return;
+    }
+
+  if (priv->queue)
+    {
+      entry = priv->queue->data;
     }
 
   if (!entry)
@@ -909,6 +938,9 @@ void
 spiel_speaker_cancel (SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_SPEAKER (self));
+
   if (!priv->queue)
     {
       return;

@@ -80,6 +80,9 @@ speech_provider_stream_reader_close (SpeechProviderStreamReader *self)
 {
   SpeechProviderStreamReaderPrivate *priv =
       speech_provider_stream_reader_get_instance_private (self);
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+
   close (priv->fd);
   priv->fd = -1;
 }
@@ -98,7 +101,10 @@ speech_provider_stream_reader_get_stream_header (
   SpeechProviderStreamReaderPrivate *priv =
       speech_provider_stream_reader_get_instance_private (self);
   SpeechProviderStreamHeader header;
+
+  g_return_val_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self), FALSE);
   g_assert (!priv->stream_header_recieved);
+
   read (priv->fd, &header, sizeof (SpeechProviderStreamHeader));
   priv->stream_header_recieved = TRUE;
   return strncmp (header.version, SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION, 4) ==
@@ -134,7 +140,13 @@ speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
 {
   SpeechProviderStreamReaderPrivate *priv =
       speech_provider_stream_reader_get_instance_private (self);
-  SpeechProviderChunkType chunk_type = _get_next_chunk_type (self);
+  SpeechProviderChunkType chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_NONE;
+
+  g_return_val_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self), FALSE);
+  g_return_val_if_fail (chunk != NULL || *chunk == NULL, FALSE);
+  g_return_val_if_fail (chunk_size != NULL, FALSE);
+
+  chunk_type = _get_next_chunk_type (self);
   g_assert (priv->stream_header_recieved);
   if (chunk_type != SPEECH_PROVIDER_CHUNK_TYPE_AUDIO)
     {
@@ -171,7 +183,14 @@ speech_provider_stream_reader_get_event (SpeechProviderStreamReader *self,
       speech_provider_stream_reader_get_instance_private (self);
   SpeechProviderChunkType chunk_type = _get_next_chunk_type (self);
   SpeechProviderEventData event_data;
+
+  g_return_val_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self), FALSE);
+  g_return_val_if_fail (event_type != NULL, FALSE);
+  g_return_val_if_fail (range_start != NULL, FALSE);
+  g_return_val_if_fail (range_end != NULL, FALSE);
+  g_return_val_if_fail (mark_name != NULL && *mark_name == NULL, FALSE);
   g_assert (priv->stream_header_recieved);
+
   if (chunk_type != SPEECH_PROVIDER_CHUNK_TYPE_EVENT)
     {
       *event_type = SPEECH_PROVIDER_EVENT_TYPE_NONE;
@@ -181,7 +200,6 @@ speech_provider_stream_reader_get_event (SpeechProviderStreamReader *self,
   *event_type = event_data.event_type;
   *range_start = event_data.range_start;
   *range_end = event_data.range_end;
-  *mark_name = NULL;
   if (event_data.mark_name_length)
     {
       char *name = g_malloc0 (event_data.mark_name_length * sizeof (char) + 1);

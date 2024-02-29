@@ -92,6 +92,8 @@ spiel_utterance_get_text (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), NULL);
+
   return priv->text;
 }
 
@@ -107,6 +109,9 @@ void
 spiel_utterance_set_text (SpielUtterance *self, const char *text)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+
   g_free (priv->text);
   priv->text = g_strdup (text);
   g_object_notify (G_OBJECT (self), "text");
@@ -125,6 +130,8 @@ spiel_utterance_get_pitch (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), 1.0);
+
   return priv->pitch;
 }
 
@@ -140,6 +147,9 @@ void
 spiel_utterance_set_pitch (SpielUtterance *self, double pitch)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+
   priv->pitch = pitch;
   g_object_notify (G_OBJECT (self), "pitch");
 }
@@ -157,6 +167,8 @@ spiel_utterance_get_rate (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), 1.0);
+
   return priv->rate;
 }
 
@@ -172,6 +184,9 @@ void
 spiel_utterance_set_rate (SpielUtterance *self, double rate)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+
   priv->rate = rate;
   g_object_notify (G_OBJECT (self), "rate");
 }
@@ -189,6 +204,8 @@ spiel_utterance_get_volume (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), 1.0);
+
   return priv->volume;
 }
 
@@ -204,6 +221,9 @@ void
 spiel_utterance_set_volume (SpielUtterance *self, double volume)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+
   priv->volume = volume;
   g_object_notify (G_OBJECT (self), "volume");
 }
@@ -221,6 +241,8 @@ spiel_utterance_get_voice (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), NULL);
+
   return priv->voice;
 }
 
@@ -236,6 +258,10 @@ void
 spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+  g_return_if_fail (voice == NULL || SPIEL_IS_VOICE (voice));
+
   g_clear_object (&(priv->voice));
 
   priv->voice = voice ? g_object_ref (voice) : NULL;
@@ -255,6 +281,8 @@ spiel_utterance_get_language (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), NULL);
+
   return priv->language;
 }
 
@@ -270,6 +298,9 @@ void
 spiel_utterance_set_language (SpielUtterance *self, const char *language)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+
   g_free (priv->language);
   priv->language = g_strdup (language);
   g_object_notify (G_OBJECT (self), "language");
@@ -287,6 +318,9 @@ gboolean
 spiel_utterance_get_is_ssml (SpielUtterance *self)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (self), FALSE);
+
   return priv->is_ssml;
 }
 
@@ -302,6 +336,9 @@ void
 spiel_utterance_set_is_ssml (SpielUtterance *self, gboolean is_ssml)
 {
   SpielUtterancePrivate *priv = spiel_utterance_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_UTTERANCE (self));
+
   priv->is_ssml = is_ssml;
 }
 

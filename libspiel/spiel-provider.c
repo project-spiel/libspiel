@@ -74,6 +74,8 @@ spiel_provider_set_proxy (SpielProvider *self,
                           SpielProviderProxy *provider_proxy)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_PROVIDER (self));
   g_assert (!priv->provider_proxy);
 
   priv->provider_proxy = g_object_ref (provider_proxy);
@@ -89,6 +91,9 @@ SpielProviderProxy *
 spiel_provider_get_proxy (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+
   return priv->provider_proxy;
 }
 
@@ -96,7 +101,12 @@ SpielVoice *
 spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-  guint voices_count = g_list_model_get_n_items (G_LIST_MODEL (priv->voices));
+  guint voices_count = 0;
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+  g_return_val_if_fail (voice_id != NULL, NULL);
+
+  voices_count = g_list_model_get_n_items (G_LIST_MODEL (priv->voices));
 
   for (guint i = 0; i < voices_count; i++)
     {
@@ -122,6 +132,8 @@ const char *
 spiel_provider_get_name (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
   g_return_val_if_fail (priv->provider_proxy, NULL);
 
   return spiel_provider_proxy_get_name (priv->provider_proxy);
@@ -139,6 +151,8 @@ const char *
 spiel_provider_get_well_known_name (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
   g_return_val_if_fail (priv->provider_proxy, NULL);
 
   return g_dbus_proxy_get_name (G_DBUS_PROXY (priv->provider_proxy));
@@ -157,6 +171,8 @@ spiel_provider_get_voices (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+
   return G_LIST_MODEL (priv->voices);
 }
 
@@ -164,6 +180,9 @@ void
 spiel_provider_set_is_activatable (SpielProvider *self, gboolean is_activatable)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_PROVIDER (self));
+
   priv->is_activatable = is_activatable;
 }
 
@@ -171,6 +190,9 @@ gboolean
 spiel_provider_get_is_activatable (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), FALSE);
+
   return priv->is_activatable;
 }
 
@@ -297,6 +319,9 @@ spiel_provider_compare (SpielProvider *self,
                         SpielProvider *other,
                         gpointer user_data)
 {
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), 0);
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (other), 0);
+
   return g_strcmp0 (spiel_provider_get_well_known_name (self),
                     spiel_provider_get_well_known_name (other));
 }

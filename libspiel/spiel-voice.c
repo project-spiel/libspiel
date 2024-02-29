@@ -75,6 +75,9 @@ const char *
 spiel_voice_get_name (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return priv->name;
 }
 
@@ -91,6 +94,9 @@ const char *
 spiel_voice_get_identifier (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return priv->identifier;
 }
 
@@ -106,6 +112,9 @@ SpielProvider *
 spiel_voice_get_provider (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return g_weak_ref_get (&priv->provider);
 }
 
@@ -122,6 +131,9 @@ const char *const *
 spiel_voice_get_languages (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return (const char *const *) priv->languages;
 }
 
@@ -129,6 +141,9 @@ SpielVoiceFeature
 spiel_voice_get_features (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), SPIEL_VOICE_FEATURE_NONE);
+
   return priv->features;
 }
 
@@ -136,6 +151,9 @@ const char *
 spiel_voice_get_output_format (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return priv->output_format;
 }
 
@@ -143,6 +161,10 @@ void
 spiel_voice_set_output_format (SpielVoice *self, const char *output_format)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_VOICE (self));
+  g_return_if_fail (output_format != NULL && *output_format != '\0');
+
   g_clear_pointer (&priv->output_format, g_free);
   priv->output_format = g_strdup (output_format);
 }
@@ -151,9 +173,12 @@ guint
 spiel_voice_hash (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
-  SpielProvider *provider = spiel_voice_get_provider (self);
+  SpielProvider *provider = NULL;
   guint hash = 0;
 
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), 0);
+
+  provider = spiel_voice_get_provider (self);
   hash = g_str_hash (priv->name);
   hash = (hash << 5) - hash + g_str_hash (priv->identifier);
   if (provider)
@@ -175,9 +200,16 @@ spiel_voice_equal (SpielVoice *self, SpielVoice *other)
 {
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
+  g_autoptr (SpielProvider) self_provider = NULL;
+  g_autoptr (SpielProvider) other_provider = NULL;
 
-  if (g_weak_ref_get (&self_priv->provider) !=
-      g_weak_ref_get (&other_priv->provider))
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), FALSE);
+  g_return_val_if_fail (SPIEL_IS_VOICE (other), FALSE);
+
+  self_provider = g_weak_ref_get (&self_priv->provider);
+  other_provider = g_weak_ref_get (&other_priv->provider);
+
+  if (self_provider != other_provider)
     {
       return FALSE;
     }
@@ -206,9 +238,15 @@ spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
 {
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
-  SpielProvider *self_provider = g_weak_ref_get (&self_priv->provider);
-  SpielProvider *other_provider = g_weak_ref_get (&other_priv->provider);
-  gint cmp = 0;
+  g_autoptr (SpielProvider) self_provider = NULL;
+  g_autoptr (SpielProvider) other_provider = NULL;
+  int cmp = 0;
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), 0);
+  g_return_val_if_fail (SPIEL_IS_VOICE (other), 0);
+
+  self_provider = g_weak_ref_get (&self_priv->provider);
+  other_provider = g_weak_ref_get (&other_priv->provider);
 
   if ((cmp = g_strcmp0 (
            self_provider ? spiel_provider_get_well_known_name (self_provider)

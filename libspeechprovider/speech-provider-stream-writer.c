@@ -79,6 +79,9 @@ speech_provider_stream_writer_close (SpeechProviderStreamWriter *self)
 {
   SpeechProviderStreamWriterPrivate *priv =
       speech_provider_stream_writer_get_instance_private (self);
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+
   close (priv->fd);
   priv->fd = -1;
 }
@@ -98,6 +101,9 @@ speech_provider_stream_writer_send_stream_header (
   SpeechProviderStreamHeader header = {
     .version = SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION
   };
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+
   g_assert (!priv->stream_header_sent);
   write (priv->fd, &header, sizeof (SpeechProviderStreamHeader));
   priv->stream_header_sent = TRUE;
@@ -105,7 +111,7 @@ speech_provider_stream_writer_send_stream_header (
 
 /**
  * speech_provider_stream_writer_send_audio:
- * @chunk: (array length=chunk_size): audio data
+ * @chunk: (array length=chunk_size) (not nullable): audio data
  * @chunk_size: audio chunk size
  *
  * Sends audio chunk
@@ -120,6 +126,8 @@ speech_provider_stream_writer_send_audio (SpeechProviderStreamWriter *self,
       speech_provider_stream_writer_get_instance_private (self);
   SpeechProviderChunkType chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_AUDIO;
 
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+  g_return_if_fail (chunk != NULL);
   g_assert (priv->stream_header_sent);
 
   write (priv->fd, &chunk_type, sizeof (SpeechProviderChunkType));
@@ -145,11 +153,13 @@ speech_provider_stream_writer_send_event (SpeechProviderStreamWriter *self,
   SpeechProviderChunkType chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_EVENT;
   SpeechProviderEventData event_data = { .event_type = event_type,
                                          .range_start = range_start,
-                                         .range_end = range_end,
-                                         .mark_name_length =
-                                             g_utf8_strlen (mark_name, -1) };
+                                         .range_end = range_end };
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+  g_return_if_fail (mark_name != NULL);
   g_assert (priv->stream_header_sent);
 
+  event_data.mark_name_length = g_utf8_strlen (mark_name, -1);
   write (priv->fd, &chunk_type, sizeof (SpeechProviderChunkType));
   write (priv->fd, &event_data, sizeof (SpeechProviderEventData));
   if (event_data.mark_name_length)

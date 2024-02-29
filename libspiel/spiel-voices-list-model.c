@@ -58,7 +58,9 @@ spiel_voices_list_model_new (GListModel *providers)
   SpielVoicesListModel *self =
       g_object_new (SPIEL_TYPE_VOICES_LIST_MODEL, NULL);
 
+  g_assert (G_IS_LIST_MODEL (providers));
   g_assert_cmpint (g_list_model_get_n_items (providers), ==, 0);
+
   self->providers = g_object_ref (providers);
   g_signal_connect (self->providers, "items-changed",
                     G_CALLBACK (handle_providers_changed), self);
