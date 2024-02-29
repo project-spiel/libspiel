@@ -64,96 +64,163 @@ static GParamSpec *properties[N_PROPS];
 
 /**
  * spiel_voice_get_name: (get-property name)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the name.
+ * Gets the name.
  *
- * Returns: (transfer none): the name text. This string is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none) (not nullable): the name
+ *
+ * Since: 1.0
  */
 const char *
 spiel_voice_get_name (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return priv->name;
 }
 
 /**
  * spiel_voice_get_identifier: (get-property identifier)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the identifier.
+ * Gets the identifier, unique to [property@Spiel.Voice:provider].
  *
- * Returns: the identifier text. This string is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none) (not nullable): the identifier
+ *
+ * Since: 1.0
  */
 const char *
 spiel_voice_get_identifier (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return priv->identifier;
 }
 
 /**
  * spiel_voice_get_provider: (get-property provider)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the provider associated with this voice
+ * Gets the provider associated with this voice
  *
- * Returns: (transfer none): a #SpielProvider
+ * Returns: (transfer full) (nullable): a `SpielProvider`
+ *
+ * Since: 1.0
  */
 SpielProvider *
 spiel_voice_get_provider (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return g_weak_ref_get (&priv->provider);
 }
 
 /**
  * spiel_voice_get_languages: (get-property languages)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the list of supported languages
+ * Gets the list of supported languages.
  *
- * Returns: the list of supported languages. This list is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none) (not nullable): a list of BCP 47 tags
+ *
+ * Since: 1.0
  */
 const char *const *
 spiel_voice_get_languages (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return (const char *const *) priv->languages;
 }
 
+/**
+ * spiel_voice_get_features: (get-property features)
+ * @self: a `SpielVoice`
+ *
+ * Gets the list of supported features.
+ *
+ * Returns: a bit-field of `SpielVoiceFeature`
+ *
+ * Since: 1.0
+ */
 SpielVoiceFeature
 spiel_voice_get_features (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), SPIEL_VOICE_FEATURE_NONE);
+
   return priv->features;
 }
 
+/**
+ * spiel_voice_get_output_format: (get-property output-format)
+ * @self: a `SpielVoice`
+ *
+ * Gets the output format.
+ *
+ * Since: 1.0
+ */
 const char *
 spiel_voice_get_output_format (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), NULL);
+
   return priv->output_format;
 }
 
+/**
+ * spiel_voice_set_output_format: (set-property output-format)
+ * @self: a `SpielVoice`
+ * @output_format: (not nullable): an output format string.
+ *
+ * Sets the audio output format.
+ *
+ * Since: 1.0
+ */
 void
 spiel_voice_set_output_format (SpielVoice *self, const char *output_format)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_VOICE (self));
+  g_return_if_fail (output_format != NULL && *output_format != '\0');
+
   g_clear_pointer (&priv->output_format, g_free);
   priv->output_format = g_strdup (output_format);
 }
 
+/**
+ * spiel_voice_hash:
+ * @self: (not nullable): a `SpielVoice`
+ *
+ * Converts a [class@Spiel.Voice] to a hash value.
+ *
+ * Returns: a hash value corresponding to @self
+ *
+ * Since: 1.0
+ */
 guint
 spiel_voice_hash (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
-  SpielProvider *provider = spiel_voice_get_provider (self);
+  g_autoptr (SpielProvider) provider = NULL;
   guint hash = 0;
 
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), 0);
+
+  provider = spiel_voice_get_provider (self);
   hash = g_str_hash (priv->name);
   hash = (hash << 5) - hash + g_str_hash (priv->identifier);
   if (provider)
@@ -170,14 +237,32 @@ spiel_voice_hash (SpielVoice *self)
   return hash;
 }
 
+/**
+ * spiel_voice_equal:
+ * @self: (not nullable): a `SpielVoice`
+ * @other: (not nullable): a `SpielVoice` to compare with @self
+ *
+ * Compares the two [class@Spiel.Voice] values and returns %TRUE if equal.
+ *
+ * Returns: %TRUE if the two voices match.
+ *
+ * Since: 1.0
+ */
 gboolean
 spiel_voice_equal (SpielVoice *self, SpielVoice *other)
 {
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
+  g_autoptr (SpielProvider) self_provider = NULL;
+  g_autoptr (SpielProvider) other_provider = NULL;
 
-  if (g_weak_ref_get (&self_priv->provider) !=
-      g_weak_ref_get (&other_priv->provider))
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), FALSE);
+  g_return_val_if_fail (SPIEL_IS_VOICE (other), FALSE);
+
+  self_provider = g_weak_ref_get (&self_priv->provider);
+  other_provider = g_weak_ref_get (&other_priv->provider);
+
+  if (self_provider != other_provider)
     {
       return FALSE;
     }
@@ -201,14 +286,34 @@ spiel_voice_equal (SpielVoice *self, SpielVoice *other)
   return TRUE;
 }
 
+/**
+ * spiel_voice_compare:
+ * @self: (not nullable): a `SpielVoice`
+ * @other: (not nullable): a `SpielVoice` to compare with @self
+ * @user_data: user-defined callback data
+ *
+ * Compares the two [class@Spiel.Voice] values and returns a negative integer
+ * if the first value comes before the second, 0 if they are equal, or a
+ * positive integer if the first value comes after the second.
+ *
+ * Returns: an integer indicating order
+ *
+ * Since: 1.0
+ */
 gint
 spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
 {
   SpielVoicePrivate *self_priv = spiel_voice_get_instance_private (self);
   SpielVoicePrivate *other_priv = spiel_voice_get_instance_private (other);
-  SpielProvider *self_provider = g_weak_ref_get (&self_priv->provider);
-  SpielProvider *other_provider = g_weak_ref_get (&other_priv->provider);
-  gint cmp = 0;
+  g_autoptr (SpielProvider) self_provider = NULL;
+  g_autoptr (SpielProvider) other_provider = NULL;
+  int cmp = 0;
+
+  g_return_val_if_fail (SPIEL_IS_VOICE (self), 0);
+  g_return_val_if_fail (SPIEL_IS_VOICE (other), 0);
+
+  self_provider = g_weak_ref_get (&self_priv->provider);
+  other_provider = g_weak_ref_get (&other_priv->provider);
 
   if ((cmp = g_strcmp0 (
            self_provider ? spiel_provider_get_well_known_name (self_provider)
@@ -241,6 +346,7 @@ spiel_voice_finalize (GObject *object)
   g_free (priv->name);
   g_free (priv->identifier);
   g_strfreev (priv->languages);
+  g_weak_ref_clear (&priv->provider);
 
   G_OBJECT_CLASS (spiel_voice_parent_class)->finalize (object);
 }
@@ -266,7 +372,7 @@ spiel_voice_get_property (GObject *object,
       g_value_set_boxed (value, priv->languages);
       break;
     case PROP_PROVIDER:
-      g_value_set_object (value, spiel_voice_get_provider (self));
+      g_value_take_object (value, spiel_voice_get_provider (self));
       break;
     case PROP_FEATURES:
       g_value_set_flags (value, priv->features);
@@ -380,4 +486,5 @@ spiel_voice_init (SpielVoice *self)
   priv->languages = NULL;
   priv->output_format = NULL;
   priv->features = 0;
+  g_weak_ref_init (&priv->provider, NULL);
 }

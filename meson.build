@@ -79,6 +79,10 @@ foreach arg: test_c_args
 endforeach
 add_project_arguments(project_c_args, language: 'c')
 
+# Synced dependency versions
+glib_version = '>= 2.76'
+gst_version = '>= 1.0'
+
 subdir('libspeechprovider')
 
 if get_option('libspiel')

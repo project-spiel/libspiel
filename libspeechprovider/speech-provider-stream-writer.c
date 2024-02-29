@@ -24,6 +24,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+/**
+ * SpeechProviderStreamWriter:
+ *
+ * A provider audio stream writer.
+ *
+ * Since: 1.0
+ */
 struct _SpeechProviderStreamWriter
 {
   GObject parent_instance;
@@ -52,9 +59,11 @@ static GParamSpec *properties[N_PROPS];
  * speech_provider_stream_writer_new: (constructor)
  * @fd: The file descriptor for a pipe
  *
- * Creates a new #SpeechProviderStreamWriter.
+ * Creates a new [class@SpeechProvider.StreamWriter].
  *
- * Returns: The new #SpeechProviderStreamWriter.
+ * Returns: (transfer full): The new `SpeechProviderStreamWriter`
+ *
+ * Since: 1.0
  */
 SpeechProviderStreamWriter *
 speech_provider_stream_writer_new (gint fd)
@@ -70,24 +79,31 @@ speech_provider_stream_writer_new (gint fd)
 
 /**
  * speech_provider_stream_writer_close:
+ * @self: a `SpeechProviderStreamWriter`
  *
- * Close the pipe.
+ * Close the writer.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_close (SpeechProviderStreamWriter *self)
 {
   SpeechProviderStreamWriterPrivate *priv =
       speech_provider_stream_writer_get_instance_private (self);
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+
   close (priv->fd);
   priv->fd = -1;
 }
 
 /**
  * speech_provider_stream_writer_send_stream_header:
+ * @self: a `SpeechProviderStreamWriter`
  *
- * Sends initial stream header
+ * Sends the initial stream header.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_send_stream_header (
@@ -98,6 +114,9 @@ speech_provider_stream_writer_send_stream_header (
   SpeechProviderStreamHeader header = {
     .version = SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION
   };
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+
   g_assert (!priv->stream_header_sent);
   write (priv->fd, &header, sizeof (SpeechProviderStreamHeader));
   priv->stream_header_sent = TRUE;
@@ -105,11 +124,13 @@ speech_provider_stream_writer_send_stream_header (
 
 /**
  * speech_provider_stream_writer_send_audio:
- * @chunk: (array length=chunk_size): audio data
+ * @self: a `SpeechProviderStreamWriter`
+ * @chunk: (array length=chunk_size) (not nullable): audio data
  * @chunk_size: audio chunk size
  *
- * Sends audio chunk
+ * Sends a chunk of audio data.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_send_audio (SpeechProviderStreamWriter *self,
@@ -120,6 +141,8 @@ speech_provider_stream_writer_send_audio (SpeechProviderStreamWriter *self,
       speech_provider_stream_writer_get_instance_private (self);
   SpeechProviderChunkType chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_AUDIO;
 
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+  g_return_if_fail (chunk != NULL);
   g_assert (priv->stream_header_sent);
 
   write (priv->fd, &chunk_type, sizeof (SpeechProviderChunkType));
@@ -129,9 +152,11 @@ speech_provider_stream_writer_send_audio (SpeechProviderStreamWriter *self,
 
 /**
  * speech_provider_stream_writer_send_event:
+ * @self: a `SpeechProviderStreamWriter`
  *
- * Sends event
+ * Sends an event.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_send_event (SpeechProviderStreamWriter *self,
@@ -145,11 +170,13 @@ speech_provider_stream_writer_send_event (SpeechProviderStreamWriter *self,
   SpeechProviderChunkType chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_EVENT;
   SpeechProviderEventData event_data = { .event_type = event_type,
                                          .range_start = range_start,
-                                         .range_end = range_end,
-                                         .mark_name_length =
-                                             g_utf8_strlen (mark_name, -1) };
+                                         .range_end = range_end };
+
+  g_return_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self));
+  g_return_if_fail (mark_name != NULL);
   g_assert (priv->stream_header_sent);
 
+  event_data.mark_name_length = g_utf8_strlen (mark_name, -1);
   write (priv->fd, &chunk_type, sizeof (SpeechProviderChunkType));
   write (priv->fd, &event_data, sizeof (SpeechProviderEventData));
   if (event_data.mark_name_length)
@@ -223,8 +250,9 @@ speech_provider_stream_writer_class_init (
   /**
    * SpeechProviderStreamWriter:fd:
    *
-   * File descriptor for pipe
+   * File descriptor for the stream.
    *
+   * Since: 1.0
    */
   properties[PROP_FD] =
       g_param_spec_int ("fd", NULL, NULL, -1, G_MAXINT32, 0,

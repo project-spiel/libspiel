@@ -85,10 +85,10 @@ spiel_lib_generated = [
 ]
 
 spiel_deps = [
-  dependency('gio-2.0'),
-  dependency('gio-unix-2.0'),
-  dependency('gstreamer-1.0'),
-  dependency('gstreamer-audio-1.0'),
+  dependency('gio-2.0', version: glib_version),
+  dependency('gio-unix-2.0', version: glib_version),
+  dependency('gstreamer-1.0', version: gst_version),
+  dependency('gstreamer-audio-1.0', version: gst_version),
   speech_provider_lib_dep
 ]
 
@@ -147,3 +147,4 @@ if compile_schemas.found()
     args: ['--strict', '--dry-run', meson.current_source_dir()]
   )
 endif
+

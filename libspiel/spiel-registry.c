@@ -299,6 +299,8 @@ spiel_registry_get (GCancellable *cancellable,
                     GAsyncReadyCallback callback,
                     gpointer user_data)
 {
+  g_return_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable));
+
   if (sRegistry != NULL)
     {
       GTask *task = g_task_new (g_object_ref (sRegistry), cancellable, callback,
@@ -327,6 +329,9 @@ spiel_registry_get_finish (GAsyncResult *result, GError **error)
   g_autoptr (GObject) source_object = g_async_result_get_source_object (result);
   g_assert (source_object != NULL);
 
+  g_return_val_if_fail (G_IS_ASYNC_INITABLE (source_object), NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
   object = g_async_initable_new_finish (G_ASYNC_INITABLE (source_object),
                                         result, error);
   if (object != NULL)
@@ -348,6 +353,10 @@ spiel_registry_get_finish (GAsyncResult *result, GError **error)
 SpielRegistry *
 spiel_registry_get_sync (GCancellable *cancellable, GError **error)
 {
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable),
+                        NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
   if (sRegistry == NULL)
     {
       gst_init_check (NULL, NULL, error);
@@ -513,11 +522,15 @@ initable_iface_init (GInitableIface *initable_iface)
 SpielProviderProxy *
 spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
-  SpielProvider *provider = spiel_voice_get_provider (voice);
+  g_autoptr (SpielProvider) voice_provider = NULL;
 
-  g_return_val_if_fail (provider, NULL);
+  g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
+  g_return_val_if_fail (SPIEL_IS_VOICE (voice), NULL);
 
-  return spiel_provider_get_proxy (provider);
+  voice_provider = spiel_voice_get_provider (voice);
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (voice_provider), NULL);
+
+  return spiel_provider_get_proxy (voice_provider);
 }
 
 static SpielVoice *
@@ -566,14 +579,19 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
   g_autofree char *provider_name = NULL;
   g_autofree char *voice_id = NULL;
-  const char *language = spiel_utterance_get_language (utterance);
+  const char *language = NULL;
+  SpielVoice *voice = NULL;
 
-  SpielVoice *voice = spiel_utterance_get_voice (utterance);
+  g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
+  g_return_val_if_fail (SPIEL_IS_VOICE (utterance), NULL);
+
+  voice = spiel_utterance_get_voice (utterance);
   if (voice)
     {
       return voice;
     }
 
+  language = spiel_utterance_get_language (utterance);
   if (language && priv->settings)
     {
       g_autoptr (GVariant) mapping =
@@ -620,6 +638,9 @@ GListModel *
 spiel_registry_get_voices (SpielRegistry *self)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
+
   return G_LIST_MODEL (priv->voices);
 }
 
@@ -627,5 +648,8 @@ GListModel *
 spiel_registry_get_providers (SpielRegistry *self)
 {
   SpielRegistryPrivate *priv = spiel_registry_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
+
   return G_LIST_MODEL (priv->providers);
 }

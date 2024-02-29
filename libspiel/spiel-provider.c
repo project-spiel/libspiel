@@ -28,6 +28,7 @@
  *
  * Represents a provider speech backend.
  *
+ * Since: 1.0
  */
 
 struct _SpielProvider
@@ -63,17 +64,33 @@ static gboolean handle_voices_changed (SpielProviderProxy *provider_proxy,
 
 static void _spiel_provider_update_voices (SpielProvider *self);
 
+/*< private >
+ * spiel_provider_new: (constructor)
+ *
+ * Creates a new [class@Spiel.Provider].
+ *
+ * Returns: (transfer full): The new `SpielProvider`.
+ */
 SpielProvider *
 spiel_provider_new (void)
 {
   return g_object_new (SPIEL_TYPE_PROVIDER, NULL);
 }
 
+/*< private >
+ * spiel_provider_set_proxy:
+ * @self: a `SpielProvider`
+ * @provider_proxy: a `SpielProviderProxy`
+ *
+ * Sets the internal D-Bus proxy.
+ */
 void
 spiel_provider_set_proxy (SpielProvider *self,
                           SpielProviderProxy *provider_proxy)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_PROVIDER (self));
   g_assert (!priv->provider_proxy);
 
   priv->provider_proxy = g_object_ref (provider_proxy);
@@ -85,18 +102,43 @@ spiel_provider_set_proxy (SpielProvider *self,
                         G_CALLBACK (handle_voices_changed), self);
 }
 
+/*< private >
+ * spiel_provider_get_proxy:
+ * @self: a `SpielProvider`
+ *
+ * Gets the internal D-Bus proxy.
+ *
+ * Returns: (transfer none): a `SpielProviderProxy`
+ */
 SpielProviderProxy *
 spiel_provider_get_proxy (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+
   return priv->provider_proxy;
 }
 
+/*< private >
+ * spiel_provider_get_voice_by_id:
+ * @self: a `SpielProvider`
+ * @voice_id: (not nullable): a voice ID
+ *
+ * Lookup a `SpielVoice` by ID.
+ *
+ * Returns: (transfer none) (nullable): a `SpielProviderProxy`
+ */
 SpielVoice *
 spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-  guint voices_count = g_list_model_get_n_items (G_LIST_MODEL (priv->voices));
+  guint voices_count = 0;
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+  g_return_val_if_fail (voice_id != NULL, NULL);
+
+  voices_count = g_list_model_get_n_items (G_LIST_MODEL (priv->voices));
 
   for (guint i = 0; i < voices_count; i++)
     {
@@ -111,17 +153,21 @@ spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
 }
 
 /**
- * spiel_provider_proxy_get_name: (get-property name)
- * @self: a #SpielProvider
+ * spiel_provider_get_name: (get-property name)
+ * @self: a `SpielProvider`
  *
- * Fetches a human readable name of this provider
+ * Gets a human readable name of this provider
  *
  * Returns: (transfer none): the human readable name.
+ *
+ * Since: 1.0
  */
 const char *
 spiel_provider_get_name (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
   g_return_val_if_fail (priv->provider_proxy, NULL);
 
   return spiel_provider_proxy_get_name (priv->provider_proxy);
@@ -129,16 +175,20 @@ spiel_provider_get_name (SpielProvider *self)
 
 /**
  * spiel_provider_get_well_known_name: (get-property well-known-name)
- * @self: a #SpielProvider
+ * @self: a `SpielProvider`
  *
- * Fetches the provider's D-Bus well known name.
+ * Gets the provider's D-Bus well known name.
  *
  * Returns: (transfer none): the well known name.
+ *
+ * Since: 1.0
  */
 const char *
 spiel_provider_get_well_known_name (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
   g_return_val_if_fail (priv->provider_proxy, NULL);
 
   return g_dbus_proxy_get_name (G_DBUS_PROXY (priv->provider_proxy));
@@ -146,31 +196,56 @@ spiel_provider_get_well_known_name (SpielProvider *self)
 
 /**
  * spiel_provider_get_voices: (get-property voices)
- * @self: a #SpielProvider
- * *
- * Fetches the provider's voices.
+ * @self: a `SpielProvider`
  *
- * Returns: (transfer none): A list of #SpielVoice voices provided
+ * Gets the provider's voices.
+ *
+ * Returns: (transfer none): A list of available voices
+ *
+ * Since: 1.0
  */
 GListModel *
 spiel_provider_get_voices (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
 
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+
   return G_LIST_MODEL (priv->voices);
 }
 
+/*< private >
+ * spiel_provider_set_is_activatable:
+ * @self: a `SpielProvider`
+ * @is_activatable: %TRUE if activatable
+ *
+ * Sets whether the provider supports D-Bus activation.
+ */
 void
 spiel_provider_set_is_activatable (SpielProvider *self, gboolean is_activatable)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_if_fail (SPIEL_IS_PROVIDER (self));
+
   priv->is_activatable = is_activatable;
 }
 
+/*< private >
+ * spiel_provider_get_is_activatable:
+ * @self: a `SpielProvider`
+ *
+ * Gets whether the provider supports D-Bus activation.
+ *
+ * Returns: %TRUE if activatable
+ */
 gboolean
 spiel_provider_get_is_activatable (SpielProvider *self)
 {
   SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), FALSE);
+
   return priv->is_activatable;
 }
 
@@ -292,11 +367,26 @@ handle_voices_changed (SpielProviderProxy *provider_proxy,
   return TRUE;
 }
 
+/*< private >
+ * spiel_provider_compare:
+ * @self: (not nullable): a `SpielProvider`
+ * @other: (not nullable): a `SpielProvider` to compare with @self
+ * @user_data: user-defined callback data
+ *
+ * Compares the two [class@Spiel.Provider] values and returns a negative integer
+ * if the first value comes before the second, 0 if they are equal, or a
+ * positive integer if the first value comes after the second.
+ *
+ * Returns: an integer indicating order
+ */
 gint
 spiel_provider_compare (SpielProvider *self,
                         SpielProvider *other,
                         gpointer user_data)
 {
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), 0);
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (other), 0);
+
   return g_strcmp0 (spiel_provider_get_well_known_name (self),
                     spiel_provider_get_well_known_name (other));
 }
@@ -353,6 +443,7 @@ spiel_provider_class_init (SpielProviderClass *klass)
    *
    * The provider's human readable name
    *
+   * Since: 1.0
    */
   properties[PROP_NAME] =
       g_param_spec_string ("name", NULL, NULL, NULL /* default value */,
@@ -363,16 +454,18 @@ spiel_provider_class_init (SpielProviderClass *klass)
    *
    * The provider's D-Bus well known name.
    *
+   * Since: 1.0
    */
   properties[PROP_WELL_KNOWN_NAME] = g_param_spec_string (
       "well-known-name", NULL, NULL, NULL /* default value */,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   /**
-   * SpielProvider:voices:
+   * SpielProvider:voices: (getter get_voices)
    *
-   * The list of available [class@Voice]s that are provided.
+   * The list of available [class@Spiel.Voice]s that are provided.
    *
+   * Since: 1.0
    */
   properties[PROP_VOICES] =
       g_param_spec_object ("voices", NULL, NULL, G_TYPE_LIST_MODEL,
