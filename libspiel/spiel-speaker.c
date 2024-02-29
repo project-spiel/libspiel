@@ -35,17 +35,18 @@
  *
  * A virtual speaker for speech synthesis
  *
- * The #SpielSpeaker class represents a single "individual" speaker. Its primary
- * method is [method@Speaker.speak] which queues utterances to be spoken.
+ * The `SpielSpeaker` class represents a single "individual" speaker. Its primary
+ * method is [method@Spiel.Speaker.speak] which queues utterances to be spoken.
  *
  * This class also provides a list of available voices provided by DBus speech
  * providers that are activatable on the session bus.
  *
- * #SpielSpeaker's initialization may perform blocking IO if it the first
+ * `SpielSpeaker`'s initialization may perform blocking IO if it the first
  * instance in the process. The default constructor is asynchronous
- * ([func@Speaker.new]), although there is a synchronous blocking alternative
- * ([ctor@Speaker.new_sync]).
+ * ([func@Spiel.Speaker.new]), although there is a synchronous blocking
+ * alternative ([ctor@Spiel.Speaker.new_sync]).
  *
+ * Since: 1.0
  */
 
 struct _SpielSpeaker
@@ -160,19 +161,21 @@ _queue_entry_destroy (gpointer data)
 
 /**
  * spiel_speaker_new:
- * @cancellable: (nullable): A #GCancellable or %NULL.
+ * @cancellable: (nullable): optional `GCancellable`.
  * @callback: A #GAsyncReadyCallback to call when the request is satisfied.
  * @user_data: User data to pass to @callback.
  *
- * Asynchronously creates a SpielSpeaker.
+ * Asynchronously creates a [class@Spiel.Speaker].
  *
  * When the operation is finished, @callback will be invoked in the
  * thread-default main loop of the thread you are calling this method from (see
- * g_main_context_push_thread_default()). You can then call
- * spiel_speaker_new_finish() to get the result of the operation.
+ * [method@GLib.MainContext.push_thread_default]). You can then call
+ * [ctor@Spiel.Speaker.new_finish] to get the result of the operation.
  *
- * See spiel_speaker_new_sync() for the synchronous, blocking version of this
- * constructor.
+ * See [ctor@Spiel.Speaker.new_sync] for the synchronous, blocking version of
+ * this constructor.
+ *
+ * Since: 1.0
  */
 void
 spiel_speaker_new (GCancellable *cancellable,
@@ -186,15 +189,16 @@ spiel_speaker_new (GCancellable *cancellable,
 }
 
 /**
- * spiel_speaker_new_finish:
- * @result: The #GAsyncResult obtained from the #GAsyncReadyCallback passed to
- * spiel_speaker_new().
- * @error: Return location for error or %NULL
+ * spiel_speaker_new_finish: (constructor)
+ * @result: The `GAsyncResult` obtained from the `GAsyncReadyCallback` passed to
+ * [func@Spiel.Speaker.new].
+ * @error: (nullable): optional `GError`
  *
- * Finishes an operation started with spiel_speaker_new().
+ * Finishes an operation started with [func@Spiel.Speaker.new].
  *
- * Returns: (transfer full) (type SpielSpeaker): The constructed speaker object
- * or %NULL if @error is set.
+ * Returns: (transfer full): The new `SpielSpeaker`, or %NULL with @error set
+ *
+ * Since: 1.0
  */
 SpielSpeaker *
 spiel_speaker_new_finish (GAsyncResult *result, GError **error)
@@ -215,7 +219,7 @@ spiel_speaker_new_finish (GAsyncResult *result, GError **error)
 
 /**
  * spiel_speaker_new_sync:
- * @cancellable: (nullable): A #GCancellable or %NULL.
+ * @cancellable: (nullable): A optional `GCancellable`.
  * @error: Return location for error or %NULL
  *
  * Synchronously creates a SpielSpeaker.
@@ -226,6 +230,8 @@ spiel_speaker_new_finish (GAsyncResult *result, GError **error)
  *
  * Returns: (transfer full) (type SpielSpeaker): The constructed speaker object
  * or %NULL if @error is set.
+ *
+ * Since: 1.0
  */
 SpielSpeaker *
 spiel_speaker_new_sync (GCancellable *cancellable, GError **error)
@@ -330,6 +336,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    * The speaker has an utterance queued or speaking.
    *
+   * Since: 1.0
    */
   properties[PROP_SPEAKING] =
       g_param_spec_boolean ("speaking", NULL, NULL, FALSE /* default value */,
@@ -340,26 +347,31 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    * The speaker is in a paused state.
    *
+   * See [method@Spiel.Speaker.pause] and [method@Spiel.Speaker.resume].
+   *
+   * Since: 1.0
    */
   properties[PROP_PAUSED] =
       g_param_spec_boolean ("paused", NULL, NULL, FALSE /* default value */,
                             G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   /**
-   * SpielSpeaker:voices:
+   * SpielSpeaker:voices: (getter get_voices)
    *
    * The list of available [class@Voice]s that can be used in an utterance.
    *
+   * Since: 1.0
    */
   properties[PROP_VOICES] =
       g_param_spec_object ("voices", NULL, NULL, G_TYPE_LIST_MODEL,
                            G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   /**
-   * SpielSpeaker:providers:
+   * SpielSpeaker:providers: (getter get_providers)
    *
    * The list of available [class@Provider]s that offer voices.
    *
+   * Since: 1.0
    */
   properties[PROP_PROVIDERS] =
       g_param_spec_object ("providers", NULL, NULL, G_TYPE_LIST_MODEL,
@@ -370,6 +382,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    * The gstreamer sink this speaker is connected to.
    *
+   * Since: 1.0
    */
   properties[PROP_SINK] = g_param_spec_object (
       "sink", NULL, NULL, GST_TYPE_ELEMENT, G_PARAM_READWRITE);
@@ -378,11 +391,12 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::utterance-started:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    *
    * Emitted when the given utterance is actively being spoken.
    *
+   * Since: 1.0
    */
   speaker_signals[UTTURANCE_STARTED] = g_signal_new (
       "utterance-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
@@ -390,11 +404,12 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::utterance-finished:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    *
    * Emitted when a given utterance has completed speaking
    *
+   * Since: 1.0
    */
   speaker_signals[UTTERANCE_FINISHED] = g_signal_new (
       "utterance-finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
@@ -402,12 +417,13 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::utterance-canceled:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    *
    * Emitted when a given utterance has been canceled after it has started
    * speaking
    *
+   * Since: 1.0
    */
   speaker_signals[UTTERANCE_CANCELED] = g_signal_new (
       "utterance-canceled", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
@@ -415,12 +431,13 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::utterance-error:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    * @error: A #GError
    *
    * Emitted when a given utterance has failed to start or complete.
    *
+   * Since: 1.0
    */
   speaker_signals[UTTERANCE_ERROR] = g_signal_new (
       "utterance-error", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
@@ -428,14 +445,15 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::word-started:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    * @start: Character start offset of speech word
    * @end: Character end offset of speech word
    *
    * Emitted when a word will be spoken in a given utterance. Not all
    * voices are capable of notifying when a word will be spoken.
    *
+   * Since: 1.0
    */
   speaker_signals[WORD_STARTED] =
       g_signal_new ("word-started", G_TYPE_FROM_CLASS (klass),
@@ -444,14 +462,15 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::sentence-started:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    * @start: Character start offset of speech sentence
    * @end: Character end offset of speech sentence
    *
    * Emitted when a sentence will be spoken in a given utterance. Not all
    * voices are capable of notifying when a sentence will be spoken.
    *
+   * Since: 1.0
    */
   speaker_signals[SENTENCE_STARTED] =
       g_signal_new ("sentence-started", G_TYPE_FROM_CLASS (klass),
@@ -460,14 +479,15 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::range-started:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    * @start: Character start offset of speech range
    * @end: Character end offset of speech range
    *
    * Emitted when a range will be spoken in a given utterance. Not all
    * voices are capable of notifying when a range will be spoken.
    *
+   * Since: 1.0
    */
   speaker_signals[RANGE_STARTED] =
       g_signal_new ("range-started", G_TYPE_FROM_CLASS (klass),
@@ -476,12 +496,13 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
 
   /**
    * SpielSpeaker::mark-reached:
-   * @speaker: A #SpielSpeaker
-   * @utterance: A #SpielUtterance
+   * @speaker: A `SpielSpeaker`
+   * @utterance: A `SpielUtterance`
    * @name: Name of mark reached
    *
    * Emitted when an SSML mark element is reached
    *
+   * Since: 1.0
    */
   speaker_signals[MARK_REACHED] = g_signal_new (
       "mark-reached", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0, NULL,
@@ -669,7 +690,7 @@ spiel_error_quark (void)
   return g_quark_from_static_string ("spiel-error-quark");
 }
 
-/**
+/*
  * Playback
  */
 
@@ -692,12 +713,14 @@ typedef struct
 
 /**
  * spiel_speaker_speak:
- * @self: a #SpielSpeaker
- * @utterance: an #SpielUtterance to speak
+ * @self: a `SpielSpeaker`
+ * @utterance: an `SpielUtterance` to speak
  *
  * Speak the given utterance. If an utterance is already being spoken
  * the provided utterances will be added to a queue and will be spoken
  * in the order received.
+ *
+ * Since: 1.0
  */
 void
 spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
@@ -822,11 +845,13 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
 /**
  * spiel_speaker_get_voices: (get-property voices)
- * @self: a #SpielSpeaker
+ * @self: a `SpielSpeaker`
  *
- * Fetches the voices available to this speaker
+ * Gets the voices available to this speaker.
  *
- * Returns: (transfer none): A live #ListModel of voices
+ * Returns: (transfer none): A `GListModel` of `SpielVoice`
+ *
+ * Since: 1.0
  */
 GListModel *
 spiel_speaker_get_voices (SpielSpeaker *self)
@@ -840,11 +865,13 @@ spiel_speaker_get_voices (SpielSpeaker *self)
 
 /**
  * spiel_speaker_get_providers: (get-property providers)
- * @self: a #SpielSpeaker
+ * @self: a `SpielSpeaker`
  *
- * Fetches the speech providers that offer voices to this speaker
+ * Gets the speech providers that offer voices to this speaker.
  *
- * Returns: (transfer none): A live #ListModel of providers
+ * Returns: (transfer none): A `GListModel` of `SpielProvider`
+ *
+ * Since: 1.0
  */
 GListModel *
 spiel_speaker_get_providers (SpielSpeaker *self)
@@ -858,12 +885,15 @@ spiel_speaker_get_providers (SpielSpeaker *self)
 
 /**
  * spiel_speaker_pause:
- * @self: a #SpielSpeaker
+ * @self: a `SpielSpeaker`
  *
  * Pause the given speaker. If an utterance is being spoken, it will pause
  * until [method@Speaker.resume] is called.
+ *
  * If the speaker isn't speaking, calling [method@Speaker.speak] will store
  * new utterances in a queue until [method@Speaker.resume] is called.
+ *
+ * Since: 1.0
  */
 void
 spiel_speaker_pause (SpielSpeaker *self)
@@ -895,10 +925,13 @@ spiel_speaker_pause (SpielSpeaker *self)
 
 /**
  * spiel_speaker_resume:
- * @self: a #SpielSpeaker
+ * @self: a `SpielSpeaker`
  *
- * Resumes the given paused speaker. If the speaker isn't pause this will do
- * nothing.
+ * Resumes the given paused speaker.
+ *
+ * If the speaker isn't paused this will do nothing.
+ *
+ * Since: 1.0
  */
 void
 spiel_speaker_resume (SpielSpeaker *self)
@@ -930,9 +963,11 @@ spiel_speaker_resume (SpielSpeaker *self)
 
 /**
  * spiel_speaker_cancel:
- * @self: a #SpielSpeaker
+ * @self: a `SpielSpeaker`
  *
  * Stops the current utterance from being spoken and dumps the utterance queue.
+ *
+ * Since: 1.0
  */
 void
 spiel_speaker_cancel (SpielSpeaker *self)

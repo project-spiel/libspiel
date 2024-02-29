@@ -23,11 +23,12 @@
 /**
  * SpielUtterance:
  *
- * Represents an utterance to be spoken by a #SpielSpeaker.
+ * Represents an utterance to be spoken by a `SpielSpeaker`.
  *
  * An utterance consists of the text to be spoken and other properties that
  * affect the speech, like rate, pitch or voice used.
  *
+ * Since: 1.0
  */
 
 struct _SpielUtterance
@@ -67,11 +68,13 @@ static GParamSpec *properties[N_PROPS];
 
 /**
  * spiel_utterance_new: (constructor)
- * @text: (not nullable): The utterance text to be spoken.
+ * @text: (nullable): The utterance text to be spoken.
  *
- * Creates a new #SpielUtterance.
+ * Creates a new [class@Spiel.Utterance].
  *
- * Returns: The new #NotifyNotification.
+ * Returns: The new `SpielUtterance`.
+ *
+ * Since: 1.0
  */
 SpielUtterance *
 spiel_utterance_new (const char *text)
@@ -81,11 +84,13 @@ spiel_utterance_new (const char *text)
 
 /**
  * spiel_utterance_get_text: (get-property text)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Fetches the text spoken in this utterance
+ * Gets the text spoken in this utterance.
  *
- * Returns: (transfer none): the text.
+ * Returns: (transfer none): the text
+ *
+ * Since: 1.0
  */
 const char *
 spiel_utterance_get_text (SpielUtterance *self)
@@ -99,11 +104,12 @@ spiel_utterance_get_text (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_text: (set-property text)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  * @text: the text to assign to this utterance
  *
- * Sets the text to be spoken by this utterance
+ * Sets the text to be spoken by this utterance.
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_text (SpielUtterance *self, const char *text)
@@ -119,11 +125,13 @@ spiel_utterance_set_text (SpielUtterance *self, const char *text)
 
 /**
  * spiel_utterance_get_pitch: (get-property pitch)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Fetches the pitch used in this utterance
+ * Gets the pitch used in this utterance.
  *
- * Returns: the pitch value.
+ * Returns: the pitch value
+ *
+ * Since: 1.0
  */
 double
 spiel_utterance_get_pitch (SpielUtterance *self)
@@ -137,11 +145,12 @@ spiel_utterance_get_pitch (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_pitch: (set-property pitch)
- * @self: a #SpielUtterance
- * @pitch: a rate to assign to this utterance
+ * @self: a `SpielUtterance`
+ * @pitch: a pitch to assign to this utterance
  *
- * Sets a pitch on this utterance
+ * Sets a pitch on this utterance.
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_pitch (SpielUtterance *self, double pitch)
@@ -156,11 +165,13 @@ spiel_utterance_set_pitch (SpielUtterance *self, double pitch)
 
 /**
  * spiel_utterance_get_rate: (get-property rate)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Fetches the rate used in this utterance
+ * Gets the rate used in this utterance.
  *
- * Returns: the rate value.
+ * Returns: the rate value
+ *
+ * Since: 1.0
  */
 double
 spiel_utterance_get_rate (SpielUtterance *self)
@@ -174,11 +185,12 @@ spiel_utterance_get_rate (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_rate: (set-property rate)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  * @rate: a rate to assign to this utterance
  *
- * Sets a rate on this utterance
+ * Sets a rate on this utterance.
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_rate (SpielUtterance *self, double rate)
@@ -193,11 +205,13 @@ spiel_utterance_set_rate (SpielUtterance *self, double rate)
 
 /**
  * spiel_utterance_get_volume: (get-property volume)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Fetches the volume used in this utterance
+ * Gets the volume used in this utterance.
  *
- * Returns: the volume value.
+ * Returns: the volume value
+ *
+ * Since: 1.0
  */
 double
 spiel_utterance_get_volume (SpielUtterance *self)
@@ -211,11 +225,12 @@ spiel_utterance_get_volume (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_volume: (set-property volume)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  * @volume: a volume to assign to this utterance
  *
- * Sets a volume on this utterance
+ * Sets a volume on this utterance.
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_volume (SpielUtterance *self, double volume)
@@ -230,11 +245,13 @@ spiel_utterance_set_volume (SpielUtterance *self, double volume)
 
 /**
  * spiel_utterance_get_voice: (get-property voice)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Fetches the voice used in this utterance
+ * Gets the voice used in this utterance
  *
- * Returns: (transfer none): the voice object.
+ * Returns: (transfer none) (nullable): a `SpielVoice`
+ *
+ * Since: 1.0
  */
 SpielVoice *
 spiel_utterance_get_voice (SpielUtterance *self)
@@ -248,11 +265,12 @@ spiel_utterance_get_voice (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_voice: (set-property voice)
- * @self: a #SpielUtterance
- * @voice: a #SpielVoice to assign to this utterance
+ * @self: a `SpielUtterance`
+ * @voice: a `SpielVoice` to assign to this utterance
  *
- * Sets a voice on this utterance
+ * Sets a voice on this utterance.
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
@@ -270,11 +288,13 @@ spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
 
 /**
  * spiel_utterance_get_language: (get-property language)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Fetches the language used in this utterance.
+ * Gets the language used in this utterance.
  *
- * Returns: (transfer none): the language.
+ * Returns: (transfer none): the language
+ *
+ * Since: 1.0
  */
 const char *
 spiel_utterance_get_language (SpielUtterance *self)
@@ -288,11 +308,12 @@ spiel_utterance_get_language (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_language: (set-property language)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  * @language: the language to assign to this utterance
  *
  * Sets the language of this utterance
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_language (SpielUtterance *self, const char *language)
@@ -308,11 +329,13 @@ spiel_utterance_set_language (SpielUtterance *self, const char *language)
 
 /**
  * spiel_utterance_get_is_ssml: (get-property is-ssml)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  *
- * Is the current utterance an SSML snippet
+ * Gets whether the current utterance an SSML snippet.
  *
- * Returns: the utterance text is SSML
+ * Returns: %TRUE if the utterance text is SSML
+ *
+ * Since: 1.0
  */
 gboolean
 spiel_utterance_get_is_ssml (SpielUtterance *self)
@@ -326,11 +349,12 @@ spiel_utterance_get_is_ssml (SpielUtterance *self)
 
 /**
  * spiel_utterance_set_is_ssml: (set-property is-ssml)
- * @self: a #SpielUtterance
+ * @self: a `SpielUtterance`
  * @is_ssml: whether the utterance text is an SSML snippet
  *
- * Indicates whether this utterance should be interpreted as SSML
+ * Indicates whether this utterance should be interpreted as SSML.
  *
+ * Since: 1.0
  */
 void
 spiel_utterance_set_is_ssml (SpielUtterance *self, gboolean is_ssml)
@@ -441,6 +465,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    *
    * The utterance text that will be spoken.
    *
+   * Since: 1.0
    */
   properties[PROP_TEXT] =
       g_param_spec_string ("text", NULL, NULL, NULL /* default value */,
@@ -451,6 +476,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    *
    * The pitch at which the utterance will be spoken.
    *
+   * Since: 1.0
    */
   properties[PROP_PITCH] = g_param_spec_double (
       "pitch", NULL, NULL, 0, 2, 1, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
@@ -460,6 +486,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    *
    * The speed at which the utterance will be spoken.
    *
+   * Since: 1.0
    */
   properties[PROP_RATE] =
       g_param_spec_double ("rate", NULL, NULL, 0.1, 10, 1,
@@ -470,6 +497,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    *
    * The volume at which the utterance will be spoken.
    *
+   * Since: 1.0
    */
   properties[PROP_VOLUME] =
       g_param_spec_double ("volume", NULL, NULL, 0, 1, 1,
@@ -480,6 +508,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    *
    * The voice with which the utterance will be spoken.
    *
+   * Since: 1.0
    */
   properties[PROP_VOICE] =
       g_param_spec_object ("voice", NULL, NULL, SPIEL_TYPE_VOICE,
@@ -491,6 +520,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    * The utterance language. If no voice is set this language will be used to
    * select the best matching voice.
    *
+   * Since: 1.0
    */
   properties[PROP_LANGUAGE] =
       g_param_spec_string ("language", NULL, NULL, NULL /* default value */,
@@ -501,6 +531,7 @@ spiel_utterance_class_init (SpielUtteranceClass *klass)
    *
    * Whether the utterance's text should be interpreted as an SSML snippet.
    *
+   * Since: 1.0
    */
   properties[PROP_IS_SSML] = g_param_spec_boolean (
       "is-ssml", NULL, NULL, FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);

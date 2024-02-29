@@ -24,6 +24,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+/**
+ * SpeechProviderStreamWriter:
+ *
+ * A provider audio stream writer.
+ *
+ * Since: 1.0
+ */
 struct _SpeechProviderStreamWriter
 {
   GObject parent_instance;
@@ -52,9 +59,11 @@ static GParamSpec *properties[N_PROPS];
  * speech_provider_stream_writer_new: (constructor)
  * @fd: The file descriptor for a pipe
  *
- * Creates a new #SpeechProviderStreamWriter.
+ * Creates a new [class@SpeechProvider.StreamWriter].
  *
- * Returns: The new #SpeechProviderStreamWriter.
+ * Returns: (transfer full): The new `SpeechProviderStreamWriter`
+ *
+ * Since: 1.0
  */
 SpeechProviderStreamWriter *
 speech_provider_stream_writer_new (gint fd)
@@ -70,9 +79,11 @@ speech_provider_stream_writer_new (gint fd)
 
 /**
  * speech_provider_stream_writer_close:
+ * @self: a `SpeechProviderStreamWriter`
  *
- * Close the pipe.
+ * Close the writer.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_close (SpeechProviderStreamWriter *self)
@@ -88,9 +99,11 @@ speech_provider_stream_writer_close (SpeechProviderStreamWriter *self)
 
 /**
  * speech_provider_stream_writer_send_stream_header:
+ * @self: a `SpeechProviderStreamWriter`
  *
- * Sends initial stream header
+ * Sends the initial stream header.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_send_stream_header (
@@ -111,11 +124,13 @@ speech_provider_stream_writer_send_stream_header (
 
 /**
  * speech_provider_stream_writer_send_audio:
+ * @self: a `SpeechProviderStreamWriter`
  * @chunk: (array length=chunk_size) (not nullable): audio data
  * @chunk_size: audio chunk size
  *
- * Sends audio chunk
+ * Sends a chunk of audio data.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_send_audio (SpeechProviderStreamWriter *self,
@@ -137,9 +152,11 @@ speech_provider_stream_writer_send_audio (SpeechProviderStreamWriter *self,
 
 /**
  * speech_provider_stream_writer_send_event:
+ * @self: a `SpeechProviderStreamWriter`
  *
- * Sends event
+ * Sends an event.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_writer_send_event (SpeechProviderStreamWriter *self,
@@ -233,8 +250,9 @@ speech_provider_stream_writer_class_init (
   /**
    * SpeechProviderStreamWriter:fd:
    *
-   * File descriptor for pipe
+   * File descriptor for the stream.
    *
+   * Since: 1.0
    */
   properties[PROP_FD] =
       g_param_spec_int ("fd", NULL, NULL, -1, G_MAXINT32, 0,

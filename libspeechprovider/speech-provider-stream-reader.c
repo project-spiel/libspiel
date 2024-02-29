@@ -24,6 +24,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+/**
+ * SpeechProviderStreamReader:
+ *
+ * A provider audio stream reader.
+ *
+ * Since: 1.0
+ */
 struct _SpeechProviderStreamReader
 {
   GObject parent_instance;
@@ -53,9 +60,11 @@ static GParamSpec *properties[N_PROPS];
  * speech_provider_stream_reader_new: (constructor)
  * @fd: The file descriptor for a pipe
  *
- * Creates a new #SpeechProviderStreamReader.
+ * Creates a new [class@SpeechProvider.StreamReader].
  *
- * Returns: The new #SpeechProviderStreamReader.
+ * Returns: (transfer full): The new `SpeechProviderStreamReader`.
+ *
+ * Since: 1.0
  */
 SpeechProviderStreamReader *
 speech_provider_stream_reader_new (gint fd)
@@ -71,9 +80,11 @@ speech_provider_stream_reader_new (gint fd)
 
 /**
  * speech_provider_stream_reader_close:
+ * @self: `SpeechProviderStreamReader`
  *
  * Close the pipe.
  *
+ * Since: 1.0
  */
 void
 speech_provider_stream_reader_close (SpeechProviderStreamReader *self)
@@ -89,10 +100,13 @@ speech_provider_stream_reader_close (SpeechProviderStreamReader *self)
 
 /**
  * speech_provider_stream_reader_get_stream_header:
+ * @self: `SpeechProviderStreamReader`
  *
  * Retrieves stream header.
  *
  * Returns: %TRUE if header successfully received.
+ *
+ * Since: 1.0
  */
 gboolean
 speech_provider_stream_reader_get_stream_header (
@@ -124,14 +138,17 @@ _get_next_chunk_type (SpeechProviderStreamReader *self)
 }
 
 /**
- * speech_provider_stream_reader_get_audio:
- * @chunk: (out) (array length=chunk_size) (transfer full): Location to
- *        store audio data
- * @chunk_size: (out): Location to store size of chunk
+ * speech_provider_stream_reader_get_audio: (skip)
+ * @self: `SpeechProviderStreamReader`
+ * @chunk: (out) (array length=chunk_size) (transfer full) (not nullable):
+ *        Location to store audio data
+ * @chunk_size: (out) (not nullable): Location to store size of chunk
  *
  * Retrieves audio data
  *
- * Returns: (skip): %TRUE if the call succeeds.
+ * Returns: %TRUE if the call succeeds.
+ *
+ * Since: 1.0
  */
 gboolean
 speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
@@ -162,15 +179,18 @@ speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
 }
 
 /**
- * speech_provider_stream_reader_get_event:
- * @event_type: (out): type of event
- * @range_start: (out): text range start
- * @range_end: (out): text range end
- * @mark_name: (out): mark name
+ * speech_provider_stream_reader_get_event: (skip)
+ * @self: a `SpeechProviderStreamReader`
+ * @event_type: (out) (not nullable): type of event
+ * @range_start: (out) (not nullable): text range start
+ * @range_end: (out) (not nullable): text range end
+ * @mark_name: (out) (not nullable): mark name
  *
  * Retrieves event data
  *
- * Returns: (skip): %TRUE if the call succeeds.
+ * Returns: %TRUE if the call succeeds.
+ *
+ * Since: 1.0
  */
 gboolean
 speech_provider_stream_reader_get_event (SpeechProviderStreamReader *self,
@@ -262,8 +282,9 @@ speech_provider_stream_reader_class_init (
   /**
    * SpeechProviderStreamReader:fd:
    *
-   * File descriptor for pipe
+   * File descriptor for pipe.
    *
+   * Since: 1.0
    */
   properties[PROP_FD] =
       g_param_spec_int ("fd", NULL, NULL, -1, G_MAXINT32, 0,

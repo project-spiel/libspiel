@@ -64,12 +64,13 @@ static GParamSpec *properties[N_PROPS];
 
 /**
  * spiel_voice_get_name: (get-property name)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the name.
+ * Gets the name.
  *
- * Returns: (transfer none): the name text. This string is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none) (not nullable): the name
+ *
+ * Since: 1.0
  */
 const char *
 spiel_voice_get_name (SpielVoice *self)
@@ -83,12 +84,13 @@ spiel_voice_get_name (SpielVoice *self)
 
 /**
  * spiel_voice_get_identifier: (get-property identifier)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the identifier.
+ * Gets the identifier, unique to [property@Spiel.Voice:provider].
  *
- * Returns: the identifier text. This string is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none) (not nullable): the identifier
+ *
+ * Since: 1.0
  */
 const char *
 spiel_voice_get_identifier (SpielVoice *self)
@@ -102,11 +104,13 @@ spiel_voice_get_identifier (SpielVoice *self)
 
 /**
  * spiel_voice_get_provider: (get-property provider)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the provider associated with this voice
+ * Gets the provider associated with this voice
  *
- * Returns: (transfer none): a #SpielProvider
+ * Returns: (transfer none) (nullable): a `SpielProvider`
+ *
+ * Since: 1.0
  */
 SpielProvider *
 spiel_voice_get_provider (SpielVoice *self)
@@ -120,12 +124,13 @@ spiel_voice_get_provider (SpielVoice *self)
 
 /**
  * spiel_voice_get_languages: (get-property languages)
- * @self: a #SpielVoice
+ * @self: a `SpielVoice`
  *
- * Fetches the list of supported languages
+ * Gets the list of supported languages.
  *
- * Returns: the list of supported languages. This list is
- *   owned by the voice and must not be modified or freed.
+ * Returns: (transfer none) (not nullable): a list of BCP 47 tags
+ *
+ * Since: 1.0
  */
 const char *const *
 spiel_voice_get_languages (SpielVoice *self)
@@ -137,6 +142,16 @@ spiel_voice_get_languages (SpielVoice *self)
   return (const char *const *) priv->languages;
 }
 
+/**
+ * spiel_voice_get_features: (get-property features)
+ * @self: a `SpielVoice`
+ *
+ * Gets the list of supported features.
+ *
+ * Returns: a bit-field of `SpielVoiceFeature`
+ *
+ * Since: 1.0
+ */
 SpielVoiceFeature
 spiel_voice_get_features (SpielVoice *self)
 {
@@ -147,6 +162,14 @@ spiel_voice_get_features (SpielVoice *self)
   return priv->features;
 }
 
+/**
+ * spiel_voice_get_output_format: (get-property output-format)
+ * @self: a `SpielVoice`
+ *
+ * Gets the output format.
+ *
+ * Since: 1.0
+ */
 const char *
 spiel_voice_get_output_format (SpielVoice *self)
 {
@@ -157,6 +180,15 @@ spiel_voice_get_output_format (SpielVoice *self)
   return priv->output_format;
 }
 
+/**
+ * spiel_voice_set_output_format: (set-property output-format)
+ * @self: a `SpielVoice`
+ * @output_format: (not nullable): an output format string.
+ *
+ * Sets the audio output format.
+ *
+ * Since: 1.0
+ */
 void
 spiel_voice_set_output_format (SpielVoice *self, const char *output_format)
 {
@@ -169,6 +201,16 @@ spiel_voice_set_output_format (SpielVoice *self, const char *output_format)
   priv->output_format = g_strdup (output_format);
 }
 
+/**
+ * spiel_voice_hash:
+ * @self: (not nullable): a `SpielVoice`
+ *
+ * Converts a [class@Spiel.Voice] to a hash value.
+ *
+ * Returns: a hash value corresponding to @self
+ *
+ * Since: 1.0
+ */
 guint
 spiel_voice_hash (SpielVoice *self)
 {
@@ -195,6 +237,17 @@ spiel_voice_hash (SpielVoice *self)
   return hash;
 }
 
+/**
+ * spiel_voice_equal:
+ * @self: (not nullable): a `SpielVoice`
+ * @other: (not nullable): a `SpielVoice` to compare with @self
+ *
+ * Compares the two [class@Spiel.Voice] values and returns %TRUE if equal.
+ *
+ * Returns: %TRUE if the two voices match.
+ *
+ * Since: 1.0
+ */
 gboolean
 spiel_voice_equal (SpielVoice *self, SpielVoice *other)
 {
@@ -233,6 +286,20 @@ spiel_voice_equal (SpielVoice *self, SpielVoice *other)
   return TRUE;
 }
 
+/**
+ * spiel_voice_compare:
+ * @self: (not nullable): a `SpielVoice`
+ * @other: (not nullable): a `SpielVoice` to compare with @self
+ * @user_data: user-defined callback data
+ *
+ * Compares the two [class@Spiel.Voice] values and returns a negative integer
+ * if the first value comes before the second, 0 if they are equal, or a
+ * positive integer if the first value comes after the second.
+ *
+ * Returns: an integer indicating order
+ *
+ * Since: 1.0
+ */
 gint
 spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
 {
