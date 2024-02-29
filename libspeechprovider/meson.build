@@ -54,7 +54,7 @@ speech_provider_lib_generated = [
 ]
 
 speech_provider_deps = [
-  dependency('gobject-2.0'),
+  dependency('gobject-2.0', version: glib_version),
 ]
 
 speech_provider_lib = shared_library('speech-provider-' + api_version,
