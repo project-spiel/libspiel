@@ -210,4 +210,3 @@ main (int argc, char *argv[])
 
   do_speak (speaker, argv[argc - 1]);
 }
-

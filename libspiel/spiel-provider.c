@@ -64,7 +64,6 @@ static gboolean handle_voices_changed (SpielProviderProxy *provider_proxy,
 
 static void _spiel_provider_update_voices (SpielProvider *self);
 
-
 /*< private >
  * spiel_provider_new: (constructor)
  *

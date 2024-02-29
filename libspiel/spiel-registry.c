@@ -353,7 +353,8 @@ spiel_registry_get_finish (GAsyncResult *result, GError **error)
 SpielRegistry *
 spiel_registry_get_sync (GCancellable *cancellable, GError **error)
 {
-  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable), NULL);
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable),
+                        NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   if (sRegistry == NULL)

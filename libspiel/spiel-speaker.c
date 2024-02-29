@@ -35,8 +35,9 @@
  *
  * A virtual speaker for speech synthesis
  *
- * The `SpielSpeaker` class represents a single "individual" speaker. Its primary
- * method is [method@Spiel.Speaker.speak] which queues utterances to be spoken.
+ * The `SpielSpeaker` class represents a single "individual" speaker. Its
+ * primary method is [method@Spiel.Speaker.speak] which queues utterances to be
+ * spoken.
  *
  * This class also provides a list of available voices provided by DBus speech
  * providers that are activatable on the session bus.
@@ -236,7 +237,8 @@ spiel_speaker_new_finish (GAsyncResult *result, GError **error)
 SpielSpeaker *
 spiel_speaker_new_sync (GCancellable *cancellable, GError **error)
 {
-  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable), NULL);
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable),
+                        NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
   return g_initable_new (SPIEL_TYPE_SPEAKER, cancellable, error, NULL);
@@ -547,9 +549,7 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
     {
       if (error != NULL && *error == NULL)
         {
-          g_set_error_literal (error,
-                               GST_CORE_ERROR,
-                               GST_CORE_ERROR_FAILED,
+          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
                                "Failed to create 'autoaudiosink' element; "
                                "ensure GStreamer Good Plug-ins are installed");
         }
