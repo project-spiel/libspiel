@@ -521,7 +521,7 @@ initable_iface_init (GInitableIface *initable_iface)
 SpielProviderProxy *
 spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
-  SpielProvider *voice_provider = NULL;
+  g_autoptr (SpielProvider) voice_provider = NULL;
 
   g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
   g_return_val_if_fail (SPIEL_IS_VOICE (voice), NULL);

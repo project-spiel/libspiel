@@ -64,12 +64,12 @@ do_list_voices (SpielSpeaker *speaker)
     {
       g_autoptr (SpielVoice) voice =
           SPIEL_VOICE (g_list_model_get_object (voices, i));
+      g_autoptr (SpielProvider) provider = spiel_voice_get_provider (voice);
       g_autofree char *languages =
           g_strjoinv (",", (char **) spiel_voice_get_languages (voice));
       g_print ("%-25s %-10s %-10s %s\n", spiel_voice_get_name (voice),
                languages, spiel_voice_get_identifier (voice),
-               spiel_provider_get_well_known_name (
-                   spiel_voice_get_provider (voice)));
+               spiel_provider_get_well_known_name (provider));
     }
 }
 
@@ -129,11 +129,11 @@ find_voice (SpielSpeaker *speaker)
         {
           g_autoptr (SpielVoice) voice =
               SPIEL_VOICE (g_list_model_get_object (voices, i));
+          g_autoptr (SpielProvider) provider = spiel_voice_get_provider (voice);
           if (g_str_equal (voice_id, spiel_voice_get_identifier (voice)) &&
               (!provider_id ||
                g_str_equal (provider_id,
-                            spiel_provider_get_well_known_name (
-                                spiel_voice_get_provider (voice)))))
+                            spiel_provider_get_well_known_name (provider))))
             {
               return g_steal_pointer (&voice);
             }
@@ -210,3 +210,4 @@ main (int argc, char *argv[])
 
   do_speak (speaker, argv[argc - 1]);
 }
+

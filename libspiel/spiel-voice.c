@@ -215,7 +215,7 @@ guint
 spiel_voice_hash (SpielVoice *self)
 {
   SpielVoicePrivate *priv = spiel_voice_get_instance_private (self);
-  SpielProvider *provider = NULL;
+  g_autoptr (SpielProvider) provider = NULL;
   guint hash = 0;
 
   g_return_val_if_fail (SPIEL_IS_VOICE (self), 0);
@@ -346,6 +346,7 @@ spiel_voice_finalize (GObject *object)
   g_free (priv->name);
   g_free (priv->identifier);
   g_strfreev (priv->languages);
+  g_weak_ref_clear (&priv->provider);
 
   G_OBJECT_CLASS (spiel_voice_parent_class)->finalize (object);
 }
@@ -371,7 +372,7 @@ spiel_voice_get_property (GObject *object,
       g_value_set_boxed (value, priv->languages);
       break;
     case PROP_PROVIDER:
-      g_value_set_object (value, spiel_voice_get_provider (self));
+      g_value_take_object (value, spiel_voice_get_provider (self));
       break;
     case PROP_FEATURES:
       g_value_set_flags (value, priv->features);
@@ -485,4 +486,5 @@ spiel_voice_init (SpielVoice *self)
   priv->languages = NULL;
   priv->output_format = NULL;
   priv->features = 0;
+  g_weak_ref_init (&priv->provider, NULL);
 }
