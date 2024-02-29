@@ -697,7 +697,7 @@ typedef struct
  *
  * Speak the given utterance. If an utterance is already being spoken
  * the provided utterances will be added to a queue and will be spoken
- * in the order recieved.
+ * in the order received.
  */
 void
 spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)

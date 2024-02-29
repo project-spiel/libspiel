@@ -32,7 +32,7 @@ struct _SpeechProviderStreamReader
 typedef struct
 {
   gint fd;
-  gboolean stream_header_recieved;
+  gboolean stream_header_received;
   SpeechProviderChunkType next_chunk_type;
 } SpeechProviderStreamReaderPrivate;
 
@@ -92,7 +92,7 @@ speech_provider_stream_reader_close (SpeechProviderStreamReader *self)
  *
  * Retrieves stream header.
  *
- * Returns: %TRUE if header successfully recieved.
+ * Returns: %TRUE if header successfully received.
  */
 gboolean
 speech_provider_stream_reader_get_stream_header (
@@ -103,10 +103,10 @@ speech_provider_stream_reader_get_stream_header (
   SpeechProviderStreamHeader header;
 
   g_return_val_if_fail (SPEECH_PROVIDER_IS_STREAM_WRITER (self), FALSE);
-  g_assert (!priv->stream_header_recieved);
+  g_assert (!priv->stream_header_received);
 
   read (priv->fd, &header, sizeof (SpeechProviderStreamHeader));
-  priv->stream_header_recieved = TRUE;
+  priv->stream_header_received = TRUE;
   return strncmp (header.version, SPEECH_PROVIDER_STREAM_PROTOCOL_VERSION, 4) ==
          0;
 }
@@ -147,7 +147,7 @@ speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
   g_return_val_if_fail (chunk_size != NULL, FALSE);
 
   chunk_type = _get_next_chunk_type (self);
-  g_assert (priv->stream_header_recieved);
+  g_assert (priv->stream_header_received);
   if (chunk_type != SPEECH_PROVIDER_CHUNK_TYPE_AUDIO)
     {
       *chunk_size = 0;
@@ -189,7 +189,7 @@ speech_provider_stream_reader_get_event (SpeechProviderStreamReader *self,
   g_return_val_if_fail (range_start != NULL, FALSE);
   g_return_val_if_fail (range_end != NULL, FALSE);
   g_return_val_if_fail (mark_name != NULL && *mark_name == NULL, FALSE);
-  g_assert (priv->stream_header_recieved);
+  g_assert (priv->stream_header_received);
 
   if (chunk_type != SPEECH_PROVIDER_CHUNK_TYPE_EVENT)
     {
@@ -277,6 +277,6 @@ speech_provider_stream_reader_init (SpeechProviderStreamReader *self)
 {
   SpeechProviderStreamReaderPrivate *priv =
       speech_provider_stream_reader_get_instance_private (self);
-  priv->stream_header_recieved = FALSE;
+  priv->stream_header_received = FALSE;
   priv->next_chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_NONE;
 }
