@@ -583,7 +583,7 @@ spiel_registry_get_voice_for_utterance (SpielRegistry *self,
   SpielVoice *voice = NULL;
 
   g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
-  g_return_val_if_fail (SPIEL_IS_VOICE (utterance), NULL);
+  g_return_val_if_fail (SPIEL_IS_UTTERANCE (utterance), NULL);
 
   voice = spiel_utterance_get_voice (utterance);
   if (voice)
