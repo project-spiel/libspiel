@@ -138,7 +138,7 @@ _get_next_chunk_type (SpeechProviderStreamReader *self)
 }
 
 /**
- * speech_provider_stream_reader_get_audio: (skip)
+ * speech_provider_stream_reader_get_audio:
  * @self: `SpeechProviderStreamReader`
  * @chunk: (out) (array length=chunk_size) (transfer full) (not nullable):
  *        Location to store audio data
@@ -146,7 +146,7 @@ _get_next_chunk_type (SpeechProviderStreamReader *self)
  *
  * Retrieves audio data
  *
- * Returns: %TRUE if the call succeeds.
+ * Returns: (skip): %TRUE if the call succeeds.
  *
  * Since: 1.0
  */
@@ -179,7 +179,7 @@ speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
 }
 
 /**
- * speech_provider_stream_reader_get_event: (skip)
+ * speech_provider_stream_reader_get_event:
  * @self: a `SpeechProviderStreamReader`
  * @event_type: (out) (not nullable): type of event
  * @range_start: (out) (not nullable): text range start
@@ -188,7 +188,7 @@ speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
  *
  * Retrieves event data
  *
- * Returns: %TRUE if the call succeeds.
+ * Returns: (skip): %TRUE if the call succeeds.
  *
  * Since: 1.0
  */
