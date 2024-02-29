@@ -108,7 +108,7 @@ spiel_voice_get_identifier (SpielVoice *self)
  *
  * Gets the provider associated with this voice
  *
- * Returns: (transfer none) (nullable): a `SpielProvider`
+ * Returns: (transfer full) (nullable): a `SpielProvider`
  *
  * Since: 1.0
  */
