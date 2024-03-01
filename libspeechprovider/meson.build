@@ -83,15 +83,17 @@ pkg.generate(
      requires: 'gobject-2.0'
 )
 
-gnome = import('gnome')
-speech_provider_gir = gnome.generate_gir(speech_provider_lib,
-            sources: speech_provider_headers + speech_provider_sources + speech_provider_dbus_enums_h,
-            nsversion: api_version,
-            namespace: 'SpeechProvider',
-            header: 'speech-provider/speech-provider.h',
-        symbol_prefix: 'speech_provider',
-    identifier_prefix: 'SpeechProvider',
-             includes: [ 'GObject-2.0' ],
-              install: true,
-              export_packages: 'speech-provider',
-)
+if get_option('tests') or get_option('docs') or get_option('introspection')
+  gnome = import('gnome')
+  speech_provider_gir = gnome.generate_gir(speech_provider_lib,
+              sources: speech_provider_headers + speech_provider_sources + speech_provider_dbus_enums_h,
+              nsversion: api_version,
+              namespace: 'SpeechProvider',
+              header: 'speech-provider/speech-provider.h',
+          symbol_prefix: 'speech_provider',
+      identifier_prefix: 'SpeechProvider',
+               includes: [ 'GObject-2.0' ],
+                install: true,
+                export_packages: 'speech-provider',
+  )
+endif

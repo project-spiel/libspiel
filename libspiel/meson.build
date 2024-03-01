@@ -119,17 +119,19 @@ pkg.generate(
      requires: 'gio-2.0'
 )
 
-spiel_gir = gnome.generate_gir(spiel_lib,
-            sources: spiel_public_headers + spiel_public_sources + spiel_dbus_enums_h,
-            nsversion: api_version,
-            namespace: 'Spiel',
-            header: 'spiel/spiel.h',
-        symbol_prefix: 'spiel',
-    identifier_prefix: 'Spiel',
-             includes: [ 'Gio-2.0' ],
-              install: true,
-              export_packages: 'spiel',
-)
+if get_option('tests') or get_option('docs') or get_option('introspection')
+  spiel_gir = gnome.generate_gir(spiel_lib,
+              sources: spiel_public_headers + spiel_public_sources + spiel_dbus_enums_h,
+              nsversion: api_version,
+              namespace: 'Spiel',
+              header: 'spiel/spiel.h',
+          symbol_prefix: 'spiel',
+      identifier_prefix: 'Spiel',
+               includes: [ 'Gio-2.0' ],
+                install: true,
+                export_packages: 'spiel',
+  )
+endif
 
 schemas_dir = join_paths(get_option('datadir'), 'glib-2.0/schemas')
 install_data('org.monotonous.libspiel.gschema.xml',
