@@ -160,7 +160,7 @@ speech_provider_stream_reader_get_audio (SpeechProviderStreamReader *self,
   SpeechProviderChunkType chunk_type = SPEECH_PROVIDER_CHUNK_TYPE_NONE;
 
   g_return_val_if_fail (SPEECH_PROVIDER_IS_STREAM_READER (self), FALSE);
-  g_return_val_if_fail (chunk != NULL || *chunk == NULL, FALSE);
+  g_return_val_if_fail (chunk != NULL && *chunk == NULL, FALSE);
   g_return_val_if_fail (chunk_size != NULL, FALSE);
 
   chunk_type = _get_next_chunk_type (self);
