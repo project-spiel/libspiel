@@ -1108,6 +1108,11 @@ _handle_gst_element_message (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
   _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
   const GstStructure *strct = gst_message_get_structure (msg);
 
+  if (!entry)
+    {
+      return TRUE;
+    }
+
   if (!strct ||
       !g_str_equal (gst_structure_get_name (strct), "SpielGoingToSpeak"))
     {
