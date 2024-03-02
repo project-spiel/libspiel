@@ -1008,7 +1008,7 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
           g_object_notify (G_OBJECT (self), "paused");
         }
 
-      if (!entry->started)
+      if (entry && !entry->started)
         {
           entry->started = TRUE;
           g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0,
@@ -1031,7 +1031,7 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
     }
 
   if (new_state == GST_STATE_NULL && pending_state == GST_STATE_VOID_PENDING &&
-      element == GST_OBJECT (entry->src))
+      entry && element == GST_OBJECT (entry->src))
     {
       _advance_to_next_entry_or_finish (self, FALSE);
     }
