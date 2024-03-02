@@ -788,12 +788,12 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   stream_type = gst_struct ? gst_structure_get_name (gst_struct) : NULL;
 
-  if (g_str_equal (stream_type, "audio/x-raw"))
+  if (g_strcmp0 (stream_type, "audio/x-raw") == 0)
     {
       entry->src =
           gst_element_factory_make_full ("fdsrc", "fd", mypipe[0], NULL);
     }
-  else if (g_str_equal (stream_type, "audio/x-spiel"))
+  else if (g_strcmp0 (stream_type, "audio/x-spiel") == 0)
     {
       entry->src = GST_ELEMENT (spiel_provider_src_new (mypipe[0]));
     }
