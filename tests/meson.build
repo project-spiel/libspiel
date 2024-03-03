@@ -17,7 +17,7 @@ test_env.set('SPIEL_TEST', '1')
 python_module = import('python')
 dbus_run_session = find_program('dbus-run-session', required : false)
 python = python_module.find_installation(
-  'python3', required : false, modules: ['tap', 'dasbus'])
+  'python3.11', required : false, modules: ['tap', 'dasbus'])
 
 tests = ['test_speak.py',
          'test_types.py',
