@@ -201,11 +201,11 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
 
   while (TRUE)
     {
-      guint8 *chunk;
-      guint32 chunk_size;
-      SpeechProviderEventType event_type;
-      guint32 range_start;
-      guint32 range_end;
+      guint8 *chunk = NULL;
+      guint32 chunk_size = 0;
+      SpeechProviderEventType event_type = SPEECH_PROVIDER_EVENT_TYPE_NONE;
+      guint32 range_start = 0;
+      guint32 range_end = 0;
       g_autofree char *mark_name = NULL;
       gboolean got_event, got_audio;
       got_event = speech_provider_stream_reader_get_event (
