@@ -54,7 +54,10 @@ test_simultaneous_init = executable(
   dependencies: test_deps
 )
 
-if dbus_run_session.found() and python.found()
+subdir('libspiel')
+subdir('libspeechprovider')
+
+if dbus_run_session.found() and python.found() and get_option('introspection')
   foreach test_name : tests
     test(
       test_name, dbus_run_session,
