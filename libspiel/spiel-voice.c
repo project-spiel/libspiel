@@ -346,6 +346,7 @@ spiel_voice_finalize (GObject *object)
   g_free (priv->name);
   g_free (priv->identifier);
   g_strfreev (priv->languages);
+  g_free (priv->output_format);
   g_weak_ref_clear (&priv->provider);
 
   G_OBJECT_CLASS (spiel_voice_parent_class)->finalize (object);
