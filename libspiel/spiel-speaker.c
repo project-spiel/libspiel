@@ -1063,6 +1063,8 @@ _process_going_to_speak_message (GstMessage *msg, SpielSpeaker *self)
   guint32 range_end = 0;
   const char *mark_name = gst_structure_get_string (strct, "name");
 
+  g_return_if_fail (entry != NULL);
+
   if (!gst_structure_get_uint (strct, "event_type", &event_type))
     {
       g_warning ("No 'event_type' in message structure");
