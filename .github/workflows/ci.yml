@@ -12,13 +12,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  style-check:
+  clang-format:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: clang-format
-      uses: DoozyX/clang-format-lint-action@v0.17
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Lint
+        uses: DoozyX/clang-format-lint-action@v0.17
 
   python-black:
     runs-on: ubuntu-latest
