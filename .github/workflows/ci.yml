@@ -20,6 +20,14 @@ jobs:
     - name: clang-format
       uses: DoozyX/clang-format-lint-action@v0.17
 
+  python-black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Lint
+        uses: psf/black@stable
+
   deploy:
     runs-on: ubuntu-latest
     container: ubuntu:lunar
