@@ -1044,8 +1044,10 @@ _handle_gst_eos (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
 {
   SpielSpeakerPrivate *priv = spiel_speaker_get_instance_private (self);
   _QueueEntry *entry = priv->queue ? priv->queue->data : NULL;
-  GstElement *fdsrc = entry->src;
-  gst_element_set_state (fdsrc, GST_STATE_NULL);
+
+  g_return_val_if_fail (entry != NULL, TRUE);
+
+  gst_element_set_state (GST_ELEMENT (entry->src), GST_STATE_NULL);
 
   return TRUE;
 }
@@ -1060,6 +1062,8 @@ _process_going_to_speak_message (GstMessage *msg, SpielSpeaker *self)
   guint32 range_start = 0;
   guint32 range_end = 0;
   const char *mark_name = gst_structure_get_string (strct, "name");
+
+  g_return_if_fail (entry != NULL);
 
   if (!gst_structure_get_uint (strct, "event_type", &event_type))
     {
