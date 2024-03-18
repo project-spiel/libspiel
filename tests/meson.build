@@ -1,12 +1,14 @@
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
+speech_provider_gir = speechprovider_proj.get_variable('speech_provider_gir')
+
+speechprovider_libdir = meson.project_build_root() / 'subprojects' / 'libspeechprovider' / 'libspeechprovider'
+
 test_env = environment()
 test_env.prepend('GI_TYPELIB_PATH',
-  join_paths(meson.project_build_root(), 'libspiel'),
-  join_paths(meson.project_build_root(), 'libspeechprovider'), separator: ':')
+  join_paths(meson.project_build_root(), 'libspiel'), speechprovider_libdir, separator: ':')
 test_env.prepend('LD_LIBRARY_PATH',
-  join_paths(meson.project_build_root(), 'libspiel'),
-  join_paths(meson.project_build_root(), 'libspeechprovider'), separator: ':')
+  join_paths(meson.project_build_root(), 'libspiel'), speechprovider_libdir, separator: ':')
 test_env.set('G_DEBUG', 'fatal-warnings')
 test_env.set('TEST_SERVICE_DIR', service_dir)
 test_env.set('TEST_DISCARDED_SERVICE_DIR', join_paths(meson.current_build_dir(), 'discarded_services'))
@@ -25,8 +27,7 @@ tests = ['test_speak.py',
          'test_settings.py',
          'test_voice_selection.py',
          'test_errors.py',
-         'test_audio.py',
-         'test_provider_lib.py']
+         'test_audio.py']
 
 newer_dbus = dependency('dbus-1', version : '>=1.14.4', required : false)
 if newer_dbus.found()
@@ -66,6 +67,7 @@ if dbus_run_session.found() and python.found()
       ],
       env : test_env,
       protocol : 'tap',
+      depends: [speech_provider_gir, spiel_gir, spiel_schema],
       is_parallel : test_name != 'test_provider.py'
     )
   endforeach

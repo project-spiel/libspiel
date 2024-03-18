@@ -37,5 +37,5 @@ base_url = "https://github.com/eeejay/libspiel/blob/main/"
 
 [extra]
 urlmap_file = "urlmap.js"
-content_files = ["overview.md", "generated-org.freedesktop.Speech.Provider.md"]
+content_files = ["overview.md"]
 content_images = ["spiel-logo.svg"]

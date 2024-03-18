@@ -1,6 +1,5 @@
 config = configuration_data()
-config.set('provider_iface', join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'))
-# config.set('python_path', py.full_path())
+config.set('provider_iface', iface_xml.full_path())
 
 configure_file(
   input: 'mock_speech_provider.py.in',

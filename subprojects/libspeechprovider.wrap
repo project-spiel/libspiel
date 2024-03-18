@@ -1,0 +1,8 @@
+[wrap-git]
+directory=libspeechprovider
+url=https://github.com/project-spiel/libspeechprovider.git
+revision=test
+depth=1
+
+[provide]
+dependency_names = speech-provider-1.0

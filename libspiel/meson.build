@@ -2,7 +2,7 @@ gnome = import('gnome')
 
 spiel_iface_sources = gnome.gdbus_codegen(
     'spiel-provider-proxy',
-    join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
+    iface_xml,
     interface_prefix: 'org.freedesktop.Speech.',
     namespace: 'Spiel',
     annotations : [
@@ -13,18 +13,12 @@ spiel_iface_sources = gnome.gdbus_codegen(
 python_module = import('python')
 python = python_module.find_installation(
   'python3', required : true)
-gen_enums = files(join_paths(meson.project_source_root(), 'interface', 'generate_enums.py'))
-spiel_dbus_enums_h = custom_target(
-    input: join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
-    output: 'spiel-dbus-enums.h',
-    command: [python, gen_enums, 'spiel', '@INPUT@', '@OUTPUT@'],
-    install: true,
-    install_dir: join_paths(get_option('includedir'), 'spiel')
-)
-spiel_dbus_enums_c = custom_target(
-    input: join_paths(meson.project_source_root(), 'interface', 'org.freedesktop.Speech.Provider.xml'),
-    output: 'spiel-dbus-enums.c',
-    command: [python, gen_enums, 'spiel', '@INPUT@', '@OUTPUT@'],
+generate_enums = speechprovider_proj.get_variable('generate_enums')
+
+spiel_dbus_enums_ch = custom_target(
+    input: iface_xml,
+    output: ['spiel-dbus-enums.c', 'spiel-dbus-enums.h'],
+    command: [python, generate_enums, 'spiel', iface_xml.full_path(), '@OUTPUT@'],
     install: true,
     install_dir: join_paths(get_option('includedir'), 'spiel')
 )
@@ -43,7 +37,7 @@ spiel_sources = [
   'spiel-collect-providers.c',
   'spiel-provider-src.c',
   spiel_iface_sources,
-  spiel_dbus_enums_c,
+  spiel_dbus_enums_ch[0],
 ]
 
 spiel_public_headers = [
@@ -80,8 +74,7 @@ spiel_version_h = configure_file(
 
 spiel_lib_generated = [
   spiel_version_h,
-  spiel_dbus_enums_h,
-  spiel_dbus_enums_c,
+  spiel_dbus_enums_ch,
 ]
 
 spiel_deps = [
@@ -89,13 +82,12 @@ spiel_deps = [
   dependency('gio-unix-2.0', version: glib_version),
   dependency('gstreamer-1.0', version: gst_version),
   dependency('gstreamer-audio-1.0', version: gst_version),
-  speech_provider_lib_dep
+  dependency('speech-provider-1.0', version: speechprovider_version),
 ]
 
 spiel_lib = shared_library('spiel-' + api_version,
   spiel_sources,
   dependencies: spiel_deps,
-  include_directories: include_directories('../interface'),
   install: true,
 )
 
@@ -120,7 +112,7 @@ pkg.generate(
 )
 
 spiel_gir = gnome.generate_gir(spiel_lib,
-            sources: spiel_public_headers + spiel_public_sources + spiel_dbus_enums_h,
+            sources: spiel_public_headers + spiel_public_sources + spiel_dbus_enums_ch[1],
             nsversion: api_version,
             namespace: 'Spiel',
             header: 'spiel/spiel.h',
@@ -136,7 +128,7 @@ install_data('org.monotonous.libspiel.gschema.xml',
   install_dir: schemas_dir
 )
 
-gnome.compile_schemas(build_by_default: true, depend_files: 'org.monotonous.libspiel.gschema.xml')
+spiel_schema = gnome.compile_schemas(build_by_default: true, depend_files: 'org.monotonous.libspiel.gschema.xml')
 
 gnome.post_install(glib_compile_schemas: true)
 
