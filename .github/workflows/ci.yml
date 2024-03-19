@@ -35,8 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     container: ubuntu:lunar
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Update repos
@@ -45,6 +43,8 @@ jobs:
         run: apt install -y git meson libgirepository1.0-dev dbus libdbus-glib-1-dev python3-dasbus python3-tap python3-gi libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
       - name: Set up permissions
         run: chown ubuntu:ubuntu .
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Setup Spiel
         run: su ubuntu -c "meson setup build -Ddocs=false"
       - name: Compile Spiel
