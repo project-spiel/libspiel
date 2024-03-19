@@ -51,5 +51,5 @@ jobs:
       - uses: actions/upload-artifact@v1
         if: failure()
         with:
-          name: Meson_Testlog
-          path: build/meson-logs/testlog.txt
+          name: Meson_Log
+          path: build/meson-logs
