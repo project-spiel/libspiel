@@ -38,12 +38,10 @@ jobs:
         run: apt update
       - name: Install dependencies
         run: apt install -y git meson libgirepository1.0-dev dbus libdbus-glib-1-dev python3-dasbus python3-tap python3-gi libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
-      - name: Configure git
-        run: git config --system --add safe.directory '*'
       - name: Set up permissions
-        run: chown ubuntu:ubuntu .
+        run: chown -R ubuntu:ubuntu .
       - name: Setup Spiel
-        run: su ubuntu -c "meson setup build -Ddocs=false"
+        run: su ubuntu -c "meson setup build -Ddocs=false -Dlibspeechprovider:docs=false"
       - name: Compile Spiel
         run: su ubuntu -c "meson compile -C build"
       - name: Test Spiel
