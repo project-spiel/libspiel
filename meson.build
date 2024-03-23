@@ -1,5 +1,5 @@
 project('spiel', 'c',
-          version: '1.0.0',
+          version: '1.0.1',
     meson_version: '>= 0.64.0',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
@@ -82,7 +82,7 @@ add_project_arguments(project_c_args, language: 'c')
 # Synced dependency versions
 glib_version = '>= 2.76'
 gst_version = '>= 1.0'
-speechprovider_version = '>= 1.0.0'
+speechprovider_version = '>= 1.0.1'
 
 speechprovider_proj = subproject('libspeechprovider')
 iface_xml = speechprovider_proj.get_variable('iface_xml')

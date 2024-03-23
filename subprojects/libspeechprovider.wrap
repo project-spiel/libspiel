@@ -1,7 +1,7 @@
 [wrap-git]
 directory=libspeechprovider
 url=https://github.com/project-spiel/libspeechprovider.git
-revision=main
+revision=SPEECHPROVIDER_1_0_1
 depth=1
 
 [provide]
