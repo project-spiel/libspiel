@@ -161,7 +161,7 @@ _queue_entry_destroy (gpointer data)
 }
 
 /**
- * spiel_speaker_new:
+ * spiel_speaker_new: (finish-func spiel_speaker_new_finish)
  * @cancellable: (nullable): optional `GCancellable`.
  * @callback: A #GAsyncReadyCallback to call when the request is satisfied.
  * @user_data: User data to pass to @callback.
