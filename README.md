@@ -45,4 +45,4 @@ meson compile -C build
 
 ## Documentation
 
-There is an [auto-generated API reference](https://project-spiel.github.io/libspiel/).
+There is an [auto-generated API reference](https://project-spiel.org/libspiel/).
