@@ -177,5 +177,6 @@ class TestSpeak(BaseSpielTest):
         lang = self.mock_service.GetLastSpeakArguments()[6]
         self.assertEqual(lang, "hy")
 
+
 if __name__ == "__main__":
     test_main()
