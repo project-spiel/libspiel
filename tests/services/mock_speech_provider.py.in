@@ -180,6 +180,7 @@ class SomeObject(PropertiesInterface):
       <arg direction="out" type="d" />
       <arg direction="out" type="d" />
       <arg direction="out" type="b" />
+      <arg direction="out" type="s" />
     </method>
     <method name="FlushTasks">
     </method>
@@ -200,7 +201,7 @@ class SomeObject(PropertiesInterface):
 </node>"""
 
     def __init__(self):
-        self._last_speak_args = [0, "", "", 0, 0, 0]
+        self._last_speak_args = [0, "", "", 0, 0, 0, ""]
         self._infinite = False
         self._stream = None
         self._voices = VOICES[NAME][:]
@@ -210,7 +211,7 @@ class SomeObject(PropertiesInterface):
         if utterance == "die":
             # special utterance text that makes us die
             self.byebye()
-        self._last_speak_args = (fd, utterance, voice_id, pitch, rate, is_ssml)
+        self._last_speak_args = (fd, utterance, voice_id, pitch, rate, is_ssml, language)
         voice = dict([[v["identifier"], v] for v in self._voices])[voice_id]
         output_format = voice["output_format"]
         synthstream_cls = RawSynthStream

@@ -159,16 +159,23 @@ class TestSpeak(BaseSpielTest):
 
         utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
-        is_ssml = self.mock_service.GetLastSpeakArguments()[-1]
+        is_ssml = self.mock_service.GetLastSpeakArguments()[5]
         self.assertFalse(is_ssml)
 
         utterance = Spiel.Utterance(
             text="hello world, how are you?", language="hy", is_ssml=True
         )
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
-        is_ssml = self.mock_service.GetLastSpeakArguments()[-1]
+        is_ssml = self.mock_service.GetLastSpeakArguments()[5]
         self.assertTrue(is_ssml)
 
+    def test_provide_language(self):
+        speaker = Spiel.Speaker.new_sync(None)
+
+        utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
+        self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
+        lang = self.mock_service.GetLastSpeakArguments()[6]
+        self.assertEqual(lang, "hy")
 
 if __name__ == "__main__":
     test_main()

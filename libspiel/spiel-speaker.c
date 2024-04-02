@@ -733,6 +733,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   int mypipe[2];
   int fd;
   const char *text = spiel_utterance_get_text (utterance);
+  const char *lang = spiel_utterance_get_language (utterance);
   const char *output_format = NULL;
   const char *stream_type = NULL;
   gboolean is_ssml = FALSE;
@@ -771,12 +772,11 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   call_synth_data->self = self;
   call_synth_data->utterance = g_object_ref (utterance);
 
-  // XXX: Send utterance language
   spiel_provider_proxy_call_synthesize (
       provider, g_variant_new_handle (fd), text,
-      voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml, "",
-      G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL, _provider_call_synthesize_done,
-      call_synth_data);
+      voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
+      lang ? lang : "", G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL,
+      _provider_call_synthesize_done, call_synth_data);
 
   g_object_unref (fd_list);
 
