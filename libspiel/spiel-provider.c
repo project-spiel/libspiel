@@ -34,18 +34,14 @@
 struct _SpielProvider
 {
   GObject parent_instance;
-};
-
-typedef struct
-{
   SpielProviderProxy *provider_proxy;
   gboolean is_activatable;
   GListStore *voices;
   GHashTable *voices_hashset;
   gulong voices_changed_handler_id;
-} SpielProviderPrivate;
+};
 
-G_DEFINE_FINAL_TYPE_WITH_PRIVATE (SpielProvider, spiel_provider, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (SpielProvider, spiel_provider, G_TYPE_OBJECT)
 
 enum
 {
@@ -88,17 +84,15 @@ void
 spiel_provider_set_proxy (SpielProvider *self,
                           SpielProviderProxy *provider_proxy)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_if_fail (SPIEL_IS_PROVIDER (self));
-  g_assert (!priv->provider_proxy);
+  g_assert (!self->provider_proxy);
 
-  priv->provider_proxy = g_object_ref (provider_proxy);
+  self->provider_proxy = g_object_ref (provider_proxy);
 
   _spiel_provider_update_voices (self);
 
-  priv->voices_changed_handler_id =
-      g_signal_connect (priv->provider_proxy, "notify::voices",
+  self->voices_changed_handler_id =
+      g_signal_connect (self->provider_proxy, "notify::voices",
                         G_CALLBACK (handle_voices_changed), self);
 }
 
@@ -113,11 +107,9 @@ spiel_provider_set_proxy (SpielProvider *self,
 SpielProviderProxy *
 spiel_provider_get_proxy (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
 
-  return priv->provider_proxy;
+  return self->provider_proxy;
 }
 
 /*< private >
@@ -132,18 +124,17 @@ spiel_provider_get_proxy (SpielProvider *self)
 SpielVoice *
 spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
   guint voices_count = 0;
 
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
   g_return_val_if_fail (voice_id != NULL, NULL);
 
-  voices_count = g_list_model_get_n_items (G_LIST_MODEL (priv->voices));
+  voices_count = g_list_model_get_n_items (G_LIST_MODEL (self->voices));
 
   for (guint i = 0; i < voices_count; i++)
     {
       g_autoptr (SpielVoice) voice = SPIEL_VOICE (
-          g_list_model_get_object (G_LIST_MODEL (priv->voices), i));
+          g_list_model_get_object (G_LIST_MODEL (self->voices), i));
       if (g_str_equal (spiel_voice_get_identifier (voice), voice_id))
         {
           return g_steal_pointer (&voice);
@@ -165,12 +156,10 @@ spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
 const char *
 spiel_provider_get_name (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
-  g_return_val_if_fail (priv->provider_proxy, NULL);
+  g_return_val_if_fail (self->provider_proxy, NULL);
 
-  return spiel_provider_proxy_get_name (priv->provider_proxy);
+  return spiel_provider_proxy_get_name (self->provider_proxy);
 }
 
 /**
@@ -186,12 +175,10 @@ spiel_provider_get_name (SpielProvider *self)
 const char *
 spiel_provider_get_well_known_name (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
-  g_return_val_if_fail (priv->provider_proxy, NULL);
+  g_return_val_if_fail (self->provider_proxy, NULL);
 
-  return g_dbus_proxy_get_name (G_DBUS_PROXY (priv->provider_proxy));
+  return g_dbus_proxy_get_name (G_DBUS_PROXY (self->provider_proxy));
 }
 
 /**
@@ -207,11 +194,9 @@ spiel_provider_get_well_known_name (SpielProvider *self)
 GListModel *
 spiel_provider_get_voices (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
 
-  return G_LIST_MODEL (priv->voices);
+  return G_LIST_MODEL (self->voices);
 }
 
 /*< private >
@@ -224,11 +209,9 @@ spiel_provider_get_voices (SpielProvider *self)
 void
 spiel_provider_set_is_activatable (SpielProvider *self, gboolean is_activatable)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_if_fail (SPIEL_IS_PROVIDER (self));
 
-  priv->is_activatable = is_activatable;
+  self->is_activatable = is_activatable;
 }
 
 /*< private >
@@ -242,19 +225,16 @@ spiel_provider_set_is_activatable (SpielProvider *self, gboolean is_activatable)
 gboolean
 spiel_provider_get_is_activatable (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), FALSE);
 
-  return priv->is_activatable;
+  return self->is_activatable;
 }
 
 static GSList *
 _create_provider_voices (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
   GSList *voices_slist = NULL;
-  GVariant *voices = spiel_provider_proxy_get_voices (priv->provider_proxy);
+  GVariant *voices = spiel_provider_proxy_get_voices (self->provider_proxy);
   gsize voices_count = voices ? g_variant_n_children (voices) : 0;
 
   for (gsize i = 0; i < voices_count; i++)
@@ -287,14 +267,13 @@ _create_provider_voices (SpielProvider *self)
 static void
 _spiel_provider_update_voices (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
   GSList *new_voices = NULL;
   g_autoptr (GHashTable) new_voices_hashset = NULL;
 
-  g_return_if_fail (priv->provider_proxy);
+  g_return_if_fail (self->provider_proxy);
 
   new_voices = _create_provider_voices (self);
-  if (g_hash_table_size (priv->voices_hashset) > 0)
+  if (g_hash_table_size (self->voices_hashset) > 0)
     {
       // We are adding voices to an already populated provider_proxy, store
       // new voices in a hashset for easy purge of ones that were removed.
@@ -307,12 +286,12 @@ _spiel_provider_update_voices (SpielProvider *self)
       for (GSList *item = new_voices; item; item = item->next)
         {
           SpielVoice *voice = item->data;
-          if (!g_hash_table_contains (priv->voices_hashset, voice))
+          if (!g_hash_table_contains (self->voices_hashset, voice))
             {
-              g_hash_table_insert (priv->voices_hashset, g_object_ref (voice),
+              g_hash_table_insert (self->voices_hashset, g_object_ref (voice),
                                    NULL);
               g_list_store_insert_sorted (
-                  priv->voices, g_object_ref (voice),
+                  self->voices, g_object_ref (voice),
                   (GCompareDataFunc) spiel_voice_compare, NULL);
             }
           if (new_voices_hashset)
@@ -326,16 +305,16 @@ _spiel_provider_update_voices (SpielProvider *self)
     {
       GHashTableIter voices_iter;
       SpielVoice *old_voice;
-      g_hash_table_iter_init (&voices_iter, priv->voices_hashset);
+      g_hash_table_iter_init (&voices_iter, self->voices_hashset);
       while (
           g_hash_table_iter_next (&voices_iter, (gpointer *) &old_voice, NULL))
         {
           if (!g_hash_table_contains (new_voices_hashset, old_voice))
             {
               guint position = 0;
-              if (g_list_store_find (priv->voices, old_voice, &position))
+              if (g_list_store_find (self->voices, old_voice, &position))
                 {
-                  g_list_store_remove (priv->voices, position);
+                  g_list_store_remove (self->voices, position);
                 }
               g_hash_table_iter_remove (&voices_iter);
             }
@@ -351,11 +330,10 @@ handle_voices_changed (SpielProviderProxy *provider_proxy,
                        gpointer user_data)
 {
   SpielProvider *self = user_data;
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
   g_autofree char *name_owner =
-      g_dbus_proxy_get_name_owner (G_DBUS_PROXY (priv->provider_proxy));
+      g_dbus_proxy_get_name_owner (G_DBUS_PROXY (self->provider_proxy));
 
-  if (name_owner == NULL && priv->is_activatable)
+  if (name_owner == NULL && self->is_activatable)
     {
       // Got a change notification because an activatable service left the bus.
       // Its voices are still valid, though.
@@ -395,13 +373,12 @@ static void
 spiel_provider_finalize (GObject *object)
 {
   SpielProvider *self = (SpielProvider *) object;
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
 
-  g_signal_handler_disconnect (priv->provider_proxy,
-                               priv->voices_changed_handler_id);
+  g_signal_handler_disconnect (self->provider_proxy,
+                               self->voices_changed_handler_id);
 
-  g_clear_object (&(priv->provider_proxy));
-  g_clear_object (&(priv->voices));
+  g_clear_object (&(self->provider_proxy));
+  g_clear_object (&(self->voices));
 
   G_OBJECT_CLASS (spiel_provider_parent_class)->finalize (object);
 }
@@ -477,10 +454,9 @@ spiel_provider_class_init (SpielProviderClass *klass)
 static void
 spiel_provider_init (SpielProvider *self)
 {
-  SpielProviderPrivate *priv = spiel_provider_get_instance_private (self);
-  priv->provider_proxy = NULL;
-  priv->is_activatable = FALSE;
-  priv->voices = g_list_store_new (SPIEL_TYPE_VOICE);
-  priv->voices_hashset = g_hash_table_new ((GHashFunc) spiel_voice_hash,
+  self->provider_proxy = NULL;
+  self->is_activatable = FALSE;
+  self->voices = g_list_store_new (SPIEL_TYPE_VOICE);
+  self->voices_hashset = g_hash_table_new ((GHashFunc) spiel_voice_hash,
                                            (GCompareFunc) spiel_voice_equal);
 }
