@@ -1,7 +1,5 @@
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
-speech_provider_gir = speechprovider_proj.get_variable('speech_provider_gir')
-
 speechprovider_libdir = meson.project_build_root() / 'subprojects' / 'libspeechprovider' / 'libspeechprovider'
 
 test_env = environment()
@@ -55,7 +53,9 @@ test_simultaneous_init = executable(
   dependencies: test_deps
 )
 
-if dbus_run_session.found() and python.found()
+if dbus_run_session.found() and python.found() and get_option('introspection')
+  speech_provider_gir = speechprovider_proj.get_variable('speech_provider_gir')
+
   foreach test_name : tests
     test(
       test_name, dbus_run_session,

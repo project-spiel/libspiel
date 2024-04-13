@@ -97,7 +97,7 @@ if get_option('utils')
   subdir('utils')
 endif
 
-if get_option('docs')
+if get_option('docs') and get_option('introspection')
   subdir('doc')
 endif
 
