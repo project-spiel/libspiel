@@ -432,9 +432,10 @@ spiel_registry_finalize (GObject *object)
       g_clear_object (&self->connection);
     }
 
-  G_OBJECT_CLASS (spiel_registry_parent_class)->finalize (object);
   g_assert (object == G_OBJECT (sRegistry));
   sRegistry = NULL;
+
+  G_OBJECT_CLASS (spiel_registry_parent_class)->finalize (object);
 }
 
 static gboolean
