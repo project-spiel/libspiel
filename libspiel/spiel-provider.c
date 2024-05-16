@@ -291,8 +291,8 @@ _spiel_provider_update_voices (SpielProvider *self)
               g_hash_table_insert (self->voices_hashset, g_object_ref (voice),
                                    NULL);
               g_list_store_insert_sorted (
-                  self->voices, g_object_ref (voice),
-                  (GCompareDataFunc) spiel_voice_compare, NULL);
+                  self->voices, voice, (GCompareDataFunc) spiel_voice_compare,
+                  NULL);
             }
           if (new_voices_hashset)
             {
