@@ -119,10 +119,7 @@ _queue_entry_destroy (gpointer data)
   if (entry)
     {
       g_clear_object (&entry->utterance);
-      if (entry->error)
-        {
-          g_error_free (entry->error);
-        }
+      g_clear_error (&entry->error);
 
       if (entry->src)
         {
@@ -135,15 +132,8 @@ _queue_entry_destroy (gpointer data)
           g_clear_object (&entry->src);
         }
 
-      if (entry->parse)
-        {
-          g_clear_object (&entry->parse);
-        }
-
-      if (entry->volume)
-        {
-          g_clear_object (&entry->volume);
-        }
+      g_clear_object (&entry->parse);
+      g_clear_object (&entry->volume);
 
       if (entry->deferred_messages)
         {
