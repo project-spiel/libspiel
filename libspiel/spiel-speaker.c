@@ -75,7 +75,7 @@ G_DEFINE_FINAL_TYPE_WITH_CODE (
 
 enum
 {
-  UTTURANCE_STARTED,
+  UTTERANCE_STARTED,
   UTTERANCE_FINISHED,
   UTTERANCE_CANCELED,
   UTTERANCE_ERROR,
@@ -392,7 +392,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    * Since: 1.0
    */
-  speaker_signals[UTTURANCE_STARTED] = g_signal_new (
+  speaker_signals[UTTERANCE_STARTED] = g_signal_new (
       "utterance-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
       NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
@@ -988,7 +988,7 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       if (entry && !entry->started)
         {
           entry->started = TRUE;
-          g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0,
+          g_signal_emit (self, speaker_signals[UTTERANCE_STARTED], 0,
                          entry->utterance);
           if (entry->deferred_messages)
             {
