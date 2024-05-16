@@ -269,9 +269,9 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
   GTask *task = user_data;
   GCancellable *cancellable = g_task_get_task_data (task);
   SpielRegistry *self = g_task_get_source_object (task);
-
   GError *error = NULL;
-  GDBusConnection *bus = g_bus_get_finish (result, &error);
+
+  self->connection = g_bus_get_finish (result, &error);
   if (error != NULL)
     {
       g_task_return_error (task, error);
@@ -279,9 +279,8 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
       return;
     }
 
-  self->connection = g_object_ref (bus);
-
-  spiel_collect_providers (bus, cancellable, _on_providers_collected, task);
+  spiel_collect_providers (self->connection, cancellable,
+                           _on_providers_collected, task);
 }
 
 void
