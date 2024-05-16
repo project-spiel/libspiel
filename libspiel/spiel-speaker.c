@@ -824,7 +824,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   if (!self->queue->next)
     {
-      g_object_notify (G_OBJECT (self), "speaking");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SPEAKING]);
       _speak_current_entry (self);
     }
 }
@@ -897,7 +897,7 @@ spiel_speaker_pause (SpielSpeaker *self)
   if (!entry)
     {
       self->paused = TRUE;
-      g_object_notify (G_OBJECT (self), "paused");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
       return;
     }
 
@@ -934,7 +934,7 @@ spiel_speaker_resume (SpielSpeaker *self)
   if (!entry)
     {
       self->paused = FALSE;
-      g_object_notify (G_OBJECT (self), "paused");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
       return;
     }
 
@@ -982,7 +982,7 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       if (self->paused)
         {
           self->paused = FALSE;
-          g_object_notify (G_OBJECT (self), "paused");
+          g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
         }
 
       if (entry && !entry->started)
@@ -1004,7 +1004,7 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       element == GST_OBJECT (self->pipeline))
     {
       self->paused = TRUE;
-      g_object_notify (G_OBJECT (self), "paused");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
     }
 
   if (new_state == GST_STATE_NULL && pending_state == GST_STATE_VOID_PENDING &&
@@ -1218,6 +1218,6 @@ _advance_to_next_entry_or_finish (SpielSpeaker *self, gboolean canceled)
     }
   else
     {
-      g_object_notify (G_OBJECT (self), "speaking");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SPEAKING]);
     }
 }
