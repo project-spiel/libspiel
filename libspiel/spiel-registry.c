@@ -552,7 +552,6 @@ _get_fallback_voice (SpielRegistry *self, const char *language)
     }
 
   return g_list_model_get_item ((GListModel *) self->voices, 0);
-  ;
 }
 
 SpielVoice *
