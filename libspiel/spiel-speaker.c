@@ -697,7 +697,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   _QueueEntry *entry = g_slice_new0 (_QueueEntry);
   _CallSynthData *call_synth_data = g_slice_new0 (_CallSynthData);
   SpielProviderProxy *provider = NULL;
-  GUnixFDList *fd_list = g_unix_fd_list_new ();
+  g_autoptr (GUnixFDList) fd_list = NULL;
   int mypipe[2];
   int fd;
   const char *text = spiel_utterance_get_text (utterance);
@@ -708,6 +708,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
   gdouble pitch, rate, volume;
   g_autoptr (SpielVoice) voice = NULL;
   GstStructure *gst_struct;
+  g_autoptr (GError) error = NULL;
 
   g_return_if_fail (SPIEL_IS_SPEAKER (self));
   g_return_if_fail (SPIEL_IS_UTTERANCE (utterance));
@@ -728,25 +729,36 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
       g_object_ref (voice);
     }
 
-  provider = spiel_registry_get_provider_for_voice (self->registry, voice);
+  if (!g_unix_open_pipe (mypipe, 0, &error))
+    {
+      g_signal_emit (G_OBJECT (self), speaker_signals[UTTERANCE_ERROR], 0,
+                     error);
+      return;
+    }
 
-  // XXX: Emit error on failure
-  g_unix_open_pipe (mypipe, 0, NULL);
-  fd = g_unix_fd_list_append (fd_list, mypipe[1], NULL);
+  fd_list = g_unix_fd_list_new ();
+  fd = g_unix_fd_list_append (fd_list, mypipe[1], &error);
+  if (close (mypipe[1]) == -1)
+    {
+      int errsv = errno;
 
-  // XXX: Emit error on failure
-  close (mypipe[1]);
+      g_set_error_literal (&error, G_FILE_ERROR,
+                           g_file_error_from_errno (errsv), g_strerror (errsv));
+      g_signal_emit (G_OBJECT (self), speaker_signals[UTTERANCE_ERROR], 0,
+                     error);
+      close (mypipe[0]);
+      return;
+    }
 
   call_synth_data->self = self;
   call_synth_data->utterance = g_object_ref (utterance);
 
+  provider = spiel_registry_get_provider_for_voice (self->registry, voice);
   spiel_provider_proxy_call_synthesize (
       provider, g_variant_new_handle (fd), text,
       voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
       lang ? lang : "", G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL,
       _provider_call_synthesize_done, call_synth_data);
-
-  g_object_unref (fd_list);
 
   entry->utterance = g_object_ref (utterance);
 
