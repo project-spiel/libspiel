@@ -406,6 +406,7 @@ spiel_voice_class_init (SpielVoiceClass *klass)
    * A human readable name for the voice. Not guaranteed to be unique.
    * May, or may not, be localized by the speech provider.
    *
+   * Since: 1.0
    */
   properties[PROP_NAME] = g_param_spec_string (
       "name", NULL, NULL, NULL /* default value */,
@@ -418,6 +419,7 @@ spiel_voice_class_init (SpielVoiceClass *klass)
    * in the scope of the provider (ie. two providers can use the same
    * identifier).
    *
+   * Since: 1.0
    */
   properties[PROP_IDENTIFIER] = g_param_spec_string (
       "identifier", NULL, NULL, NULL /* default value */,
@@ -428,6 +430,7 @@ spiel_voice_class_init (SpielVoiceClass *klass)
    *
    * A list of supported languages encoded as BCP 47 tags.
    *
+   * Since: 1.0
    */
   properties[PROP_LANGUAGES] = g_param_spec_boxed (
       "languages", NULL, NULL, G_TYPE_STRV,
@@ -438,6 +441,7 @@ spiel_voice_class_init (SpielVoiceClass *klass)
    *
    * The speech provider that implements this voice.
    *
+   * Since: 1.0
    */
   properties[PROP_PROVIDER] = g_param_spec_object (
       "provider", NULL, NULL, SPIEL_TYPE_PROVIDER,
@@ -448,6 +452,7 @@ spiel_voice_class_init (SpielVoiceClass *klass)
    *
    * A bitfield of supported features.
    *
+   * Since: 1.0
    */
   properties[PROP_FEATURES] = g_param_spec_flags (
       "features", NULL, NULL, SPIEL_TYPE_VOICE_FEATURE,
