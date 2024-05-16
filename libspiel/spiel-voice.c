@@ -443,6 +443,12 @@ spiel_voice_class_init (SpielVoiceClass *klass)
       "provider", NULL, NULL, SPIEL_TYPE_PROVIDER,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  /**
+   * SpielVoice:features: (getter get_features)
+   *
+   * A bitfield of supported features.
+   *
+   */
   properties[PROP_FEATURES] = g_param_spec_flags (
       "features", NULL, NULL, SPIEL_TYPE_VOICE_FEATURE,
       SPIEL_VOICE_FEATURE_NONE,
