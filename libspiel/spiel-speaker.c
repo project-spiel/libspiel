@@ -522,15 +522,13 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
   GstElement *convert = NULL;
   GstElement *sink = NULL;
 
+  g_assert (error == NULL || *error == NULL);
+
   convert = gst_element_factory_make ("audioconvert", "convert");
   if (convert == NULL)
     {
-      if (error != NULL && *error == NULL)
-        {
-          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                               "Failed to create 'convert' element");
-        }
-
+      g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                           "Failed to create 'convert' element");
       return;
     }
 
@@ -538,12 +536,9 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
       g_getenv ("SPIEL_TEST") ? "fakesink" : "autoaudiosink", "sink");
   if (sink == NULL)
     {
-      if (error != NULL && *error == NULL)
-        {
-          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                               "Failed to create 'autoaudiosink' element; "
-                               "ensure GStreamer Good Plug-ins are installed");
-        }
+      g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                           "Failed to create 'autoaudiosink' element; "
+                           "ensure GStreamer Good Plug-ins are installed");
 
       gst_object_unref (gst_object_ref_sink (convert));
       return;
@@ -554,11 +549,8 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
   gst_bin_add_many (GST_BIN (self->pipeline), convert, sink, NULL);
   if (!gst_element_link (convert, sink))
     {
-      if (error != NULL && *error == NULL)
-        {
-          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                               "Failed to link 'convert' and 'sink' elements");
-        }
+      g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                           "Failed to link 'convert' and 'sink' elements");
 
       gst_object_unref (gst_object_ref_sink (convert));
       gst_object_unref (gst_object_ref_sink (sink));
