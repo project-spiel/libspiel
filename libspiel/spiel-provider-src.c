@@ -114,7 +114,8 @@ static void
 spiel_provider_src_dispose (GObject *obj)
 {
   SpielProviderSrc *src = SPIEL_PROVIDER_SRC (obj);
-  g_object_unref (src->reader);
+
+  g_clear_object (&src->reader);
 
   G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
