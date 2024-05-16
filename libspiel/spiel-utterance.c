@@ -255,10 +255,10 @@ spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
   g_return_if_fail (SPIEL_IS_UTTERANCE (self));
   g_return_if_fail (voice == NULL || SPIEL_IS_VOICE (voice));
 
-  g_clear_object (&(self->voice));
-
-  self->voice = voice ? g_object_ref (voice) : NULL;
-  g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOICE]);
+  if (g_set_object (&self->voice, voice))
+    {
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOICE]);
+    }
 }
 
 /**
