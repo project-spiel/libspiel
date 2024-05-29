@@ -342,7 +342,7 @@ spiel_collect_providers_sync (GDBusConnection *connection,
     {
       g_autoptr (GVariant) real_ret = NULL;
       GVariantIter iter;
-      GVariant *service = NULL;
+      const char *service_name = NULL;
       g_autoptr (GVariant) ret = g_dbus_connection_call_sync (
           connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
           "org.freedesktop.DBus", *method, NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
@@ -357,13 +357,12 @@ spiel_collect_providers_sync (GDBusConnection *connection,
       real_ret = g_variant_get_child_value (ret, 0);
 
       g_variant_iter_init (&iter, real_ret);
-      while ((service = g_variant_iter_next_value (&iter)) &&
+      while (g_variant_iter_loop (&iter, "s", &service_name) &&
              !g_cancellable_is_cancelled (cancellable))
         {
-          const char *service_name = g_variant_get_string (service, NULL);
           g_autofree char *obj_path = NULL;
           SpielProvider *provider = NULL;
-          SpielProviderProxy *provider_proxy = NULL;
+          g_autoptr (SpielProviderProxy) provider_proxy = NULL;
           g_autoptr (GError) err = NULL;
 
           if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX) ||
@@ -387,7 +386,6 @@ spiel_collect_providers_sync (GDBusConnection *connection,
           spiel_provider_set_is_activatable (
               provider, g_str_equal (*method, "ListActivatableNames"));
           g_hash_table_insert (providers, g_strdup (service_name), provider);
-          g_variant_unref (service);
         }
     }
 

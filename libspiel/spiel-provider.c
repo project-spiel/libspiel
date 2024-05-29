@@ -38,7 +38,6 @@ struct _SpielProvider
   gboolean is_activatable;
   GListStore *voices;
   GHashTable *voices_hashset;
-  gulong voices_changed_handler_id;
 };
 
 G_DEFINE_FINAL_TYPE (SpielProvider, spiel_provider, G_TYPE_OBJECT)
@@ -87,13 +86,19 @@ spiel_provider_set_proxy (SpielProvider *self,
   g_return_if_fail (SPIEL_IS_PROVIDER (self));
   g_assert (!self->provider_proxy);
 
-  self->provider_proxy = g_object_ref (provider_proxy);
+  if (self->provider_proxy != NULL)
+    {
+      g_signal_handlers_disconnect_by_func (self->provider_proxy,
+                                            handle_voices_changed, self);
+      g_clear_object (&self->provider_proxy);
+    }
 
-  _spiel_provider_update_voices (self);
-
-  self->voices_changed_handler_id =
+  if (g_set_object (&self->provider_proxy, provider_proxy))
+    {
+      _spiel_provider_update_voices (self);
       g_signal_connect (self->provider_proxy, "notify::voices",
                         G_CALLBACK (handle_voices_changed), self);
+    }
 }
 
 /*< private >
@@ -291,8 +296,8 @@ _spiel_provider_update_voices (SpielProvider *self)
               g_hash_table_insert (self->voices_hashset, g_object_ref (voice),
                                    NULL);
               g_list_store_insert_sorted (
-                  self->voices, g_object_ref (voice),
-                  (GCompareDataFunc) spiel_voice_compare, NULL);
+                  self->voices, voice, (GCompareDataFunc) spiel_voice_compare,
+                  NULL);
             }
           if (new_voices_hashset)
             {
@@ -374,10 +379,13 @@ spiel_provider_finalize (GObject *object)
 {
   SpielProvider *self = (SpielProvider *) object;
 
-  g_signal_handler_disconnect (self->provider_proxy,
-                               self->voices_changed_handler_id);
+  if (self->provider_proxy != NULL)
+    {
+      g_signal_handlers_disconnect_by_func (self->provider_proxy,
+                                            handle_voices_changed, self);
+      g_clear_object (&self->provider_proxy);
+    }
 
-  g_clear_object (&(self->provider_proxy));
   g_clear_object (&(self->voices));
 
   G_OBJECT_CLASS (spiel_provider_parent_class)->finalize (object);
