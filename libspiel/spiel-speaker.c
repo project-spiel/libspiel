@@ -75,7 +75,7 @@ G_DEFINE_FINAL_TYPE_WITH_CODE (
 
 enum
 {
-  UTTURANCE_STARTED,
+  UTTERANCE_STARTED,
   UTTERANCE_FINISHED,
   UTTERANCE_CANCELED,
   UTTERANCE_ERROR,
@@ -119,10 +119,7 @@ _queue_entry_destroy (gpointer data)
   if (entry)
     {
       g_clear_object (&entry->utterance);
-      if (entry->error)
-        {
-          g_error_free (entry->error);
-        }
+      g_clear_error (&entry->error);
 
       if (entry->src)
         {
@@ -135,15 +132,8 @@ _queue_entry_destroy (gpointer data)
           g_clear_object (&entry->src);
         }
 
-      if (entry->parse)
-        {
-          g_clear_object (&entry->parse);
-        }
-
-      if (entry->volume)
-        {
-          g_clear_object (&entry->volume);
-        }
+      g_clear_object (&entry->parse);
+      g_clear_object (&entry->volume);
 
       if (entry->deferred_messages)
         {
@@ -392,7 +382,7 @@ spiel_speaker_class_init (SpielSpeakerClass *klass)
    *
    * Since: 1.0
    */
-  speaker_signals[UTTURANCE_STARTED] = g_signal_new (
+  speaker_signals[UTTERANCE_STARTED] = g_signal_new (
       "utterance-started", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST, 0,
       NULL, NULL, NULL, G_TYPE_NONE, 1, SPIEL_TYPE_UTTERANCE);
 
@@ -522,15 +512,13 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
   GstElement *convert = NULL;
   GstElement *sink = NULL;
 
+  g_assert (error == NULL || *error == NULL);
+
   convert = gst_element_factory_make ("audioconvert", "convert");
   if (convert == NULL)
     {
-      if (error != NULL && *error == NULL)
-        {
-          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                               "Failed to create 'convert' element");
-        }
-
+      g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                           "Failed to create 'convert' element");
       return;
     }
 
@@ -538,12 +526,9 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
       g_getenv ("SPIEL_TEST") ? "fakesink" : "autoaudiosink", "sink");
   if (sink == NULL)
     {
-      if (error != NULL && *error == NULL)
-        {
-          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                               "Failed to create 'autoaudiosink' element; "
-                               "ensure GStreamer Good Plug-ins are installed");
-        }
+      g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                           "Failed to create 'autoaudiosink' element; "
+                           "ensure GStreamer Good Plug-ins are installed");
 
       gst_object_unref (gst_object_ref_sink (convert));
       return;
@@ -554,11 +539,8 @@ _setup_pipeline (SpielSpeaker *self, GError **error)
   gst_bin_add_many (GST_BIN (self->pipeline), convert, sink, NULL);
   if (!gst_element_link (convert, sink))
     {
-      if (error != NULL && *error == NULL)
-        {
-          g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                               "Failed to link 'convert' and 'sink' elements");
-        }
+      g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+                           "Failed to link 'convert' and 'sink' elements");
 
       gst_object_unref (gst_object_ref_sink (convert));
       gst_object_unref (gst_object_ref_sink (sink));
@@ -824,7 +806,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 
   if (!self->queue->next)
     {
-      g_object_notify (G_OBJECT (self), "speaking");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SPEAKING]);
       _speak_current_entry (self);
     }
 }
@@ -897,7 +879,7 @@ spiel_speaker_pause (SpielSpeaker *self)
   if (!entry)
     {
       self->paused = TRUE;
-      g_object_notify (G_OBJECT (self), "paused");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
       return;
     }
 
@@ -934,7 +916,7 @@ spiel_speaker_resume (SpielSpeaker *self)
   if (!entry)
     {
       self->paused = FALSE;
-      g_object_notify (G_OBJECT (self), "paused");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
       return;
     }
 
@@ -982,13 +964,13 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       if (self->paused)
         {
           self->paused = FALSE;
-          g_object_notify (G_OBJECT (self), "paused");
+          g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
         }
 
       if (entry && !entry->started)
         {
           entry->started = TRUE;
-          g_signal_emit (self, speaker_signals[UTTURANCE_STARTED], 0,
+          g_signal_emit (self, speaker_signals[UTTERANCE_STARTED], 0,
                          entry->utterance);
           if (entry->deferred_messages)
             {
@@ -1004,7 +986,7 @@ _handle_gst_state_change (GstBus *bus, GstMessage *msg, SpielSpeaker *self)
       element == GST_OBJECT (self->pipeline))
     {
       self->paused = TRUE;
-      g_object_notify (G_OBJECT (self), "paused");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PAUSED]);
     }
 
   if (new_state == GST_STATE_NULL && pending_state == GST_STATE_VOID_PENDING &&
@@ -1218,6 +1200,6 @@ _advance_to_next_entry_or_finish (SpielSpeaker *self, gboolean canceled)
     }
   else
     {
-      g_object_notify (G_OBJECT (self), "speaking");
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_SPEAKING]);
     }
 }

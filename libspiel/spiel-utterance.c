@@ -111,7 +111,7 @@ spiel_utterance_set_text (SpielUtterance *self, const char *text)
 
   g_free (self->text);
   self->text = g_strdup (text);
-  g_object_notify (G_OBJECT (self), "text");
+  g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_TEXT]);
 }
 
 /**
@@ -147,7 +147,7 @@ spiel_utterance_set_pitch (SpielUtterance *self, double pitch)
   g_return_if_fail (SPIEL_IS_UTTERANCE (self));
 
   self->pitch = pitch;
-  g_object_notify (G_OBJECT (self), "pitch");
+  g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_PITCH]);
 }
 
 /**
@@ -183,7 +183,7 @@ spiel_utterance_set_rate (SpielUtterance *self, double rate)
   g_return_if_fail (SPIEL_IS_UTTERANCE (self));
 
   self->rate = rate;
-  g_object_notify (G_OBJECT (self), "rate");
+  g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_RATE]);
 }
 
 /**
@@ -219,7 +219,7 @@ spiel_utterance_set_volume (SpielUtterance *self, double volume)
   g_return_if_fail (SPIEL_IS_UTTERANCE (self));
 
   self->volume = volume;
-  g_object_notify (G_OBJECT (self), "volume");
+  g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOLUME]);
 }
 
 /**
@@ -255,10 +255,10 @@ spiel_utterance_set_voice (SpielUtterance *self, SpielVoice *voice)
   g_return_if_fail (SPIEL_IS_UTTERANCE (self));
   g_return_if_fail (voice == NULL || SPIEL_IS_VOICE (voice));
 
-  g_clear_object (&(self->voice));
-
-  self->voice = voice ? g_object_ref (voice) : NULL;
-  g_object_notify (G_OBJECT (self), "voice");
+  if (g_set_object (&self->voice, voice))
+    {
+      g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_VOICE]);
+    }
 }
 
 /**
@@ -295,7 +295,7 @@ spiel_utterance_set_language (SpielUtterance *self, const char *language)
 
   g_free (self->language);
   self->language = g_strdup (language);
-  g_object_notify (G_OBJECT (self), "language");
+  g_object_notify_by_pspec (G_OBJECT (self), properties[PROP_LANGUAGE]);
 }
 
 /**
