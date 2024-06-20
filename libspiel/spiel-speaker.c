@@ -1173,6 +1173,7 @@ _advance_to_next_entry_or_finish (SpielSpeaker *self, gboolean canceled)
 
   if (entry->error)
     {
+      g_warning ("Synthesis error: %s\n", entry->error->message);
       g_signal_emit (self, speaker_signals[UTTERANCE_ERROR], 0,
                      entry->utterance, entry->error);
     }
