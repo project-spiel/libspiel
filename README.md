@@ -45,7 +45,7 @@ meson compile -C build
 
 Once Spiel is built, to run test the Python example above or a similar GObject client, make sure you are inside the build environment by running `meson devenv -C build`.
 
-To install libspiel system wide and expose it to GObject client code without needing to run `meson devenv`, run $TODO_NOT_SURE
+To install libspiel system wide and expose it to GObject client code without needing to run `meson devenv`, run `meson install -C build`
 
 ## Documentation
 
