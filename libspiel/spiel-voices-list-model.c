@@ -169,13 +169,14 @@ handle_voices_changed (GListModel *voices,
     {
       g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
-      if (voices == spiel_provider_get_voices (provider))
+      GListModel *provider_voices = spiel_provider_get_voices (provider);
+      if (voices == provider_voices)
         {
           g_list_model_items_changed (G_LIST_MODEL (self), position + offset,
                                       removed, added);
           break;
         }
-      offset += g_list_model_get_n_items (voices);
+      offset += g_list_model_get_n_items (provider_voices);
     }
 }
 
