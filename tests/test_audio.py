@@ -78,6 +78,37 @@ class TestSpeak(BaseSpielTest):
 
         loop.run()
 
+    def test_change_volume(self):
+        loop = GLib.MainLoop()
+
+        levels = []
+
+        def _on_message(bus, message):
+            info = message.get_structure()
+            if info.get_name() == "level":
+                level = info.get_value("rms")[0]
+                if level > -5:
+                    levels.append(level)
+                    utterance.props.volume = 0.5
+                else:
+                    levels.append(level)
+                    loop.quit()
+
+        speechSynthesis, bus = self._setup_custom_sink()
+
+        bus.connect("message::element", _on_message)
+
+        utterance = Spiel.Utterance(text="hello world, how are you?")
+        utterance.props.volume = 1.0
+        utterance.props.voice = self.get_voice(
+            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+        )
+        speechSynthesis.speak(utterance)
+
+        loop.run()
+        self.assertGreater(levels[0], -5)
+        self.assertLess(levels[1], -5)
+
     def test_queue(self):
         # Tests the proper disposal/closing of 'audio/x-spiel' utterances in a queue
         speaker = Spiel.Speaker.new_sync(None)

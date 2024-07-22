@@ -781,6 +781,9 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
       entry->volume =
           gst_element_factory_make_full ("volume", "volume", volume, NULL);
 
+      g_object_bind_property (entry->utterance, "volume", entry->volume,
+                              "volume", G_BINDING_DEFAULT);
+
       entry->parse = gst_element_factory_make ("rawaudioparse", "parse");
       if (gst_structure_get_int (gst_struct, "rate", &sample_rate))
         {
