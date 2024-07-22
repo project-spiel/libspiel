@@ -84,6 +84,22 @@ glib_version = '>= 2.76'
 gst_version = '>= 1.0'
 speechprovider_version = '>= 1.0.1'
 
+libspeechprovider_dep = dependency('speech-provider-1.0',
+   version: speechprovider_version,
+  required: false,
+)
+
+if not libspeechprovider_dep.found()
+  libspeechprovider_dep = dependency('speech-provider-1.0',
+            version: speechprovider_version,
+           fallback: ['libspeechprovider', 'speech_provider_lib_dep'],
+    default_options: [
+      'docs=false',
+      'introspection=@0@'.format(get_option('introspection')),
+    ],
+  )
+endif
+
 speechprovider_proj = subproject('libspeechprovider')
 iface_xml = speechprovider_proj.get_variable('iface_xml')
 
@@ -97,7 +113,7 @@ if get_option('utils')
   subdir('utils')
 endif
 
-if get_option('docs')
+if get_option('docs') and get_option('introspection')
   subdir('doc')
 endif
 

@@ -1,7 +1,5 @@
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
-speech_provider_gir = speechprovider_proj.get_variable('speech_provider_gir')
-
 speechprovider_libdir = meson.project_build_root() / 'subprojects' / 'libspeechprovider' / 'libspeechprovider'
 
 test_env = environment()
@@ -19,7 +17,7 @@ test_env.set('SPIEL_TEST', '1')
 python_module = import('python')
 dbus_run_session = find_program('dbus-run-session', required : false)
 python = python_module.find_installation(
-  'python3', required : false, modules: ['tap', 'dasbus'])
+  'python3.11', required : false, modules: ['tap', 'dasbus'])
 
 tests = ['test_speak.py',
          'test_types.py',
@@ -55,7 +53,9 @@ test_simultaneous_init = executable(
   dependencies: test_deps
 )
 
-if dbus_run_session.found() and python.found()
+if dbus_run_session.found() and python.found() and get_option('introspection')
+  speech_provider_gir = speechprovider_proj.get_variable('speech_provider_gir')
+
   foreach test_name : tests
     test(
       test_name, dbus_run_session,
@@ -92,3 +92,4 @@ endif
 
 subdir('services')
 subdir('discarded_services')
+subdir('libspiel')
