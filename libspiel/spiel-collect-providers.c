@@ -158,7 +158,8 @@ _on_list_names (GObject *source, GAsyncResult *result, gpointer user_data)
 
   if (!closure->providers_to_process)
     {
-      g_task_return_new_error (task, G_IO_ERROR, G_IO_ERROR_FAILED, "No voice provider found");
+      g_task_return_new_error (task, G_IO_ERROR, G_IO_ERROR_FAILED,
+                               "No voice provider found");
       g_object_unref (task);
     }
   else
