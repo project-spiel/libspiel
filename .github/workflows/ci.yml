@@ -46,7 +46,7 @@ jobs:
         run: su ubuntu -c "meson compile -C build"
       - name: Test Spiel
         run: su ubuntu -c "meson test -C build"
-      - uses: actions/upload-artifact@v1
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: Meson_Log
