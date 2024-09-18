@@ -432,7 +432,6 @@ spiel_registry_finalize (GObject *object)
     }
 
   G_OBJECT_CLASS (spiel_registry_parent_class)->finalize (object);
-  g_assert (object == G_OBJECT (sRegistry));
   sRegistry = NULL;
 }
 
