@@ -37,7 +37,7 @@ jobs:
       - name: Update repos
         run: apt update
       - name: Install dependencies
-        run: apt install -y git meson libgirepository1.0-dev dbus libdbus-glib-1-dev python3-dasbus python3-tap python3-gi libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
+        run: apt install -y git meson libgirepository1.0-dev dbus libdbus-glib-1-dev python3-dasbus python3-dbusmock python3-tap python3-gi libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good
       - name: Set up permissions
         run: chown -R ubuntu:ubuntu .
       - name: Setup Spiel
@@ -51,3 +51,71 @@ jobs:
         with:
           name: Meson_Log
           path: build/meson-logs
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/andyholmes/actuary:latest
+
+    strategy:
+      matrix:
+        compiler: [gcc, llvm]
+        suite: [test, asan, analyzer]
+        include:
+          - suite: test
+            setup-args: |
+              -Ddocs=false
+              -Dintrospection=true
+              -Dtests=true
+            test-args: |
+              --repeat=3
+          - suite: asan
+            setup-args: |
+              -Ddocs=false
+              -Dintrospection=false
+              -Dtests=true
+          - suite: analyzer
+            setup-args: |
+              -Ddocs=false
+              -Dintrospection=false
+              -Dtests=true
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Prepare
+        run: |
+          dnf install -y cairo-gobject-devel dbus-glib-devel python3.11 python3.11-devel python3-dasbus python3-gobject-devel gi-docgen gstreamer1-devel gstreamer1-plugins-base-devel gstreamer1-plugins-good
+          python3.11 -m ensurepip --upgrade
+          python3.11 -m pip install --upgrade pip
+          python3.11 -m pip install dasbus dbus-python python-dbusmock PyGObject tap.py
+
+      - name: Test
+        id: test
+        uses: andyholmes/actuary@main
+        with:
+          suite: ${{ matrix.suite }}
+          compiler: ${{ matrix.compiler }}
+          setup-args: ${{ matrix.setup-args }}
+          test-args: ${{ matrix.test-args }}
+          test-coverage: ${{ matrix.compiler == 'gcc' && matrix.suite == 'test' }}
+          lcov-include: '${{ github.workspace }}/libspiel/*'
+
+      - name: Test Report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tests (${{ matrix.compiler }}, ${{ matrix.suite }})
+          path: ${{ steps.test.outputs.log }}
+
+      - name: Coverage (html)
+        if: ${{ matrix.compiler == 'gcc' && matrix.suite == 'test' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tests (coverage)
+          path: ${{ steps.test.outputs.coverage-html }}
