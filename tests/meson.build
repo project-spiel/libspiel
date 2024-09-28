@@ -1,14 +1,19 @@
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
-speech_provider_gir = speechprovider_proj.get_variable('speech_provider_gir')
-
-speechprovider_libdir = meson.project_build_root() / 'subprojects' / 'libspeechprovider' / 'libspeechprovider'
-
 test_env = environment()
-test_env.prepend('GI_TYPELIB_PATH',
-  join_paths(meson.project_build_root(), 'libspiel'), speechprovider_libdir, separator: ':')
-test_env.prepend('LD_LIBRARY_PATH',
-  join_paths(meson.project_build_root(), 'libspiel'), speechprovider_libdir, separator: ':')
+
+test_env.prepend('GI_TYPELIB_PATH', meson.project_build_root() / 'libspiel', separator: ':')
+test_env.prepend('LD_LIBRARY_PATH', meson.project_build_root() / 'libspiel', separator: ':')
+
+if not system_installed_speechprovider
+  speechprovider_libdir = meson.project_build_root() / 'subprojects' / 'libspeechprovider' / 'libspeechprovider'
+  test_env.prepend('GI_TYPELIB_PATH', speechprovider_libdir, separator: ':')
+  test_env.prepend('LD_LIBRARY_PATH', speechprovider_libdir, separator: ':')
+else
+  test_env.prepend('GI_TYPELIB_PATH', speechprovider_dep.get_variable('libdir') / 'girepository-1.0', separator: ':')
+  test_env.prepend('GI_TYPELIB_PATH', speechprovider_dep.get_variable('libdir'), separator: ':')
+endif
+
 test_env.set('G_DEBUG', 'fatal-warnings')
 test_env.set('TEST_SERVICE_DIR', service_dir)
 test_env.set('TEST_DISCARDED_SERVICE_DIR', join_paths(meson.current_build_dir(), 'discarded_services'))
@@ -55,6 +60,11 @@ test_simultaneous_init = executable(
   dependencies: test_deps
 )
 
+test_deps = [spiel_gir, spiel_schema]
+if not system_installed_speechprovider
+  test_deps += [speechprovider_proj.get_variable('speech_provider_gir')]
+endif
+
 if dbus_run_session.found() and python.found()
   foreach test_name : tests
     test(
@@ -67,7 +77,7 @@ if dbus_run_session.found() and python.found()
       ],
       env : test_env,
       protocol : 'tap',
-      depends: [speech_provider_gir, spiel_gir, spiel_schema],
+      depends: test_deps,
       is_parallel : test_name != 'test_provider.py'
     )
   endforeach

@@ -1,5 +1,5 @@
 config = configuration_data()
-config.set('provider_iface', iface_xml.full_path())
+config.set('provider_iface', iface_xml_path)
 
 configure_file(
   input: 'mock_speech_provider.py.in',
