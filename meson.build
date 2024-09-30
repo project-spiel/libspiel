@@ -1,5 +1,5 @@
 project('spiel', 'c',
-          version: '1.0.2',
+          version: '1.0.3',
     meson_version: '>= 0.64.0',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
@@ -82,7 +82,7 @@ add_project_arguments(project_c_args, language: 'c')
 # Synced dependency versions
 glib_version = '>= 2.76'
 gst_version = '>= 1.0'
-speechprovider_version = '>= 1.0.2'
+speechprovider_version = '>= 1.0.3'
 
 speechprovider_dep = dependency('speech-provider-1.0', version: speechprovider_version, required : false)
 if speechprovider_dep.found()
