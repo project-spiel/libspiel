@@ -25,23 +25,20 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    container: ubuntu:lunar
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Update repos
-        run: apt update
+        run: sudo apt update
       - name: Install dependencies
-        run: apt install -y git meson gi-docgen libgirepository1.0-dev libdbus-glib-1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-      - name: Set up permissions
-        run: chown -R ubuntu:ubuntu .
+        run: sudo apt install -y git meson gi-docgen libgirepository1.0-dev libdbus-glib-1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
       - name: Setup Spiel
-        run: su ubuntu -c "meson setup build -Dtests=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:tests=false"
+        run: meson setup build -Dtests=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:tests=false
       - name: Compile Spiel
-        run: su ubuntu -c "meson compile -C build"
+        run: meson compile -C build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
