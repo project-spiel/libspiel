@@ -1,5 +1,6 @@
 toml_conf = configuration_data()
 toml_conf.set('version', meson.project_version())
+toml_conf.set('license', meson.project_license())
 
 source_toml = configure_file(
   input: 'Spiel.toml.in',

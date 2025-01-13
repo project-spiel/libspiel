@@ -2,6 +2,7 @@ project('spiel', 'c',
           version: '1.0.3',
     meson_version: '>= 0.64.0',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
+  license: 'LGPL-2.1-or-later',
 )
 
 api_version = '1.0'
