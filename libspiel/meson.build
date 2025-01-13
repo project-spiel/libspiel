@@ -87,6 +87,7 @@ spiel_deps = [
 spiel_lib = shared_library('spiel-' + api_version,
   spiel_sources,
   dependencies: spiel_deps,
+  version: meson.project_version(),
   install: true,
 )
 
