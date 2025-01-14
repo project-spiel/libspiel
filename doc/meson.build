@@ -50,7 +50,7 @@ custom_target('libspiel-doc',
     '@INPUT1@',
   ],
   build_by_default: true,
-  depends: [ overview_doc, urlmap_doc, logo_file ]
-  # install: true,
-  # install_dir: docs_dir,
+  depends: [ overview_doc, urlmap_doc, logo_file ],
+  install: true,
+  install_dir: get_option('datadir') / 'doc',
 )
