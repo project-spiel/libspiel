@@ -1,4 +1,4 @@
-FROM ubuntu:lunar
+FROM ubuntu:oracular
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USERNAME=ubuntu
