@@ -60,6 +60,10 @@ test_simultaneous_init = executable(
   dependencies: test_deps
 )
 
+test_registry = executable('test-registry', 'test-registry.c',
+  dependencies: test_deps
+)
+
 test_deps = [spiel_gir, spiel_schema]
 if not system_installed_speechprovider
   test_deps += [speechprovider_proj.get_variable('speech_provider_gir')]
@@ -94,6 +98,14 @@ test('test-simultaneous-init', dbus_run_session,
       args : [
         '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
         '--', test_simultaneous_init
+        ],
+      env : test_env
+    )\
+
+test('test-registry', dbus_run_session,
+      args : [
+        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+        '--', test_registry
         ],
       env : test_env
     )
