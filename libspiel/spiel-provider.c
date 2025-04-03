@@ -20,7 +20,6 @@
 
 #include "spiel-collect-providers.h"
 #include "spiel-provider-private.h"
-#include "spiel-provider-proxy.h"
 #include "spiel-provider.h"
 
 /**
@@ -102,7 +101,7 @@ spiel_provider_set_proxy (SpielProvider *self,
 }
 
 /*< private >
- * spiel_provider_get_proxy:
+ * spiel_provider_get_proxy: (skip)
  * @self: a `SpielProvider`
  *
  * Gets the internal D-Bus proxy.
