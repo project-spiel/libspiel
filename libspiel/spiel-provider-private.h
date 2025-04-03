@@ -28,8 +28,6 @@ SpielProvider *spiel_provider_new (void);
 void spiel_provider_set_proxy (SpielProvider *self,
                                SpielProviderProxy *provider_proxy);
 
-SpielProviderProxy *spiel_provider_get_proxy (SpielProvider *self);
-
 SpielVoice *spiel_provider_get_voice_by_id (SpielProvider *self,
                                             const char *voice_id);
 

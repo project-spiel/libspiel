@@ -44,7 +44,7 @@ class TestSpeak(BaseSpielTest):
         utterance = Spiel.Utterance(text="hello world, how are you?", voice=voice)
         speechSynthesis.speak(utterance)
         args = self.mock_iface(
-            voice.props.provider.get_well_known_name()
+            voice.props.provider.get_identifier()
         ).GetLastSpeakArguments()
         self.assertEqual(str(args[2]), voice.props.identifier)
 

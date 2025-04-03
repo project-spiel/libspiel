@@ -69,7 +69,7 @@ do_list_voices (SpielSpeaker *speaker)
           g_strjoinv (",", (char **) spiel_voice_get_languages (voice));
       g_print ("%-25s %-10s %-10s %s\n", spiel_voice_get_name (voice),
                languages, spiel_voice_get_identifier (voice),
-               spiel_provider_get_well_known_name (provider));
+               spiel_provider_get_identifier (provider));
     }
 }
 
@@ -85,7 +85,7 @@ do_list_providers (SpielSpeaker *speaker)
       g_autoptr (SpielProvider) provider =
           SPIEL_PROVIDER (g_list_model_get_object (providers, i));
       g_print ("%-30s %s\n", spiel_provider_get_name (provider),
-               spiel_provider_get_well_known_name (provider));
+               spiel_provider_get_identifier (provider));
     }
 }
 
@@ -133,7 +133,7 @@ find_voice (SpielSpeaker *speaker)
           if (g_str_equal (voice_id, spiel_voice_get_identifier (voice)) &&
               (!provider_id ||
                g_str_equal (provider_id,
-                            spiel_provider_get_well_known_name (provider))))
+                            spiel_provider_get_identifier (provider))))
             {
               return g_steal_pointer (&voice);
             }

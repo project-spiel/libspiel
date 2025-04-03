@@ -47,6 +47,7 @@ enum
   PROP_WELL_KNOWN_NAME,
   PROP_NAME,
   PROP_VOICES,
+  PROP_IDENTIFIER,
   N_PROPS
 };
 
@@ -174,10 +175,27 @@ spiel_provider_get_name (SpielProvider *self)
  *
  * Returns: (transfer none): the well known name.
  *
- * Since: 1.0
+ * Deprecated: 1.0.4: Use spiel_provider_get_identifier() instead
  */
+G_DEPRECATED
 const char *
 spiel_provider_get_well_known_name (SpielProvider *self)
+{
+  return spiel_provider_get_identifier (self);
+}
+
+/**
+ * spiel_provider_get_identifier: (get-property identifier)
+ * @self: a `SpielProvider`
+ *
+ * Gets the provider's unique identifier.
+ *
+ * Returns: (transfer none): the identifier.
+ *
+ * Since: 1.0.4
+ */
+const char *
+spiel_provider_get_identifier (SpielProvider *self)
 {
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
   g_return_val_if_fail (self->provider_proxy, NULL);
@@ -255,7 +273,7 @@ _create_provider_voices (SpielProvider *self)
       if (features >> 32)
         {
           g_warning ("Voice features past 32 bits are ignored in %s (%s)",
-                     identifier, spiel_provider_get_well_known_name (self));
+                     identifier, spiel_provider_get_identifier (self));
         }
       voice = g_object_new (SPIEL_TYPE_VOICE, "name", name, "identifier",
                             identifier, "languages", languages, "provider",
@@ -369,8 +387,8 @@ spiel_provider_compare (SpielProvider *self,
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), 0);
   g_return_val_if_fail (SPIEL_IS_PROVIDER (other), 0);
 
-  return g_strcmp0 (spiel_provider_get_well_known_name (self),
-                    spiel_provider_get_well_known_name (other));
+  return g_strcmp0 (spiel_provider_get_identifier (self),
+                    spiel_provider_get_identifier (other));
 }
 
 static void
@@ -404,10 +422,13 @@ spiel_provider_get_property (GObject *object,
       g_value_set_string (value, spiel_provider_get_name (self));
       break;
     case PROP_WELL_KNOWN_NAME:
-      g_value_set_string (value, spiel_provider_get_well_known_name (self));
+      g_value_set_string (value, spiel_provider_get_identifier (self));
       break;
     case PROP_VOICES:
       g_value_set_object (value, spiel_provider_get_voices (self));
+      break;
+    case PROP_IDENTIFIER:
+      g_value_set_string (value, spiel_provider_get_identifier (self));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -438,11 +459,11 @@ spiel_provider_class_init (SpielProviderClass *klass)
    *
    * The provider's D-Bus well known name.
    *
-   * Since: 1.0
+   * Deprecated: 1.0.4: Use #SpielProvider:identifier instead.
    */
   properties[PROP_WELL_KNOWN_NAME] = g_param_spec_string (
       "well-known-name", NULL, NULL, NULL /* default value */,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS | G_PARAM_DEPRECATED);
 
   /**
    * SpielProvider:voices: (getter get_voices)
@@ -453,6 +474,17 @@ spiel_provider_class_init (SpielProviderClass *klass)
    */
   properties[PROP_VOICES] =
       g_param_spec_object ("voices", NULL, NULL, G_TYPE_LIST_MODEL,
+                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  /**
+   * SpielProvider:identifier: (getter get_identifier)
+   *
+   * The provider's unique identifer.
+   *
+   * Since: 1.0.4
+   */
+  properties[PROP_IDENTIFIER] =
+      g_param_spec_string ("identifier", NULL, NULL, NULL /* default value */,
                            G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, N_PROPS, properties);

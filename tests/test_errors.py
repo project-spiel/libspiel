@@ -33,8 +33,8 @@ class TestSpeak(BaseSpielTest):
         speaker = Spiel.Speaker.new_sync(None)
 
         voices = [
-            self.get_voice(speaker, *provider_well_known_name_and_id)
-            for provider_well_known_name_and_id in [
+            self.get_voice(speaker, *provider_identifier_and_id)
+            for provider_identifier_and_id in [
                 ("org.mock2.Speech.Provider", "ine/hyw"),
                 ("org.mock2.Speech.Provider", "gmw/en-GB-scotland#misconfigured"),
                 ("org.mock2.Speech.Provider", "gmw/en-GB-x-gbclan"),

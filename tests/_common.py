@@ -183,10 +183,10 @@ class BaseSpielTest(unittest.TestCase):
         )
         os.rename(src, dest)
 
-    def get_voice(self, synth, provider_well_known_name, voice_id):
+    def get_voice(self, synth, provider_identifier, voice_id):
         for v in synth.props.voices:
             if (
-                v.props.provider.get_well_known_name() == provider_well_known_name
+                v.props.provider.get_identifier() == provider_identifier
                 and v.props.identifier == voice_id
             ):
                 return v

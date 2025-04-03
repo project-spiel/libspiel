@@ -72,8 +72,7 @@ _get_provider_by_name (GListStore *providers,
     {
       g_autoptr (SpielProvider) provider = SPIEL_PROVIDER (
           g_list_model_get_object (G_LIST_MODEL (providers), i));
-      if (g_str_equal (provider_name,
-                       spiel_provider_get_well_known_name (provider)))
+      if (g_str_equal (provider_name, spiel_provider_get_identifier (provider)))
         {
           if (position)
             {
@@ -129,8 +128,8 @@ _on_providers_updated (GObject *source, GAsyncResult *res, SpielRegistry *self)
     {
       g_autoptr (SpielProvider) provider = SPIEL_PROVIDER (
           g_list_model_get_object (G_LIST_MODEL (self->providers), i));
-      if (!g_hash_table_contains (
-              new_providers, spiel_provider_get_well_known_name (provider)))
+      if (!g_hash_table_contains (new_providers,
+                                  spiel_provider_get_identifier (provider)))
         {
           g_list_store_remove (self->providers, i);
         }
@@ -153,7 +152,7 @@ _on_new_provider_collected (GObject *source,
       return;
     }
 
-  provider_name = spiel_provider_get_well_known_name (provider);
+  provider_name = spiel_provider_get_identifier (provider);
   _insert_providers (provider_name, provider, self);
 }
 

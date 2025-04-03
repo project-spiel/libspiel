@@ -207,7 +207,7 @@ spiel_voice_hash (SpielVoice *self)
   if (provider)
     {
       hash = (hash << 5) - hash +
-             g_str_hash (spiel_provider_get_well_known_name (provider));
+             g_str_hash (spiel_provider_get_identifier (provider));
     }
 
   for (char **language = self->languages; *language; language++)
@@ -293,9 +293,8 @@ spiel_voice_compare (SpielVoice *self, SpielVoice *other, gpointer user_data)
   other_provider = g_weak_ref_get (&other->provider);
 
   if ((cmp = g_strcmp0 (
-           self_provider ? spiel_provider_get_well_known_name (self_provider)
-                         : "",
-           other_provider ? spiel_provider_get_well_known_name (other_provider)
+           self_provider ? spiel_provider_get_identifier (self_provider) : "",
+           other_provider ? spiel_provider_get_identifier (other_provider)
                           : "")))
     {
       return cmp;

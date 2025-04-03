@@ -5,7 +5,7 @@ class TestInstallProvider(BaseSpielTest):
     def test_providers_speaker_property(self):
         speaker = self.wait_for_async_speaker_init()
         self.assertEqual(
-            [p.get_well_known_name() for p in speaker.props.providers],
+            [p.get_identifier() for p in speaker.props.providers],
             [
                 "org.mock.Speech.Provider",
                 "org.mock2.Speech.Provider",

@@ -32,6 +32,8 @@ const char *spiel_provider_get_name (SpielProvider *self);
 
 const char *spiel_provider_get_well_known_name (SpielProvider *self);
 
+const char *spiel_provider_get_identifier (SpielProvider *self);
+
 GListModel *spiel_provider_get_voices (SpielProvider *self);
 
 SpielProviderProxy *spiel_provider_get_proxy (SpielProvider *self);
