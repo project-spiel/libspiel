@@ -64,8 +64,8 @@ test_registry = executable('test-registry', 'test-registry.c',
   dependencies: test_deps
 )
 
-if dbus_run_session.found()
-  if python.found() and introspection
+if dbus_run_session.found() and introspection
+  if python.found()
     test_deps = [spiel_gir, spiel_schema]
     if not system_installed_speechprovider
       test_deps += [speechprovider_proj.get_variable('speech_provider_gir')]
