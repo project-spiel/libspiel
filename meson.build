@@ -98,6 +98,8 @@ else
   system_installed_speechprovider = false
 endif
 
+introspection = get_option('introspection')
+
 subdir('libspiel')
 
 if get_option('tests')
@@ -108,7 +110,7 @@ if get_option('utils')
   subdir('utils')
 endif
 
-if get_option('docs')
+if get_option('docs') and introspection
   subdir('doc')
 endif
 

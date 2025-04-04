@@ -64,51 +64,53 @@ test_registry = executable('test-registry', 'test-registry.c',
   dependencies: test_deps
 )
 
-test_deps = [spiel_gir, spiel_schema]
-if not system_installed_speechprovider
-  test_deps += [speechprovider_proj.get_variable('speech_provider_gir')]
-endif
+if dbus_run_session.found()
+  if python.found() and introspection
+    test_deps = [spiel_gir, spiel_schema]
+    if not system_installed_speechprovider
+      test_deps += [speechprovider_proj.get_variable('speech_provider_gir')]
+    endif
 
-if dbus_run_session.found() and python.found()
-  foreach test_name : tests
-    test(
-      test_name, dbus_run_session,
-      args : [
-        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
-        '--',
-        python.full_path(),
-        files(test_name)
-      ],
-      env : test_env,
-      protocol : 'tap',
-      depends: test_deps,
-      is_parallel : test_name != 'test_provider.py'
-    )
-  endforeach
-
-test('test-simple-speak', dbus_run_session,
-      args : [
-        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
-        '--', test_simple_speak
+    foreach test_name : tests
+      test(
+        test_name, dbus_run_session,
+        args : [
+          '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+          '--',
+          python.full_path(),
+          files(test_name)
         ],
-      env : test_env
-    )
+        env : test_env,
+        protocol : 'tap',
+        depends: test_deps,
+        is_parallel : test_name != 'test_provider.py'
+      )
+    endforeach
+  endif
 
-test('test-simultaneous-init', dbus_run_session,
-      args : [
-        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
-        '--', test_simultaneous_init
-        ],
-      env : test_env
-    )\
+  test('test-simple-speak', dbus_run_session,
+        args : [
+          '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+          '--', test_simple_speak
+          ],
+        env : test_env
+      )
 
-test('test-registry', dbus_run_session,
-      args : [
-        '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
-        '--', test_registry
-        ],
-      env : test_env
-    )
+  test('test-simultaneous-init', dbus_run_session,
+        args : [
+          '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+          '--', test_simultaneous_init
+          ],
+        env : test_env
+      )\
+
+  test('test-registry', dbus_run_session,
+        args : [
+          '--config-file=@0@'.format(join_paths(meson.current_build_dir(), 'test-bus.conf')),
+          '--', test_registry
+          ],
+        env : test_env
+      )
 endif
 
 

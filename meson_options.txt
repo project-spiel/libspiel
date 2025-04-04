@@ -1,3 +1,5 @@
 option('tests', type: 'boolean', value: true, description: 'Enable tests')
 option('docs', type: 'boolean', value: true, description: 'Enable docs')
 option('utils', type: 'boolean', value: true, description: 'Enable CLI utilities')
+option('introspection', type: 'boolean', value: true,
+  description: 'Generate GObject introspection files')
