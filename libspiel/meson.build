@@ -46,6 +46,7 @@ spiel_public_headers = [
   'spiel-voice.h',
   'spiel-speaker.h',
   'spiel-provider.h',
+  'spiel-registry.h',
   'spiel-voices-list-model.h',
 ]
 
