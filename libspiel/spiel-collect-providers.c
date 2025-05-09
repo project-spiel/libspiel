@@ -188,9 +188,10 @@ _create_next_provider (_CollectProvidersClosure *closure, GTask *task)
       // If a provider name is specified we return a single result.
       SpielProvider *provider =
           g_hash_table_lookup (closure->providers, closure->provider_name);
-      g_hash_table_steal (closure->providers, closure->provider_name);
+      g_task_return_pointer (task, g_object_ref (provider),
+                             (GDestroyNotify) g_object_unref);
+      g_hash_table_remove (closure->providers, closure->provider_name);
       g_assert_cmpint (g_hash_table_size (closure->providers), ==, 0);
-      g_task_return_pointer (task, provider, (GDestroyNotify) g_object_unref);
       g_object_unref (task);
     }
   else
