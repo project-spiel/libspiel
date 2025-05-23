@@ -8,7 +8,8 @@ spiel_iface_sources = gnome.gdbus_codegen(
     annotations : [
       ['org.freedesktop.Speech.Provider', 'org.gtk.GDBus.C.Name', 'ProviderProxy']
     ],
-    install_header : true,
+    install_header: true,
+    install_dir: join_paths(get_option('includedir'), 'spiel'),
     extra_args: '--glib-min-required=2.64')
 
 python_module = import('python')
