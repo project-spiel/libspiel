@@ -29,7 +29,6 @@ G_BEGIN_DECLS
 #include "spiel-utterance.h"
 #include "spiel-version.h"
 #include "spiel-voice.h"
-#include "spiel-registry.h"
 #undef LIBSPIEL_INSIDE
 
 G_END_DECLS

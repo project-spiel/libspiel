@@ -20,7 +20,6 @@
 
 #include <gio/gio.h>
 #include <glib-object.h>
-#include "spiel-provider-proxy.h"
 
 G_BEGIN_DECLS
 
@@ -35,7 +34,5 @@ const char *spiel_provider_get_well_known_name (SpielProvider *self);
 const char *spiel_provider_get_identifier (SpielProvider *self);
 
 GListModel *spiel_provider_get_voices (SpielProvider *self);
-
-SpielProviderProxy *spiel_provider_get_proxy (SpielProvider *self);
 
 G_END_DECLS

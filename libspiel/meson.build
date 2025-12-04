@@ -8,7 +8,6 @@ spiel_iface_sources = gnome.gdbus_codegen(
     annotations : [
       ['org.freedesktop.Speech.Provider', 'org.gtk.GDBus.C.Name', 'ProviderProxy']
     ],
-    install_header : true,
     extra_args: '--glib-min-required=2.64')
 
 python_module = import('python')
@@ -46,7 +45,6 @@ spiel_public_headers = [
   'spiel-voice.h',
   'spiel-speaker.h',
   'spiel-provider.h',
-  'spiel-registry.h',
   'spiel-voices-list-model.h',
 ]
 

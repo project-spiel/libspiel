@@ -16,11 +16,13 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "spiel-registry.h"
+
 #include "spiel.h"
 
 #include "spiel-collect-providers.h"
 #include "spiel-provider-private.h"
-#include "spiel-registry.h"
+#include "spiel-provider-proxy.h"
 #include "spiel-voices-list-model.h"
 
 #include <gio/gio.h>

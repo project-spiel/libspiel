@@ -22,6 +22,7 @@
 
 #include "spiel-provider-proxy.h"
 #include "spiel-voice.h"
+#include "spiel-utterance.h"
 
 typedef struct _SpielVoicesListModel SpielVoicesListModel;
 
