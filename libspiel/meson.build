@@ -15,7 +15,6 @@ python = python_module.find_installation(
   'python3', required : true)
 generate_enums = files(meson.current_source_dir() / 'generate_enums.py')
 spiel_dbus_enums_ch = custom_target(
-    input: iface_xml,
     output: ['spiel-dbus-enums.c', 'spiel-dbus-enums.h'],
     command: [python, generate_enums, 'spiel', iface_xml, '@OUTPUT@'],
     install: true,
@@ -81,7 +80,7 @@ spiel_deps = [
   dependency('gio-unix-2.0', version: glib_version),
   dependency('gstreamer-1.0', version: gst_version),
   dependency('gstreamer-audio-1.0', version: gst_version),
-  dependency('speech-provider-1.0', version: speechprovider_version),
+  speechprovider_dep,
 ]
 
 spiel_lib = shared_library('spiel-' + api_version,

@@ -87,24 +87,19 @@ speechprovider_version = '>= 1.0.3'
 
 introspection = get_option('introspection')
 
-speechprovider_options = ['docs=false']
+speechprovider_options = ['docs=false', 'tests=false']
 if not introspection
   speechprovider_options += ['introspection=false']
 endif
 
-speechprovider_dep = dependency('speech-provider-1.0', version: speechprovider_version, required : false)
-if speechprovider_dep.found()
-  iface_xml = speechprovider_dep.get_variable('iface_xml')
-  iface_xml_path = iface_xml
-  system_installed_speechprovider = true
-else
-  speechprovider_proj = subproject('libspeechprovider', default_options: speechprovider_options)
-  iface_xml = speechprovider_proj.get_variable('iface_xml')
-  iface_xml_path = iface_xml.full_path()
-  speechprovider_dep = speechprovider_proj.get_variable('speech_provider_lib_dep')
-  system_installed_speechprovider = false
-endif
-
+speechprovider_dep = dependency(
+  'speech-provider-1.0',
+  version: speechprovider_version,
+  required: true,
+  fallback: ['libspeechprovider', 'speech_provider_lib_dep'],
+  default_options: speechprovider_options,
+)
+iface_xml = speechprovider_dep.get_variable('iface_xml')
 
 subdir('libspiel')
 

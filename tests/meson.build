@@ -1,3 +1,5 @@
+fs = import('fs')
+
 service_dir = join_paths(meson.current_build_dir(), 'services')
 
 test_env = environment()
@@ -5,13 +7,12 @@ test_env = environment()
 test_env.prepend('GI_TYPELIB_PATH', meson.project_build_root() / 'libspiel', separator: ':')
 test_env.prepend('LD_LIBRARY_PATH', meson.project_build_root() / 'libspiel', separator: ':')
 
-if not system_installed_speechprovider
-  speechprovider_libdir = meson.project_build_root() / 'subprojects' / 'libspeechprovider' / 'libspeechprovider'
-  test_env.prepend('GI_TYPELIB_PATH', speechprovider_libdir, separator: ':')
-  test_env.prepend('LD_LIBRARY_PATH', speechprovider_libdir, separator: ':')
+speechprovider_libdir = speechprovider_dep.get_variable('libdir')
+test_env.prepend('LD_LIBRARY_PATH', speechprovider_libdir, separator: ':')
+if fs.is_dir(speechprovider_libdir / 'girepository-1.0')
+  test_env.prepend('GI_TYPELIB_PATH', speechprovider_libdir / 'girepository-1.0', separator: ':')
 else
-  test_env.prepend('GI_TYPELIB_PATH', speechprovider_dep.get_variable('libdir') / 'girepository-1.0', separator: ':')
-  test_env.prepend('GI_TYPELIB_PATH', speechprovider_dep.get_variable('libdir'), separator: ':')
+  test_env.prepend('GI_TYPELIB_PATH', speechprovider_libdir, separator: ':')
 endif
 
 test_env.set('G_DEBUG', 'fatal-warnings')
@@ -63,9 +64,6 @@ test_simultaneous_init = executable(
 if dbus_run_session.found() and introspection
   if python.found()
     test_deps = [spiel_gir, spiel_schema]
-    if not system_installed_speechprovider
-      test_deps += [speechprovider_proj.get_variable('speech_provider_gir')]
-    endif
 
     foreach test_name : tests
       test(
