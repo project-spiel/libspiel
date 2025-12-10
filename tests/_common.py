@@ -1,8 +1,11 @@
 import unittest, os, dbus
 import dbus.mainloop.glib
 from gi.repository import GLib, Gio
-
+import dbusmock
 import gi
+import sys
+import json
+from pathlib import Path
 
 gi.require_version("Spiel", "1.0")
 from gi.repository import Spiel
@@ -12,75 +15,95 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 LOG_EVENTS = False
 
 STANDARD_VOICES = [
-    ["org.mock2.Speech.Provider", "English (Great Britain)", "gmw/en", ["en-gb", "en"]],
+    ["org.two.Speech.Provider", "English (Great Britain)", "gmw/en", ["en-gb", "en"]],
     [
-        "org.mock2.Speech.Provider",
+        "org.two.Speech.Provider",
         "English (Scotland)",
         "gmw/en-GB-scotland#misconfigured",
         ["en-gb-scotland", "en"],
     ],
     [
-        "org.mock2.Speech.Provider",
+        "org.two.Speech.Provider",
         "English (Lancaster)",
         "gmw/en-GB-x-gbclan",
         ["en-gb-x-gbclan", "en-gb", "en"],
     ],
-    ["org.mock2.Speech.Provider", "English (America)", "gmw/en-US", ["en-us", "en"]],
+    ["org.two.Speech.Provider", "English (America)", "gmw/en-US", ["en-us", "en"]],
     [
-        "org.mock.Speech.Provider",
+        "org.one.Speech.Provider",
         "Armenian (East Armenia)",
         "ine/hy",
         ["hy", "hy-arevela"],
     ],
     [
-        "org.mock2.Speech.Provider",
+        "org.two.Speech.Provider",
         "Armenian (West Armenia)",
         "ine/hyw",
         ["hyw", "hy-arevmda", "hy"],
     ],
     [
-        "org.mock.Speech.Provider",
+        "org.one.Speech.Provider",
         "Chinese (Cantonese)",
         "sit/yue",
         ["yue", "zh-yue", "zh"],
     ],
-    ["org.mock3.Speech.Provider", "Uzbek", "trk/uz", ["uz"]],
+    ["org.three.Speech.Provider", "Uzbek", "trk/uz", ["uz"]],
 ]
 
 
-class BaseSpielTest(unittest.TestCase):
+class BaseSpielTest(dbusmock.DBusTestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.start_session_bus()
+        cls.dbus_con = cls.get_dbus()
+        if os.getenv("SPIEL_TEST_DBUS_MONITOR"):
+            cls.dbus_monitor = subprocess.Popen(["dbus-monitor", "--session"])
+
+        cls.install_providers(
+            [
+                "org.one.Speech.Provider",
+                "org.two.Speech.Provider",
+                "org.three.Speech.Provider",
+            ]
+        )
+
     def __init__(self, *args):
+        self._mocks = {}
         super().__init__(*args)
 
     def setUp(self):
-        self.mock_service = self.mock_iface("org.mock.Speech.Provider")
-        self.mock_service.SetInfinite(False)
-        self.mock_service.FlushTasks()
+        pass
 
     def tearDown(self):
         settings = Gio.Settings.new("org.monotonous.libspiel")
         settings["default-voice"] = None
         settings["language-voice-mapping"] = {}
-        discarded_dir = os.environ["TEST_DISCARDED_SERVICE_DIR"]
-        service_dir = os.environ["TEST_SERVICE_DIR"]
-        for fname in os.listdir(discarded_dir):
-            os.rename(
-                os.path.join(discarded_dir, fname), os.path.join(service_dir, fname)
-            )
+        for mock in self._mocks.values():
+            try:
+                mock.SetInfinite(False)
+                mock.FlushTasks()
+            except dbus.exceptions.DBusException:
+                pass
+        self._mocks = {}
 
     def mock_iface(self, provider_name):
+        if provider_name in self._mocks:
+            return self._mocks[provider_name]
         session_bus = dbus.SessionBus()
         proxy = session_bus.get_object(
             provider_name,
             f"/{'/'.join(provider_name.split('.'))}",
         )
-        return dbus.Interface(
-            proxy, dbus_interface="org.freedesktop.Speech.MockProvider"
+        mock = dbus.Interface(
+            proxy, dbus_interface="org.freedesktop.Speech.Provider.Mock"
         )
+        self._mocks[provider_name] = mock
+        return mock
 
     def kill_provider(self, provider_name):
         try:
-            self.mock_iface(provider_name).KillMe()
+            self.mock_iface(provider_name).Die()
+            self._mocks.pop(provider_name)
         except:
             pass
 
@@ -165,23 +188,38 @@ class BaseSpielTest(unittest.TestCase):
         loop = GLib.MainLoop()
         loop.run()
 
-    def uninstall_provider(self, name):
-        src = os.path.join(
-            os.environ["TEST_SERVICE_DIR"], f"{name}{os.path.extsep}service"
-        )
-        dest = os.path.join(
-            os.environ["TEST_DISCARDED_SERVICE_DIR"], f"{name}{os.path.extsep}service"
-        )
-        os.rename(src, dest)
+    @classmethod
+    def uninstall_providers(cls, names):
+        services_dir = cls.get_services_dir()
+        for name in names:
+            (Path(services_dir) / f"{name}.service").unlink()
 
-    def install_provider(self, name):
-        src = os.path.join(
-            os.environ["TEST_DISCARDED_SERVICE_DIR"], f"{name}{os.path.extsep}service"
+        dbus_obj = cls.dbus_con.get_object(
+            "org.freedesktop.DBus", "/org/freedesktop/DBus"
         )
-        dest = os.path.join(
-            os.environ["TEST_SERVICE_DIR"], f"{name}{os.path.extsep}service"
+        dbus_if = dbus.Interface(dbus_obj, "org.freedesktop.DBus")
+        dbus_if.ReloadConfig()
+
+    @classmethod
+    def install_providers(cls, names):
+        services_dir = cls.get_services_dir()
+        for name in names:
+            template_full_path = Path(__file__).absolute().parent / "speechprovider.py"
+            params = {"name": name}
+            file_contents = [
+                "[D-BUS Service]",
+                f"Name={name}",
+                f"Exec={sys.executable} -m dbusmock -l /tmp/{name}.txt --template {template_full_path} -p '{json.dumps(params)}'",
+            ]
+            f = open(os.path.join(services_dir, f"{name}.service"), "w")
+            f.write("\n".join(file_contents) + "\n")
+            f.close()
+
+        dbus_obj = cls.dbus_con.get_object(
+            "org.freedesktop.DBus", "/org/freedesktop/DBus"
         )
-        os.rename(src, dest)
+        dbus_if = dbus.Interface(dbus_obj, "org.freedesktop.DBus")
+        dbus_if.ReloadConfig()
 
     def get_voice(self, synth, provider_identifier, voice_id):
         for v in synth.props.voices:
@@ -243,10 +281,8 @@ class BaseSpielTest(unittest.TestCase):
                 speaker.speak(utterance)
 
         GLib.idle_add(do_speak)
-
         loop = GLib.MainLoop()
         loop.run()
-
         return event_sequence
 
 

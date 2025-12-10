@@ -9,7 +9,7 @@ class TestSpeak(BaseSpielTest):
         # XXX: fdsrc goes to playing state even when no
         # data is written to the pipe. So we use a spielsrc.
         utterance.props.voice = self.get_voice(
-            speaker, "org.mock2.Speech.Provider", "gmw/en-US"
+            speaker, "org.two.Speech.Provider", "gmw/en-US"
         )
 
         expected_error = (
@@ -29,15 +29,14 @@ class TestSpeak(BaseSpielTest):
         self.assertEqual(actual_events, expected_events)
 
     def test_bad_voice(self):
-        self.mock_service.SetInfinite(True)
         speaker = Spiel.Speaker.new_sync(None)
 
         voices = [
             self.get_voice(speaker, *provider_identifier_and_id)
             for provider_identifier_and_id in [
-                ("org.mock2.Speech.Provider", "ine/hyw"),
-                ("org.mock2.Speech.Provider", "gmw/en-GB-scotland#misconfigured"),
-                ("org.mock2.Speech.Provider", "gmw/en-GB-x-gbclan"),
+                ("org.two.Speech.Provider", "ine/hyw"),
+                ("org.two.Speech.Provider", "gmw/en-GB-scotland#misconfigured"),
+                ("org.two.Speech.Provider", "gmw/en-GB-x-gbclan"),
             ]
         ]
 

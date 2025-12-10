@@ -7,7 +7,7 @@ class TestSpeak(BaseSpielTest):
 
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.voice = self.get_voice(
-            speaker, "org.mock2.Speech.Provider", "gmw/en-US"
+            speaker, "org.two.Speech.Provider", "gmw/en-US"
         )
 
         expected_events = [
@@ -50,6 +50,8 @@ class TestSpeak(BaseSpielTest):
         self.assertEqual(actual_events, expected_events)
 
     def test_pause(self):
+        mock = self.mock_iface("org.one.Speech.Provider")
+
         def _started_cb(_speaker, utt):
             _speaker.pause()
 
@@ -57,9 +59,9 @@ class TestSpeak(BaseSpielTest):
             if _speaker.props.paused:
                 GLib.idle_add(lambda: _speaker.resume())
             else:
-                self.mock_service.End()
+                mock.End()
 
-        self.mock_service.SetInfinite(True)
+        mock.SetInfinite(True)
         speaker = Spiel.Speaker.new_sync(None)
         speaker.connect("utterance-started", _started_cb)
         speaker.connect("notify::paused", _notify_paused_cb)
@@ -83,7 +85,7 @@ class TestSpeak(BaseSpielTest):
         def _started_cb(_speaker, utt):
             GLib.idle_add(lambda: _speaker.cancel())
 
-        self.mock_service.SetInfinite(True)
+        self.mock_iface("org.one.Speech.Provider").SetInfinite(True)
 
         speaker = Spiel.Speaker.new_sync(None)
         speaker.connect("utterance-started", _started_cb)
@@ -111,7 +113,7 @@ class TestSpeak(BaseSpielTest):
 
         actual_events = []
 
-        self.mock_service.SetInfinite(True)
+        self.mock_iface("org.one.Speech.Provider").SetInfinite(True)
         speaker = Spiel.Speaker.new_sync(None)
         speaker.connect("utterance-started", _started_cb)
         speaker.connect("notify::paused", _notify_paused_cb)
@@ -159,14 +161,14 @@ class TestSpeak(BaseSpielTest):
 
         utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
-        is_ssml = self.mock_service.GetLastSpeakArguments()[5]
+        is_ssml = self.mock_iface("org.one.Speech.Provider").GetLastSpeakArguments()[5]
         self.assertFalse(is_ssml)
 
         utterance = Spiel.Utterance(
             text="hello world, how are you?", language="hy", is_ssml=True
         )
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
-        is_ssml = self.mock_service.GetLastSpeakArguments()[5]
+        is_ssml = self.mock_iface("org.one.Speech.Provider").GetLastSpeakArguments()[5]
         self.assertTrue(is_ssml)
 
     def test_provide_language(self):
@@ -174,7 +176,7 @@ class TestSpeak(BaseSpielTest):
 
         utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
-        lang = self.mock_service.GetLastSpeakArguments()[6]
+        lang = self.mock_iface("org.one.Speech.Provider").GetLastSpeakArguments()[6]
         self.assertEqual(lang, "hy")
 
 

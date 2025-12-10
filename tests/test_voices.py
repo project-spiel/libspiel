@@ -4,20 +4,20 @@ from _common import *
 class TestVoices(BaseSpielTest):
     def test_voice_features(self):
         speechSynthesis = Spiel.Speaker.new_sync(None)
-        voice = self.get_voice(speechSynthesis, "org.mock.Speech.Provider", "sit/yue")
+        voice = self.get_voice(speechSynthesis, "org.one.Speech.Provider", "sit/yue")
         self.assertTrue(voice.get_features() & Spiel.VoiceFeature.SSML_SAY_AS_CARDINAL)
-        voice = self.get_voice(speechSynthesis, "org.mock.Speech.Provider", "ine/hy")
+        voice = self.get_voice(speechSynthesis, "org.one.Speech.Provider", "ine/hy")
         self.assertEqual(voice.get_features(), 0)
 
     def test_get_async_voices(self):
         speechSynthesis = self.wait_for_async_speaker_init()
-        self._test_get_voices(speechSynthesis)
+        self._do_test_get_voices(speechSynthesis)
 
     def test_get_sync_voices(self):
         speechSynthesis = Spiel.Speaker.new_sync(None)
-        self._test_get_voices(speechSynthesis)
+        self._do_test_get_voices(speechSynthesis)
 
-    def _test_get_voices(self, speechSynthesis, expected_voices=STANDARD_VOICES):
+    def _do_test_get_voices(self, speechSynthesis, expected_voices=STANDARD_VOICES):
         voices = speechSynthesis.props.voices
         voices_info = [
             [
@@ -37,48 +37,64 @@ class TestVoices(BaseSpielTest):
 
     def test_add_voice(self):
         speechSynthesis = self.wait_for_async_speaker_init()
-        self._test_get_voices(speechSynthesis)
-        self.mock_service.AddVoice("Hebrew", "he", ["he", "he-il"])
+        mock = self.mock_iface("org.one.Speech.Provider")
+        self._do_test_get_voices(speechSynthesis)
+
+        mock.AddVoice(
+            "Hebrew",
+            "he",
+            "audio/x-raw,format=S16LE,channels=1,rate=22050",
+            0,
+            ["he", "he-il"],
+        )
         self.wait_for_voices_changed(speechSynthesis, added=["he"])
-        self._test_get_voices(
+        self._do_test_get_voices(
             speechSynthesis,
             STANDARD_VOICES
             + [
                 [
-                    "org.mock.Speech.Provider",
+                    "org.one.Speech.Provider",
                     "Hebrew",
                     "he",
                     ["he", "he-il"],
                 ]
             ],
         )
-        self.mock_service.RemoveVoice("he")
+        mock.RemoveVoice("he")
         self.wait_for_voices_changed(speechSynthesis, removed=["he"])
-        self._test_get_voices(speechSynthesis)
+        self._do_test_get_voices(speechSynthesis)
 
     def test_add_voice_from_inactive(self):
         speechSynthesis = self.wait_for_async_speaker_init()
-        self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
-        self.mock_iface("org.mock3.Speech.Provider").AddVoice(
-            "Arabic", "ar", ["ar", "ar-ps", "ar-eg"]
+        self.kill_provider("org.three.Speech.Provider")
+        self.wait_for_provider_to_go_away("org.three.Speech.Provider")
+        self.mock_iface("org.three.Speech.Provider").AddVoice(
+            "Arabic",
+            "ar",
+            "audio/x-raw,format=S16LE,channels=1,rate=22050",
+            0,
+            ["ar", "ar-ps", "ar-eg"],
         )
+
         self.wait_for_voices_changed(speechSynthesis, added=["ar"])
-        self._test_get_voices(
+        self._do_test_get_voices(
             speechSynthesis,
             STANDARD_VOICES
             + [
                 [
-                    "org.mock3.Speech.Provider",
+                    "org.three.Speech.Provider",
                     "Arabic",
                     "ar",
                     ["ar", "ar-ps", "ar-eg"],
                 ]
             ],
         )
-        self.wait_for_provider_to_go_away("org.mock3.Speech.Provider")
-        self.mock_iface("org.mock3.Speech.Provider").RemoveVoice("ar")
+
+        self.kill_provider("org.three.Speech.Provider")
+        self.wait_for_provider_to_go_away("org.three.Speech.Provider")
+        self.mock_iface("org.three.Speech.Provider").RemoveVoice("ar")
         self.wait_for_voices_changed(speechSynthesis, removed=["ar"])
-        self._test_get_voices(speechSynthesis)
+        self._do_test_get_voices(speechSynthesis)
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ class TestSpeak(BaseSpielTest):
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.volume = 1
         utterance.props.voice = self.get_voice(
-            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+            speechSynthesis, "org.two.Speech.Provider", "gmw/en-US"
         )
 
         speechSynthesis.speak(utterance)
@@ -72,7 +72,7 @@ class TestSpeak(BaseSpielTest):
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.volume = 0.5
         utterance.props.voice = self.get_voice(
-            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+            speechSynthesis, "org.two.Speech.Provider", "gmw/en-US"
         )
         speechSynthesis.speak(utterance)
 
@@ -101,7 +101,7 @@ class TestSpeak(BaseSpielTest):
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.volume = 1.0
         utterance.props.voice = self.get_voice(
-            speechSynthesis, "org.mock2.Speech.Provider", "gmw/en-US"
+            speechSynthesis, "org.two.Speech.Provider", "gmw/en-US"
         )
         speechSynthesis.speak(utterance)
 
@@ -113,11 +113,11 @@ class TestSpeak(BaseSpielTest):
         # Tests the proper disposal/closing of 'audio/x-spiel' utterances in a queue
         speaker = Spiel.Speaker.new_sync(None)
 
-        sink = Gst.ElementFactory.make("autoaudiosink", "sink")
+        sink = Gst.ElementFactory.make("fakesink", "sink")
         # Override usual test fakesink
         speaker.props.sink = sink
 
-        voice = self.get_voice(speaker, "org.mock2.Speech.Provider", "gmw/en-US")
+        voice = self.get_voice(speaker, "org.two.Speech.Provider", "gmw/en-US")
         [one, two] = [
             Spiel.Utterance(text=text, voice=voice) for text in ["silent", "silent"]
         ]
