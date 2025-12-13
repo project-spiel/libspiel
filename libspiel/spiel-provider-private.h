@@ -30,8 +30,15 @@ void spiel_provider_new_direct (GDBusConnection *connection,
                                 GAsyncReadyCallback callback,
                                 gpointer user_data);
 
-SpielProvider *spiel_provider_new_direct_finish (GAsyncResult *result,
-                                                 GError **error);
+void spiel_provider_new_with_portal (GDBusConnection *connection,
+                                     const char *session_handle,
+                                     const char *well_known_name,
+                                     const char *name,
+                                     GCancellable *cancellable,
+                                     GAsyncReadyCallback callback,
+                                     gpointer user_data);
+
+SpielProvider *spiel_provider_new_finish (GAsyncResult *result, GError **error);
 
 void spiel_provider_set_proxy (SpielProvider *self,
                                SpielProviderProxy *provider_proxy);

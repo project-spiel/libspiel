@@ -92,7 +92,13 @@ VOICE_SETS = {
         ),
     ],
     "three": [
-        ("Uzbek", "trk/uz", "audio/x-raw,format=S16LE,channels=1,rate=22050", 0, ["uz"])
+        (
+            "Uzbek",
+            "trk/uz",
+            "audio/x-spiel,format=S16LE,channels=1,rate=22050",
+            0,
+            ["uz"],
+        )
     ],
 }
 

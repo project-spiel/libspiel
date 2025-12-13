@@ -21,7 +21,30 @@
 #include "spiel-provider-private.h"
 #include "spiel-provider-proxy.h"
 #include "spiel-provider.h"
+#include "spiel-portal-helpers.h"
 #include <glib-unix.h>
+
+typedef struct
+{
+  GDBusConnection *connection;
+  char *session_handle;
+  char *well_known_name;
+  char *name;
+  int voices_changed_handler_id;
+} _PortalInfo;
+
+static void
+_free_portal_info (_PortalInfo *portal_info)
+{
+  if (portal_info != NULL)
+    {
+      g_clear_object (&portal_info->connection);
+      g_clear_pointer (&portal_info->session_handle, g_free);
+      g_clear_pointer (&portal_info->well_known_name, g_free);
+      g_clear_pointer (&portal_info->name, g_free);
+      g_free (portal_info);
+    }
+}
 
 /**
  * SpielProvider:
@@ -35,6 +58,7 @@ struct _SpielProvider
 {
   GObject parent_instance;
   SpielProviderProxy *provider_proxy;
+  _PortalInfo *portal_info;
   gboolean is_activatable;
   GListStore *voices;
   GHashTable *voices_hashset;
@@ -58,39 +82,23 @@ static gboolean handle_voices_changed (SpielProviderProxy *provider_proxy,
                                        GParamSpec *spec,
                                        gpointer user_data);
 
-static void _spiel_provider_update_voices (SpielProvider *self);
+static GPtrArray *_create_provider_voices (SpielProvider *self,
+                                           GVariant *voices);
+
+static void _spiel_provider_update_voices (SpielProvider *self,
+                                           GPtrArray *new_voices);
 
 static char *_object_path_from_service_name (const char *service_name);
 
+static void _on_get_initial_voices (GObject *source,
+                                    GAsyncResult *result,
+                                    gpointer user_data);
+
 static void
-_on_proxy_created (GObject *source, GAsyncResult *result, gpointer user_data)
-{
-  GTask *task = user_data;
-  SpielProvider *self = g_object_new (SPIEL_TYPE_PROVIDER, NULL);
-  gboolean activatable = GPOINTER_TO_INT (g_task_get_task_data (task));
-  GError *error = NULL;
-
-  self->provider_proxy =
-      spiel_provider_proxy_proxy_new_for_bus_finish (result, &error);
-  self->is_activatable = activatable;
-
-  if (error != NULL)
-    {
-      g_task_return_error (task, error);
-      g_object_unref (task);
-      return;
-    }
-
-  g_signal_connect (self->provider_proxy, "notify::voices",
-                    G_CALLBACK (handle_voices_changed), self);
-  _spiel_provider_update_voices (self);
-
-  g_task_return_pointer (task, self, NULL);
-  g_object_unref (task);
-}
+_on_proxy_created (GObject *source, GAsyncResult *result, gpointer user_data);
 
 /*< private >
- * spiel_provider_new_direct: (finish-func spiel_provider_new_direct_finish)
+ * spiel_provider_new_direct: (finish-func spiel_provider_new_finish)
  * @cancellable: (nullable): optional `GCancellable`.
  * @callback: A #GAsyncReadyCallback to call when the request is satisfied.
  * @user_data: User data to pass to @callback.
@@ -101,7 +109,7 @@ _on_proxy_created (GObject *source, GAsyncResult *result, gpointer user_data)
  * When the operation is finished, @callback will be invoked in the
  * thread-default main loop of the thread you are calling this method from (see
  * [method@GLib.MainContext.push_thread_default]). You can then call
- * [ctor@Spiel.Provider.new_direct_finish] to get the result of the operation.
+ * [ctor@Spiel.Provider.new_finish] to get the result of the operation.
  */
 void
 spiel_provider_new_direct (GDBusConnection *connection,
@@ -121,7 +129,7 @@ spiel_provider_new_direct (GDBusConnection *connection,
 }
 
 /*< private >
- * spiel_provider_new_direct_finish: (constructor)
+ * spiel_provider_new_finish: (constructor)
  * @result: The `GAsyncResult` obtained from the `GAsyncReadyCallback` passed to
  * [func@Spiel.Provider.new_direct].
  * @error: (nullable): optional `GError`
@@ -132,9 +140,48 @@ spiel_provider_new_direct (GDBusConnection *connection,
  *
  */
 SpielProvider *
-spiel_provider_new_direct_finish (GAsyncResult *result, GError **error)
+spiel_provider_new_finish (GAsyncResult *result, GError **error)
 {
   return g_task_propagate_pointer (G_TASK (result), error);
+}
+
+/*< private >
+ * spiel_provider_new_with_portal: (finish-func spiel_provider_new_finish)
+ * @connection: D-Bus connection
+ * @session_handle: Portal session handle
+ * @well_known_name: Provider well known name
+ * @cancellable: (nullable): optional `GCancellable`.
+ * @callback: A #GAsyncReadyCallback to call when the request is satisfied.
+ * @user_data: User data to pass to @callback.
+ *
+ * Asynchronously creates a [class@Spiel.Provider] that is listed in the speech
+ * portal.
+ *
+ * When the operation is finished, @callback will be invoked in the
+ * thread-default main loop of the thread you are calling this method from (see
+ * [method@GLib.MainContext.push_thread_default]). You can then call
+ * [ctor@Spiel.Provider.new_finish] to get the result of the operation.
+ */
+void
+spiel_provider_new_with_portal (GDBusConnection *connection,
+                                const char *session_handle,
+                                const char *well_known_name,
+                                const char *name,
+                                GCancellable *cancellable,
+                                GAsyncReadyCallback callback,
+                                gpointer user_data)
+{
+  SpielProvider *self = g_object_new (SPIEL_TYPE_PROVIDER, NULL);
+  GTask *task = g_task_new (self, cancellable, callback, user_data);
+
+  self->portal_info = g_new0 (_PortalInfo, 1);
+  self->portal_info->connection = g_object_ref (connection);
+  self->portal_info->session_handle = g_strdup (session_handle);
+  self->portal_info->well_known_name = g_strdup (well_known_name);
+  self->portal_info->name = g_strdup (name);
+
+  _portal_get_voices (connection, session_handle, well_known_name, cancellable,
+                      _on_get_initial_voices, task);
 }
 
 /*< private >
@@ -160,7 +207,10 @@ spiel_provider_set_proxy (SpielProvider *self,
 
   if (g_set_object (&self->provider_proxy, provider_proxy))
     {
-      _spiel_provider_update_voices (self);
+      g_autofree GPtrArray *new_voices = _create_provider_voices (
+          self, spiel_provider_proxy_get_voices (self->provider_proxy));
+
+      _spiel_provider_update_voices (self, new_voices);
       g_signal_connect (self->provider_proxy, "notify::voices",
                         G_CALLBACK (handle_voices_changed), self);
     }
@@ -218,6 +268,26 @@ _call_synthesize_done (GObject *source_object,
   g_object_unref (task);
 }
 
+static void
+_call_synthesize_portal_done (GObject *source,
+                              GAsyncResult *result,
+                              gpointer user_data)
+{
+  GTask *task = G_TASK (user_data);
+  GError *error = NULL;
+  gboolean success = _portal_synthesize_finish (result, &error);
+
+  if (error)
+    {
+      g_task_return_error (task, error);
+    }
+  else
+    {
+      g_task_return_boolean (task, success);
+    }
+  g_object_unref (task);
+}
+
 /*< private >
  * spiel_provider_synthesize:
  * @self: a `SpielProvider`
@@ -254,7 +324,7 @@ spiel_provider_synthesize (SpielProvider *self,
   int fd;
 
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), -1);
-  g_return_val_if_fail (self->provider_proxy, -1);
+  g_return_val_if_fail (self->provider_proxy || self->portal_info, -1);
 
   task = g_task_new (self, cancellable, callback, user_data);
   // XXX: Emit error on failure
@@ -264,10 +334,23 @@ spiel_provider_synthesize (SpielProvider *self,
   // XXX: Emit error on failure
   close (mypipe[1]);
 
-  spiel_provider_proxy_call_synthesize (
-      self->provider_proxy, g_variant_new_handle (fd), text, voice_id, pitch,
-      rate, is_ssml, language, G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL,
-      _call_synthesize_done, task);
+  if (self->portal_info)
+    {
+      g_assert (!self->provider_proxy);
+
+      _portal_synthesize (self->portal_info->connection,
+                          self->portal_info->session_handle,
+                          self->portal_info->well_known_name, fd, text,
+                          voice_id, pitch, rate, is_ssml, language, fd_list,
+                          cancellable, _call_synthesize_portal_done, task);
+    }
+  else
+    {
+      spiel_provider_proxy_call_synthesize (
+          self->provider_proxy, g_variant_new_handle (fd), text, voice_id,
+          pitch, rate, is_ssml, language, G_DBUS_CALL_FLAGS_NONE, -1, fd_list,
+          NULL, _call_synthesize_done, task);
+    }
 
   return mypipe[0];
 }
@@ -294,6 +377,13 @@ const char *
 spiel_provider_get_name (SpielProvider *self)
 {
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+
+  if (self->portal_info)
+    {
+      g_assert (!self->provider_proxy);
+      return self->portal_info->name;
+    }
+
   g_return_val_if_fail (self->provider_proxy, NULL);
 
   return spiel_provider_proxy_get_name (self->provider_proxy);
@@ -330,6 +420,13 @@ const char *
 spiel_provider_get_identifier (SpielProvider *self)
 {
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
+
+  if (self->portal_info)
+    {
+      g_assert (!self->provider_proxy);
+      return self->portal_info->well_known_name;
+    }
+
   g_return_val_if_fail (self->provider_proxy, NULL);
 
   return g_dbus_proxy_get_name (G_DBUS_PROXY (self->provider_proxy));
@@ -394,12 +491,11 @@ _object_path_from_service_name (const char *service_name)
   return obj_path;
 }
 
-static GSList *
-_create_provider_voices (SpielProvider *self)
+static GPtrArray *
+_create_provider_voices (SpielProvider *self, GVariant *voices)
 {
-  GSList *voices_slist = NULL;
-  GVariant *voices = spiel_provider_proxy_get_voices (self->provider_proxy);
   gsize voices_count = voices ? g_variant_n_children (voices) : 0;
+  GPtrArray *voices_array = g_ptr_array_new_full (voices_count, g_object_unref);
 
   for (gsize i = 0; i < voices_count; i++)
     {
@@ -422,24 +518,20 @@ _create_provider_voices (SpielProvider *self)
                             self, "features", features, NULL);
       spiel_voice_set_output_format (voice, output_format);
 
-      voices_slist = g_slist_prepend (voices_slist, voice);
+      g_ptr_array_add (voices_array, voice);
     }
 
-  return voices_slist;
+  return voices_array;
 }
 
 static void
-_spiel_provider_update_voices (SpielProvider *self)
+_spiel_provider_update_voices (SpielProvider *self, GPtrArray *new_voices)
 {
-  GSList *new_voices = NULL;
   g_autoptr (GHashTable) new_voices_hashset = NULL;
 
-  g_return_if_fail (self->provider_proxy);
-
-  new_voices = _create_provider_voices (self);
   if (g_hash_table_size (self->voices_hashset) > 0)
     {
-      // We are adding voices to an already populated provider_proxy, store
+      // We are adding voices to an already populated provider, store
       // new voices in a hashset for easy purge of ones that were removed.
       new_voices_hashset = g_hash_table_new ((GHashFunc) spiel_voice_hash,
                                              (GCompareFunc) spiel_voice_equal);
@@ -447,9 +539,9 @@ _spiel_provider_update_voices (SpielProvider *self)
 
   if (new_voices)
     {
-      for (GSList *item = new_voices; item; item = item->next)
+      for (guint i = 0; i < new_voices->len; i++)
         {
-          SpielVoice *voice = item->data;
+          SpielVoice *voice = new_voices->pdata[i];
           if (!g_hash_table_contains (self->voices_hashset, voice))
             {
               g_hash_table_insert (self->voices_hashset, g_object_ref (voice),
@@ -484,8 +576,6 @@ _spiel_provider_update_voices (SpielProvider *self)
             }
         }
     }
-
-  g_slist_free_full (new_voices, (GDestroyNotify) g_object_unref);
 }
 
 static gboolean
@@ -496,6 +586,7 @@ handle_voices_changed (SpielProviderProxy *provider_proxy,
   SpielProvider *self = user_data;
   g_autofree char *name_owner =
       g_dbus_proxy_get_name_owner (G_DBUS_PROXY (self->provider_proxy));
+  g_autofree GPtrArray *new_voices = NULL;
 
   if (name_owner == NULL && self->is_activatable)
     {
@@ -504,7 +595,10 @@ handle_voices_changed (SpielProviderProxy *provider_proxy,
       return TRUE;
     }
 
-  _spiel_provider_update_voices (self);
+  new_voices = _create_provider_voices (
+      self, spiel_provider_proxy_get_voices (self->provider_proxy));
+
+  _spiel_provider_update_voices (self, new_voices);
 
   return TRUE;
 }
@@ -546,6 +640,11 @@ spiel_provider_finalize (GObject *object)
     }
 
   g_clear_object (&(self->voices));
+
+  if (self->portal_info != NULL)
+    {
+      g_clear_pointer (&self->portal_info, _free_portal_info);
+    }
 
   G_OBJECT_CLASS (spiel_provider_parent_class)->finalize (object);
 }
@@ -640,4 +739,67 @@ spiel_provider_init (SpielProvider *self)
   self->voices = g_list_store_new (SPIEL_TYPE_VOICE);
   self->voices_hashset = g_hash_table_new ((GHashFunc) spiel_voice_hash,
                                            (GCompareFunc) spiel_voice_equal);
+}
+
+static void
+_on_proxy_created (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+  GTask *task = user_data;
+  SpielProvider *self = g_object_new (SPIEL_TYPE_PROVIDER, NULL);
+  gboolean activatable = GPOINTER_TO_INT (g_task_get_task_data (task));
+  g_autoptr (GPtrArray) new_voices = NULL;
+  GError *error = NULL;
+
+  self->provider_proxy =
+      spiel_provider_proxy_proxy_new_for_bus_finish (result, &error);
+  self->is_activatable = activatable;
+
+  if (error != NULL)
+    {
+      g_task_return_error (task, error);
+      g_object_unref (task);
+
+      return;
+    }
+
+  g_signal_connect (self->provider_proxy, "notify::voices",
+                    G_CALLBACK (handle_voices_changed), self);
+
+  new_voices = _create_provider_voices (
+      self, spiel_provider_proxy_get_voices (self->provider_proxy));
+
+  _spiel_provider_update_voices (self, new_voices);
+
+  g_task_return_pointer (task, self, NULL);
+  g_object_unref (task);
+}
+
+static void
+_handle_portal_voices_changed (GVariant *voices_variant, gpointer user_data)
+{
+  SpielProvider *self = SPIEL_PROVIDER (user_data);
+  g_autoptr (GPtrArray) voices = _create_provider_voices (self, voices_variant);
+  _spiel_provider_update_voices (self, voices);
+}
+
+static void
+_on_get_initial_voices (GObject *source,
+                        GAsyncResult *result,
+                        gpointer user_data)
+{
+  GTask *task = user_data;
+  SpielProvider *self = SPIEL_PROVIDER (g_task_get_source_object (task));
+  g_autoptr (GError) error = NULL;
+  g_autoptr (GVariant) voices_variant =
+      _portal_get_voices_finish (result, &error);
+  g_autoptr (GPtrArray) voices = _create_provider_voices (self, voices_variant);
+  _spiel_provider_update_voices (self, voices);
+  self->portal_info->voices_changed_handler_id =
+      _portal_subscribe_to_voices_changed (self->portal_info->connection,
+                                           self->portal_info->session_handle,
+                                           self->portal_info->well_known_name,
+                                           _handle_portal_voices_changed, self);
+
+  g_task_return_pointer (task, self, g_object_unref);
+  g_object_unref (task);
 }

@@ -209,7 +209,8 @@ async_initable_init_async (GAsyncInitable *initable,
       g_task_set_task_data (task, g_object_ref (cancellable), g_object_unref);
     }
 
-  spiel_providers_list_model_new (cancellable, _on_providers_init, task);
+  spiel_providers_list_model_new (g_getenv ("SPIEL_USE_PORTAL") != NULL,
+                                  cancellable, _on_providers_init, task);
 }
 
 static gboolean
@@ -248,7 +249,8 @@ initable_init (GInitable *initable, GCancellable *cancellable, GError **error)
 {
   SpielRegistry *self = (SpielRegistry *) initable;
 
-  self->providers = spiel_providers_list_model_new_sync ();
+  self->providers = spiel_providers_list_model_new_sync (
+      g_getenv ("SPIEL_USE_PORTAL") != NULL);
   self->voices = spiel_voices_list_model_new (G_LIST_MODEL (self->providers));
   self->settings = _settings_new ();
 

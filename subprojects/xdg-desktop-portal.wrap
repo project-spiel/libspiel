@@ -1,0 +1,5 @@
+[wrap-git]
+directory=xdg-desktop-portal
+url=https://github.com/eeejay/xdg-desktop-portal.git
+revision=speech-synthesis
+depth=1

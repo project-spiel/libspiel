@@ -5,19 +5,29 @@ class TestSpeak(BaseSpielTest):
     def test_provider_dies(self):
         speaker = self.wait_for_async_speaker_init()
 
+        # self.uninstall_providers(["org.three.Speech.Provider"])
         utterance = Spiel.Utterance(text="die")
         # XXX: fdsrc goes to playing state even when no
         # data is written to the pipe. So we use a spielsrc.
         utterance.props.voice = self.get_voice(
-            speaker, "org.two.Speech.Provider", "gmw/en-US"
+            speaker, "org.three.Speech.Provider", "trk/uz"
         )
 
-        expected_error = (
-            "g-dbus-error-quark",
-            int(Gio.DBusError.NO_REPLY),
-            "GDBus.Error:org.freedesktop.DBus.Error.NoReply: "
-            "Message recipient disconnected from message bus without replying",
-        )
+        if self.use_portal:
+            expected_error = (
+                "g-io-error-quark",
+                int(Gio.IOErrorEnum.FAILED),
+                "Synthesize failed: GDBus.Error:org.freedesktop.DBus.Error.NoReply: "
+                "Message recipient disconnected from message bus without replying",
+            )
+        else:
+            expected_error = (
+                "g-dbus-error-quark",
+                int(Gio.DBusError.NO_REPLY),
+                "GDBus.Error:org.freedesktop.DBus.Error.NoReply: "
+                "Message recipient disconnected from message bus without replying",
+            )
+
         expected_events = [
             ["notify:speaking", True],
             ["utterance-error", utterance, expected_error],

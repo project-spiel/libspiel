@@ -2,6 +2,17 @@ from _common import *
 
 
 class TestInstallProvider(BaseSpielTest):
+    def _test_portal(self):
+        session_bus = dbus.SessionBus()
+        proxy = session_bus.get_object(
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+        )
+        portal = dbus.Interface(
+            proxy, dbus_interface="org.freedesktop.DBus.Introspectable"
+        )
+        self.assertIn("org.freedesktop.portal.Speech", portal.Introspect())
+
     def test_providers_speaker_property(self):
         speaker = self.wait_for_async_speaker_init()
         self.assertEqual(

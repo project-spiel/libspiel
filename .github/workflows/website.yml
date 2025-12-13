@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt install -y git meson gi-docgen libgirepository1.0-dev libdbus-glib-1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
       - name: Setup Spiel
-        run: meson setup build -Dtests=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:tests=false
+        run: meson setup build -Dportal-tests=false -Dtests=false -Dlibspeechprovider:docs=false -Dlibspeechprovider:tests=false 
       - name: Compile Spiel
         run: meson compile -C build
       - name: Upload artifact

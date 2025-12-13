@@ -6,6 +6,7 @@ import gi
 import sys
 import json
 from pathlib import Path
+import subprocess
 
 gi.require_version("Spiel", "1.0")
 from gi.repository import Spiel
@@ -56,8 +57,13 @@ class BaseSpielTest(dbusmock.DBusTestCase):
     def setUpClass(cls):
         cls.start_session_bus()
         cls.dbus_con = cls.get_dbus()
+
         if os.getenv("SPIEL_TEST_DBUS_MONITOR"):
             cls.dbus_monitor = subprocess.Popen(["dbus-monitor", "--session"])
+
+        cls.use_portal = os.getenv("SPIEL_USE_PORTAL")
+        if cls.use_portal:
+            cls.start_portals()
 
         cls.install_providers(
             [
@@ -66,6 +72,13 @@ class BaseSpielTest(dbusmock.DBusTestCase):
                 "org.three.Speech.Provider",
             ]
         )
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.use_portal:
+            cls.xdg_portal.terminate()
+            cls.xdg_portal.wait()
+        super().tearDownClass()
 
     def __init__(self, *args):
         self._mocks = {}
@@ -107,7 +120,8 @@ class BaseSpielTest(dbusmock.DBusTestCase):
         except:
             pass
 
-    def list_active_providers(self):
+    @classmethod
+    def list_active_providers(cls):
         session_bus = dbus.SessionBus()
         bus_obj = session_bus.get_object(
             "org.freedesktop.DBus", "/org/freedesktop/DBus"
@@ -189,6 +203,30 @@ class BaseSpielTest(dbusmock.DBusTestCase):
         action()
         loop = GLib.MainLoop()
         loop.run()
+
+    @classmethod
+    def start_portals(cls):
+        portals_dir = Path(cls.get_services_dir(False)).parent / "portals"
+        portals_dir.mkdir(exist_ok=True)
+        with open(portals_dir / "portals.conf", "w") as f:
+            f.write("[preferred]\n" "default=test;\n")
+        with open(portals_dir / "test.portal", "w") as f:
+            f.write(
+                "[portal]\n"
+                "DBusName=org.freedesktop.impl.portal.Test\n"
+                "Interfaces=org.freedesktop.impl.portal.Access;\n"
+            )
+        env = os.environ.copy()
+        env["XDG_DESKTOP_PORTAL_DIR"] = str(portals_dir)
+        # XXX: portals tries to talk to other services on the session and system bus that don't exist.
+        env["G_DEBUG"] = "fatal-criticals"
+
+        cls.xdg_portal = subprocess.Popen(
+            [os.environ["XDG_DESKTOP_PORTAL_EXECUTABLE"]], env=env
+        )
+        cls.wait_for_bus_object(
+            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop"
+        )
 
     @classmethod
     def uninstall_providers(cls, names):

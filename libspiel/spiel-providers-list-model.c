@@ -19,6 +19,8 @@
 #include "spiel-providers-list-model.h"
 
 #include "spiel-provider-private.h"
+#include "spiel-portal-helpers.h"
+
 #include "spiel-voice.h"
 
 #define PROVIDER_SUFFIX ".Speech.Provider"
@@ -38,6 +40,9 @@ struct _SpielProvidersListModel
   GDBusConnection *connection;
   guint subscription_ids[2];
 
+  gboolean use_portal;
+  char *session_handle;
+
   GListStore *providers_list;
   GHashTable *initializing_providers;
 };
@@ -55,13 +60,17 @@ static void
 _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data);
 
 void
-spiel_providers_list_model_new (GCancellable *cancellable,
+spiel_providers_list_model_new (gboolean use_portal,
+                                GCancellable *cancellable,
                                 GAsyncReadyCallback callback,
                                 gpointer user_data)
 {
   SpielProvidersListModel *self =
       g_object_new (SPIEL_TYPE_PROVIDERS_LIST_MODEL, NULL);
+
   GTask *task = g_task_new (self, cancellable, callback, user_data);
+
+  self->use_portal = use_portal;
 
   g_bus_get (G_BUS_TYPE_SESSION, cancellable, _on_bus_get, task);
 }
@@ -85,12 +94,14 @@ _on_sync_init (GObject *source, GAsyncResult *result, gpointer user_data)
 }
 
 SpielProvidersListModel *
-spiel_providers_list_model_new_sync (void)
+spiel_providers_list_model_new_sync (gboolean use_portal)
 {
   SpielProvidersListModel *self =
       g_object_new (SPIEL_TYPE_PROVIDERS_LIST_MODEL, NULL);
 
   GTask *task = g_task_new (self, NULL, _on_sync_init, NULL);
+
+  self->use_portal = use_portal;
 
   g_bus_get (G_BUS_TYPE_SESSION, NULL, _on_bus_get, task);
 
@@ -128,7 +139,8 @@ spiel_providers_list_model_finalize (GObject *object)
   SpielProvidersListModel *self = (SpielProvidersListModel *) object;
 
   g_clear_object (&self->providers_list);
-  g_hash_table_unref (self->initializing_providers);
+  g_clear_pointer (&self->session_handle, g_free);
+  g_clear_pointer (&self->initializing_providers, g_hash_table_unref);
 
   G_OBJECT_CLASS (spiel_providers_list_model_parent_class)->finalize (object);
 }
@@ -225,8 +237,6 @@ _get_provider_services_in_thread_func (GTask *task,
              !g_cancellable_is_cancelled (cancellable))
         {
           g_autofree char *obj_path = NULL;
-          g_autoptr (GError) err = NULL;
-
           if (!g_str_has_suffix (service_name, PROVIDER_SUFFIX) ||
               g_hash_table_contains (providers, service_name))
             {
@@ -276,7 +286,7 @@ _on_provider_created (GObject *source, GAsyncResult *result, gpointer user_data)
 {
   SpielProvidersListModel *self = SPIEL_PROVIDERS_LIST_MODEL (user_data);
   g_autoptr (GError) error = NULL;
-  SpielProvider *provider = spiel_provider_new_direct_finish (result, &error);
+  SpielProvider *provider = spiel_provider_new_finish (result, &error);
 
   if (error != NULL)
     {
@@ -387,7 +397,7 @@ _on_initial_provider_created (GObject *source,
   GTask *task = user_data;
   SpielProvidersListModel *self = g_task_get_source_object (task);
   GError *error = NULL;
-  SpielProvider *provider = spiel_provider_new_direct_finish (result, &error);
+  SpielProvider *provider = spiel_provider_new_finish (result, &error);
 
   if (error != NULL)
     {
@@ -453,6 +463,105 @@ _on_providers_collected (GObject *source, GAsyncResult *res, gpointer user_data)
 }
 
 static void
+_handle_portal_providers_changed (GHashTable *providers, gpointer user_data)
+{
+  SpielProvidersListModel *self = (SpielProvidersListModel *) user_data;
+  GHashTableIter providers_iter;
+  const char *well_known_name;
+  const char *name;
+
+  g_hash_table_iter_init (&providers_iter, providers);
+  while (g_hash_table_iter_next (&providers_iter, (gpointer *) &well_known_name,
+                                 (gpointer *) &name))
+    {
+      if (spiel_providers_list_model_get_by_name (self, well_known_name, NULL))
+        {
+          continue;
+        }
+      if (g_hash_table_insert (self->initializing_providers,
+                               g_strdup (well_known_name), NULL))
+        {
+          spiel_provider_new_with_portal (
+              self->connection, self->session_handle, well_known_name, name,
+              NULL, _on_provider_created, self);
+        }
+    }
+
+  for (gint i =
+           g_list_model_get_n_items (G_LIST_MODEL (self->providers_list)) - 1;
+       i >= 0; i--)
+    {
+      g_autoptr (SpielProvider) provider = SPIEL_PROVIDER (
+          g_list_model_get_object (G_LIST_MODEL (self->providers_list), i));
+      if (!g_hash_table_contains (providers,
+                                  spiel_provider_get_identifier (provider)))
+        {
+          g_list_store_remove (self->providers_list, i);
+        }
+    }
+}
+
+static void
+_on_portal_providers_collected (GObject *source,
+                                GAsyncResult *res,
+                                gpointer user_data)
+{
+  GTask *task = G_TASK (user_data);
+  SpielProvidersListModel *self = g_task_get_source_object (task);
+  GError *error = NULL;
+  g_autoptr (GHashTable) providers = _portal_get_providers_finish (res, &error);
+  GHashTableIter iter;
+  char *well_known_name;
+  const char *name;
+
+  if (error)
+    {
+      g_task_return_error (task, error);
+      g_object_unref (task);
+      return;
+    }
+
+  g_hash_table_iter_init (&iter, providers);
+  while (g_hash_table_iter_next (&iter, (gpointer *) &well_known_name,
+                                 (gpointer *) &name))
+    {
+      if (g_hash_table_insert (self->initializing_providers,
+                               g_strdup (well_known_name), NULL))
+        {
+          spiel_provider_new_with_portal (
+              self->connection, self->session_handle, well_known_name, name,
+              NULL, _on_initial_provider_created, task);
+        }
+    }
+
+  self->subscription_ids[0] = _portal_subscribe_to_providers_changed (
+      self->connection, self->session_handle, _handle_portal_providers_changed,
+      self);
+}
+
+static void
+_on_portal_session_created (GObject *source,
+                            GAsyncResult *res,
+                            gpointer user_data)
+{
+  GTask *task = G_TASK (user_data);
+  GDBusConnection *connection = G_DBUS_CONNECTION (source);
+  SpielProvidersListModel *self = g_task_get_source_object (task);
+  GError *error = NULL;
+  self->session_handle = _portal_create_session_finish (res, &error);
+  if (error)
+    {
+      g_task_return_error (task, error);
+      g_object_unref (task);
+      return;
+    }
+
+  _portal_get_providers (connection, self->session_handle,
+                         g_task_get_cancellable (task),
+                         _on_portal_providers_collected, task);
+}
+
+static void
 _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
 {
   GTask *task = user_data;
@@ -468,6 +577,14 @@ _on_bus_get (GObject *source, GAsyncResult *result, gpointer user_data)
       return;
     }
 
-  _get_provider_services (self->connection, cancellable,
-                          _on_providers_collected, task);
+  if (self->use_portal)
+    {
+      _portal_create_session (self->connection, cancellable,
+                              _on_portal_session_created, task);
+    }
+  else
+    {
+      _get_provider_services (self->connection, cancellable,
+                              _on_providers_collected, task);
+    }
 }

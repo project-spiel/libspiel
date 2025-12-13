@@ -33,14 +33,16 @@ G_DECLARE_FINAL_TYPE (SpielProvidersListModel,
                       PROVIDERS_LIST_MODEL,
                       GObject)
 
-void spiel_providers_list_model_new (GCancellable *cancellable,
+void spiel_providers_list_model_new (gboolean use_portal,
+                                     GCancellable *cancellable,
                                      GAsyncReadyCallback callback,
                                      gpointer user_data);
 
 SpielProvidersListModel *
 spiel_providers_list_model_new_finish (GAsyncResult *result, GError **error);
 
-SpielProvidersListModel *spiel_providers_list_model_new_sync (void);
+SpielProvidersListModel *
+spiel_providers_list_model_new_sync (gboolean use_portal);
 
 SpielProvider *spiel_providers_list_model_get_by_name (
     SpielProvidersListModel *self, const char *provider_name, guint *position);

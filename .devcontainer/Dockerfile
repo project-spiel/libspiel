@@ -18,6 +18,11 @@ RUN apt-get update \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     gstreamer1.0-plugins-good \
+    libjson-glib-dev \
+    libfuse3-dev \
+    libgdk-pixbuf-2.0-dev \
+    bubblewrap \
+    libpipewire-0.3-dev \
     && apt-get clean -y \
     && apt-get autoremove -y \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
