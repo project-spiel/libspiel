@@ -28,8 +28,6 @@ SpielProvider *spiel_provider_new (void);
 void spiel_provider_set_proxy (SpielProvider *self,
                                SpielProviderProxy *provider_proxy);
 
-SpielProviderProxy *spiel_provider_get_proxy (SpielProvider *self);
-
 SpielVoice *spiel_provider_get_voice_by_id (SpielProvider *self,
                                             const char *voice_id);
 
@@ -41,3 +39,18 @@ gboolean spiel_provider_get_is_activatable (SpielProvider *self);
 gint spiel_provider_compare (SpielProvider *self,
                              SpielProvider *other,
                              gpointer user_data);
+
+int spiel_provider_synthesize (SpielProvider *proxy,
+                               const gchar *text,
+                               const gchar *voice_id,
+                               gdouble pitch,
+                               gdouble rate,
+                               gboolean is_ssml,
+                               const gchar *language,
+                               GCancellable *cancellable,
+                               GAsyncReadyCallback callback,
+                               gpointer user_data);
+
+gboolean spiel_provider_synthesize_finish (SpielProvider *self,
+                                           GAsyncResult *result,
+                                           GError **error);

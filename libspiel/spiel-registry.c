@@ -504,7 +504,7 @@ initable_iface_init (GInitableIface *initable_iface)
 
 /* Public API */
 
-SpielProviderProxy *
+SpielProvider *
 spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
 {
   g_autoptr (SpielProvider) voice_provider = NULL;
@@ -512,10 +512,7 @@ spiel_registry_get_provider_for_voice (SpielRegistry *self, SpielVoice *voice)
   g_return_val_if_fail (SPIEL_IS_REGISTRY (self), NULL);
   g_return_val_if_fail (SPIEL_IS_VOICE (voice), NULL);
 
-  voice_provider = spiel_voice_get_provider (voice);
-  g_return_val_if_fail (SPIEL_IS_PROVIDER (voice_provider), NULL);
-
-  return spiel_provider_get_proxy (voice_provider);
+  return spiel_voice_get_provider (voice);
 }
 
 static SpielVoice *

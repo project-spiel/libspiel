@@ -20,13 +20,12 @@
 
 #include "spiel-speaker.h"
 
-#include "spiel-provider-proxy.h"
+#include "spiel-provider-private.h"
 #include "spiel-provider-src.h"
 #include "spiel-registry.h"
 #include "spiel-voice.h"
 #include <fcntl.h>
 #include <gio/gio.h>
-#include <glib-unix.h>
 #include <gst/audio/audio.h>
 #include <gst/gst.h>
 
@@ -696,15 +695,12 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
 {
   _QueueEntry *entry = g_slice_new0 (_QueueEntry);
   _CallSynthData *call_synth_data = g_slice_new0 (_CallSynthData);
-  SpielProviderProxy *provider = NULL;
-  GUnixFDList *fd_list = g_unix_fd_list_new ();
-  int mypipe[2];
-  int fd;
+  SpielProvider *provider = NULL;
   const char *text = spiel_utterance_get_text (utterance);
   const char *lang = spiel_utterance_get_language (utterance);
-  const char *output_format = NULL;
   const char *stream_type = NULL;
   gboolean is_ssml = FALSE;
+  int fd;
   gdouble pitch, rate, volume;
   g_autoptr (SpielVoice) voice = NULL;
   GstStructure *gst_struct;
@@ -729,41 +725,29 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
     }
 
   provider = spiel_registry_get_provider_for_voice (self->registry, voice);
-
-  // XXX: Emit error on failure
-  g_unix_open_pipe (mypipe, 0, NULL);
-  fd = g_unix_fd_list_append (fd_list, mypipe[1], NULL);
-
-  // XXX: Emit error on failure
-  close (mypipe[1]);
+  g_return_if_fail (SPIEL_IS_PROVIDER (provider));
 
   call_synth_data->self = self;
   call_synth_data->utterance = g_object_ref (utterance);
 
-  spiel_provider_proxy_call_synthesize (
-      provider, g_variant_new_handle (fd), text,
-      voice ? spiel_voice_get_identifier (voice) : "", pitch, rate, is_ssml,
-      lang ? lang : "", G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL,
-      _provider_call_synthesize_done, call_synth_data);
-
-  g_object_unref (fd_list);
+  fd = spiel_provider_synthesize (
+      provider, text, spiel_voice_get_identifier (voice), pitch, rate, is_ssml,
+      lang ? lang : "", NULL, _provider_call_synthesize_done, call_synth_data);
 
   entry->utterance = g_object_ref (utterance);
 
-  output_format = spiel_voice_get_output_format (voice);
-
-  gst_struct = gst_structure_from_string (output_format, NULL);
+  gst_struct =
+      gst_structure_from_string (spiel_voice_get_output_format (voice), NULL);
 
   stream_type = gst_struct ? gst_structure_get_name (gst_struct) : NULL;
 
   if (g_strcmp0 (stream_type, "audio/x-raw") == 0)
     {
-      entry->src =
-          gst_element_factory_make_full ("fdsrc", "fd", mypipe[0], NULL);
+      entry->src = gst_element_factory_make_full ("fdsrc", "fd", fd, NULL);
     }
   else if (g_strcmp0 (stream_type, "audio/x-spiel") == 0)
     {
-      entry->src = GST_ELEMENT (spiel_provider_src_new (mypipe[0]));
+      entry->src = GST_ELEMENT (spiel_provider_src_new (fd));
     }
 
   if (!entry->src)
@@ -771,7 +755,7 @@ spiel_speaker_speak (SpielSpeaker *self, SpielUtterance *utterance)
       g_assert (!entry->error);
       g_set_error (&entry->error, SPIEL_ERROR, SPIEL_ERROR_MISCONFIGURED_VOICE,
                    "Voice output format not set correctly: '%s'",
-                   output_format);
+                   spiel_voice_get_output_format (voice));
     }
   else
     {
@@ -1101,9 +1085,9 @@ _provider_call_synthesize_done (GObject *source_object,
                                 gpointer user_data)
 {
   _CallSynthData *call_synth_data = user_data;
-  SpielProviderProxy *provider = SPIEL_PROVIDER_PROXY (source_object);
+  SpielProvider *provider = SPIEL_PROVIDER (source_object);
   GError *err = NULL;
-  spiel_provider_proxy_call_synthesize_finish (provider, NULL, res, &err);
+  spiel_provider_synthesize_finish (provider, res, &err);
   if (err != NULL)
     {
       SpielSpeaker *self = SPIEL_SPEAKER (call_synth_data->self);

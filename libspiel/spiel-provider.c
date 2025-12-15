@@ -22,6 +22,7 @@
 #include "spiel-provider-private.h"
 #include "spiel-provider-proxy.h"
 #include "spiel-provider.h"
+#include <glib-unix.h>
 
 /**
  * SpielProvider:
@@ -103,22 +104,6 @@ spiel_provider_set_proxy (SpielProvider *self,
 }
 
 /*< private >
- * spiel_provider_get_proxy:
- * @self: a `SpielProvider`
- *
- * Gets the internal D-Bus proxy.
- *
- * Returns: (transfer none): a `SpielProviderProxy`
- */
-SpielProviderProxy *
-spiel_provider_get_proxy (SpielProvider *self)
-{
-  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), NULL);
-
-  return self->provider_proxy;
-}
-
-/*< private >
  * spiel_provider_get_voice_by_id:
  * @self: a `SpielProvider`
  * @voice_id: (not nullable): a voice ID
@@ -147,6 +132,89 @@ spiel_provider_get_voice_by_id (SpielProvider *self, const char *voice_id)
         }
     }
   return NULL;
+}
+
+static void
+_call_synthesize_done (GObject *source_object,
+                       GAsyncResult *res,
+                       gpointer user_data)
+{
+  GTask *task = G_TASK (user_data);
+  SpielProviderProxy *provider = SPIEL_PROVIDER_PROXY (source_object);
+  GError *error = NULL;
+  gboolean success =
+      spiel_provider_proxy_call_synthesize_finish (provider, NULL, res, &error);
+  if (error)
+    {
+      g_task_return_error (task, error);
+    }
+  else
+    {
+      g_task_return_boolean (task, success);
+    }
+  g_object_unref (task);
+}
+
+/*< private >
+ * spiel_provider_synthesize:
+ * @self: a `SpielProvider`
+ * @text: (not nullable): text to synthesize
+ * @voice_id: (not nullable): voice identifier
+ * @pitch: synthesis pitch
+ * @rate: synthesis rate
+ * @is_ssml: whether the text is SSML
+ * @language: (not nullable): language code
+ * @cancellable: (nullable): a `GCancellable`
+ * @callback: (nullable): a `GAsyncReadyCallback` to call when the
+ *     operation is complete
+ * @user_data: (nullable): user data to pass to @callback
+ *
+ * Send synthesis request to provider
+ *
+ * Returns: file descriptor of the audio stream, or -1 on error
+ */
+int
+spiel_provider_synthesize (SpielProvider *self,
+                           const gchar *text,
+                           const gchar *voice_id,
+                           gdouble pitch,
+                           gdouble rate,
+                           gboolean is_ssml,
+                           const gchar *language,
+                           GCancellable *cancellable,
+                           GAsyncReadyCallback callback,
+                           gpointer user_data)
+{
+  g_autoptr (GUnixFDList) fd_list = g_unix_fd_list_new ();
+  GTask *task = NULL;
+  int mypipe[2];
+  int fd;
+
+  g_return_val_if_fail (SPIEL_IS_PROVIDER (self), -1);
+  g_return_val_if_fail (self->provider_proxy, -1);
+
+  task = g_task_new (self, cancellable, callback, user_data);
+  // XXX: Emit error on failure
+  g_unix_open_pipe (mypipe, 0, NULL);
+  fd = g_unix_fd_list_append (fd_list, mypipe[1], NULL);
+
+  // XXX: Emit error on failure
+  close (mypipe[1]);
+
+  spiel_provider_proxy_call_synthesize (
+      self->provider_proxy, g_variant_new_handle (fd), text, voice_id, pitch,
+      rate, is_ssml, language, G_DBUS_CALL_FLAGS_NONE, -1, fd_list, NULL,
+      _call_synthesize_done, task);
+
+  return mypipe[0];
+}
+
+gboolean
+spiel_provider_synthesize_finish (SpielProvider *self,
+                                  GAsyncResult *result,
+                                  GError **error)
+{
+  return g_task_propagate_boolean (G_TASK (result), error);
 }
 
 /**
