@@ -23,7 +23,15 @@
 typedef struct _SpielProviderProxy SpielProviderProxy;
 typedef struct _SpielVoice SpielVoice;
 
-SpielProvider *spiel_provider_new (void);
+void spiel_provider_new_direct (GDBusConnection *connection,
+                                const char *well_known_name,
+                                gboolean activatable,
+                                GCancellable *cancellable,
+                                GAsyncReadyCallback callback,
+                                gpointer user_data);
+
+SpielProvider *spiel_provider_new_direct_finish (GAsyncResult *result,
+                                                 GError **error);
 
 void spiel_provider_set_proxy (SpielProvider *self,
                                SpielProviderProxy *provider_proxy);

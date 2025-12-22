@@ -18,7 +18,6 @@
 
 #include "spiel.h"
 
-#include "spiel-collect-providers.h"
 #include "spiel-provider-private.h"
 #include "spiel-provider-proxy.h"
 #include "spiel-provider.h"
@@ -61,17 +60,81 @@ static gboolean handle_voices_changed (SpielProviderProxy *provider_proxy,
 
 static void _spiel_provider_update_voices (SpielProvider *self);
 
+static char *_object_path_from_service_name (const char *service_name);
+
+static void
+_on_proxy_created (GObject *source, GAsyncResult *result, gpointer user_data)
+{
+  GTask *task = user_data;
+  SpielProvider *self = g_object_new (SPIEL_TYPE_PROVIDER, NULL);
+  gboolean activatable = GPOINTER_TO_INT (g_task_get_task_data (task));
+  GError *error = NULL;
+
+  self->provider_proxy =
+      spiel_provider_proxy_proxy_new_for_bus_finish (result, &error);
+  self->is_activatable = activatable;
+
+  if (error != NULL)
+    {
+      g_task_return_error (task, error);
+      g_object_unref (task);
+      return;
+    }
+
+  g_signal_connect (self->provider_proxy, "notify::voices",
+                    G_CALLBACK (handle_voices_changed), self);
+  _spiel_provider_update_voices (self);
+
+  g_task_return_pointer (task, self, NULL);
+  g_object_unref (task);
+}
+
 /*< private >
- * spiel_provider_new: (constructor)
+ * spiel_provider_new_direct: (finish-func spiel_provider_new_direct_finish)
+ * @cancellable: (nullable): optional `GCancellable`.
+ * @callback: A #GAsyncReadyCallback to call when the request is satisfied.
+ * @user_data: User data to pass to @callback.
  *
- * Creates a new [class@Spiel.Provider].
+ * Asynchronously creates a [class@Spiel.Provider] that is associated with a
+ * D-Bus service.
  *
- * Returns: (transfer full): The new `SpielProvider`.
+ * When the operation is finished, @callback will be invoked in the
+ * thread-default main loop of the thread you are calling this method from (see
+ * [method@GLib.MainContext.push_thread_default]). You can then call
+ * [ctor@Spiel.Provider.new_direct_finish] to get the result of the operation.
+ */
+void
+spiel_provider_new_direct (GDBusConnection *connection,
+                           const char *well_known_name,
+                           gboolean activatable,
+                           GCancellable *cancellable,
+                           GAsyncReadyCallback callback,
+                           gpointer user_data)
+{
+  GTask *task = g_task_new (connection, cancellable, callback, user_data);
+  g_autofree char *obj_path = _object_path_from_service_name (well_known_name);
+  g_task_set_task_data (task, GINT_TO_POINTER (activatable), NULL);
+
+  spiel_provider_proxy_proxy_new_for_bus (G_BUS_TYPE_SESSION, 0,
+                                          well_known_name, obj_path,
+                                          cancellable, _on_proxy_created, task);
+}
+
+/*< private >
+ * spiel_provider_new_direct_finish: (constructor)
+ * @result: The `GAsyncResult` obtained from the `GAsyncReadyCallback` passed to
+ * [func@Spiel.Provider.new_direct].
+ * @error: (nullable): optional `GError`
+ *
+ * Finishes an operation started with [func@Spiel.Provider.new_direct].
+ *
+ * Returns: (transfer full): The new `SpielProvider`, or %NULL with @error set
+ *
  */
 SpielProvider *
-spiel_provider_new (void)
+spiel_provider_new_direct_finish (GAsyncResult *result, GError **error)
 {
-  return g_object_new (SPIEL_TYPE_PROVIDER, NULL);
+  return g_task_propagate_pointer (G_TASK (result), error);
 }
 
 /*< private >
@@ -319,6 +382,16 @@ spiel_provider_get_is_activatable (SpielProvider *self)
   g_return_val_if_fail (SPIEL_IS_PROVIDER (self), FALSE);
 
   return self->is_activatable;
+}
+
+static char *
+_object_path_from_service_name (const char *service_name)
+{
+  char **split_name = g_strsplit (service_name, ".", 0);
+  g_autofree char *partial_path = g_strjoinv ("/", split_name);
+  char *obj_path = g_strdup_printf ("/%s", partial_path);
+  g_strfreev (split_name);
+  return obj_path;
 }
 
 static GSList *

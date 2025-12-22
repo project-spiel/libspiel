@@ -3,7 +3,7 @@ from _common import *
 
 class TestSpeak(BaseSpielTest):
     def test_speak(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         utterance = Spiel.Utterance(text="hello world, how are you?")
         utterance.props.voice = self.get_voice(
@@ -52,7 +52,7 @@ class TestSpeak(BaseSpielTest):
         self.assertTrue(speaker2.props.speaking, "Speaker should be speaking")
 
     def test_queue(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
         [one, two, three] = [
             Spiel.Utterance(text=text) for text in ["one", "two", "three"]
         ]
@@ -85,7 +85,7 @@ class TestSpeak(BaseSpielTest):
                 mock.End()
 
         mock.SetInfinite(True)
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
         speaker.connect("utterance-started", _started_cb)
         speaker.connect("notify::paused", _notify_paused_cb)
 
@@ -110,7 +110,7 @@ class TestSpeak(BaseSpielTest):
 
         self.mock_iface("org.one.Speech.Provider").SetInfinite(True)
 
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
         speaker.connect("utterance-started", _started_cb)
 
         [one, two, three] = [
@@ -137,7 +137,7 @@ class TestSpeak(BaseSpielTest):
         actual_events = []
 
         self.mock_iface("org.one.Speech.Provider").SetInfinite(True)
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
         speaker.connect("utterance-started", _started_cb)
         speaker.connect("notify::paused", _notify_paused_cb)
 
@@ -160,7 +160,7 @@ class TestSpeak(BaseSpielTest):
             if _speaker.props.paused:
                 GLib.idle_add(lambda: _speaker.resume())
 
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
         speaker.connect("notify::paused", _notify_paused_cb)
         GLib.idle_add(lambda: speaker.pause())
 
@@ -180,7 +180,7 @@ class TestSpeak(BaseSpielTest):
         self.assertEqual(actual_events, expected_events)
 
     def test_is_ssml(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))
@@ -195,7 +195,7 @@ class TestSpeak(BaseSpielTest):
         self.assertTrue(is_ssml)
 
     def test_provide_language(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         utterance = Spiel.Utterance(text="hello world, how are you?", language="hy")
         self.wait_for_speaking_done(speaker, lambda: speaker.speak(utterance))

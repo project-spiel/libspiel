@@ -3,7 +3,7 @@ from _common import *
 
 class TestSpeak(BaseSpielTest):
     def test_provider_dies(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         utterance = Spiel.Utterance(text="die")
         # XXX: fdsrc goes to playing state even when no
@@ -29,7 +29,7 @@ class TestSpeak(BaseSpielTest):
         self.assertEqual(actual_events, expected_events)
 
     def test_bad_voice(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         voices = [
             self.get_voice(speaker, *provider_identifier_and_id)

@@ -1,4 +1,4 @@
-/* spiel-utterance.c
+/* spiel-voices-list-model.c
  *
  * Copyright (C) 2023 Eitan Isaacson <eitan@monotonous.org>
  *
@@ -52,16 +52,27 @@ static void handle_providers_changed (GListModel *providers,
                                       guint added,
                                       SpielVoicesListModel *self);
 
+static void _connect_signals (SpielVoicesListModel *self,
+                              SpielProvider *provider);
+
 SpielVoicesListModel *
 spiel_voices_list_model_new (GListModel *providers)
 {
   SpielVoicesListModel *self =
       g_object_new (SPIEL_TYPE_VOICES_LIST_MODEL, NULL);
-
+  guint providers_count = 0;
   g_assert (G_IS_LIST_MODEL (providers));
-  g_assert_cmpint (g_list_model_get_n_items (providers), ==, 0);
 
   self->providers = g_object_ref (providers);
+  providers_count = g_list_model_get_n_items (self->providers);
+
+  for (guint i = 0; i < providers_count; i++)
+    {
+      g_autoptr (SpielProvider) provider =
+          SPIEL_PROVIDER (g_list_model_get_object (self->providers, i));
+      g_list_store_append (self->mirrored_providers, provider);
+      _connect_signals (self, provider);
+    }
   g_signal_connect (self->providers, "items-changed",
                     G_CALLBACK (handle_providers_changed), self);
   return self;

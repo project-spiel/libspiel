@@ -159,7 +159,7 @@ class BaseSpielTest(dbusmock.DBusTestCase):
         loop = GLib.MainLoop()
         loop.run()
 
-    def wait_for_voices_changed(self, speaker, added=[], removed=[]):
+    def wait_for_voices_changed(self, speaker, added=[], removed=[], count=-1):
         voices = speaker.props.voices
 
         def _cb(*args):
@@ -170,6 +170,8 @@ class BaseSpielTest(dbusmock.DBusTestCase):
             for r in removed:
                 if r in voice_ids:
                     return
+            if count >= 0 and len(voices) != count:
+                return
             voices.disconnect_by_func(_cb)
             loop.quit()
 

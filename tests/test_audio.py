@@ -25,7 +25,7 @@ class TestSpeak(BaseSpielTest):
         ghostpad = Gst.GhostPad.new("sink", pad)
         bin.add_pad(ghostpad)
 
-        speechSynthesis = Spiel.Speaker.new_sync(None)
+        speechSynthesis = self.wait_for_async_speaker_init()
         speechSynthesis.props.sink = bin
 
         pipeline = bin.get_parent()
@@ -111,7 +111,7 @@ class TestSpeak(BaseSpielTest):
 
     def test_queue(self):
         # Tests the proper disposal/closing of 'audio/x-spiel' utterances in a queue
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         sink = Gst.ElementFactory.make("fakesink", "sink")
         # Override usual test fakesink

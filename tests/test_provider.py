@@ -26,7 +26,7 @@ class TestInstallProvider(BaseSpielTest):
         )
 
     def test_install_provider_service(self):
-        speaker = Spiel.Speaker.new_sync(None)
+        speaker = self.wait_for_async_speaker_init()
 
         self.kill_provider("org.three.Speech.Provider")
         self.wait_for_provider_to_go_away("org.three.Speech.Provider")

@@ -26,14 +26,14 @@ spiel_public_sources = [
   'spiel-voice.c',
   'spiel-speaker.c',
   'spiel-provider.c',
-  'spiel-voices-list-model.c',
 ]
 
 spiel_sources = [
   spiel_public_sources,
   'spiel-registry.c',
-  'spiel-collect-providers.c',
+  'spiel-providers-list-model.c',
   'spiel-provider-src.c',
+  'spiel-voices-list-model.c',
   spiel_iface_sources,
   spiel_dbus_enums_ch[0],
 ]
@@ -44,13 +44,13 @@ spiel_public_headers = [
   'spiel-voice.h',
   'spiel-speaker.h',
   'spiel-provider.h',
-  'spiel-voices-list-model.h',
 ]
 
 spiel_headers = [
   spiel_public_headers,
   'spiel-registry.h',
-  'spiel-collect-providers.h',
+  'spiel-providers-list-model.h',
+  'spiel-voices-list-model.h',
   'spiel-provider-src.h',
   'spiel-provider-private.h',
 ]
