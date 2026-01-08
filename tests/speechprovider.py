@@ -130,7 +130,9 @@ def Synthesize(self, pipe_fd, text, voice_id, pitch, rate, is_ssml, language):
     if output_format.startswith("audio/x-spiel"):
         synthstream_cls = SpielSynthStream
     self._stream = synthstream_cls(fd, text, self._infinite, text == "silent")
-    self._stream.start()
+
+    if text != "no data":
+        self._stream.start()
 
 
 @dbus.service.method(

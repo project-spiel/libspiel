@@ -124,9 +124,7 @@ static gboolean
 spiel_provider_src_start (GstBaseSrc *bsrc)
 {
   SpielProviderSrc *src = SPIEL_PROVIDER_SRC (bsrc);
-  gboolean got_header =
-      speech_provider_stream_reader_get_stream_header (src->reader);
-  return got_header;
+  return TRUE;
 }
 
 static gboolean
@@ -196,11 +194,15 @@ spiel_provider_src_get_property (GObject *object,
 static GstFlowReturn
 spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
 {
-  SpielProviderSrc *src;
+  SpielProviderSrc *src = SPIEL_PROVIDER_SRC (psrc);
 
-  src = SPIEL_PROVIDER_SRC (psrc);
+  if (!src->got_header)
+    {
+      src->got_header =
+          speech_provider_stream_reader_get_stream_header (src->reader);
+    }
 
-  while (TRUE)
+  while (src->got_header)
     {
       guint8 *chunk = NULL;
       guint32 chunk_size = 0;

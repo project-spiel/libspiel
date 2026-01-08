@@ -28,6 +28,29 @@ class TestSpeak(BaseSpielTest):
 
         self.assertEqual(actual_events, expected_events)
 
+    def test_no_data(self):
+        speaker1 = self.wait_for_async_speaker_init()
+
+        utterance = Spiel.Utterance(text="no data")
+        utterance.props.voice = self.get_voice(
+            speaker1, "org.two.Speech.Provider", "gmw/en"
+        )
+
+        speaker1.speak(utterance)
+
+        self.assertTrue(speaker1.props.speaking, "Speaker should be speaking")
+
+        speaker2 = self.wait_for_async_speaker_init()
+
+        utterance = Spiel.Utterance(text="no data")
+        utterance.props.voice = self.get_voice(
+            speaker2, "org.two.Speech.Provider", "gmw/en-US"
+        )
+
+        speaker2.speak(utterance)
+
+        self.assertTrue(speaker2.props.speaking, "Speaker should be speaking")
+
     def test_queue(self):
         speaker = Spiel.Speaker.new_sync(None)
         [one, two, three] = [

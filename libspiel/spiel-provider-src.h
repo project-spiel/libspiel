@@ -54,6 +54,8 @@ struct _SpielProviderSrc
 
   gulong curoffset; /* current offset in file */
 
+  gboolean got_header;
+
   SpeechProviderStreamReader *reader;
 };
 
