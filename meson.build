@@ -1,6 +1,6 @@
 project('spiel', 'c',
           version: '1.0.5',
-    meson_version: '>= 0.64.0',
+    meson_version: '>= 1.3.2',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
   license: 'LGPL-2.1-or-later',
 )
