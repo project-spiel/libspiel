@@ -12,7 +12,7 @@ RUN apt-get update \
     libgirepository1.0-dev \
     dbus \
     libdbus-glib-1-dev \
-    python3-dasbus \
+    python3-dbusmock \
     python3-tap \
     python3-gi \
     libgstreamer1.0-dev \
