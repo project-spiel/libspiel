@@ -120,31 +120,70 @@ spiel_provider_src_dispose (GObject *obj)
   G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
 
+static void
+spiel_provider_src_update_fd (SpielProviderSrc *src)
+{
+  /* we need to always update the fdset since it may not have existed when
+   * gst_fd_src_update_fd () was called earlier */
+  if (src->fdset != NULL)
+    {
+      GstPollFD fd = GST_POLL_FD_INIT;
+
+      fd.fd = src->fd;
+      gst_poll_add_fd (src->fdset, &fd);
+      gst_poll_fd_ctl_read (src->fdset, &fd, TRUE);
+    }
+}
+
 static gboolean
 spiel_provider_src_start (GstBaseSrc *bsrc)
 {
   SpielProviderSrc *src = SPIEL_PROVIDER_SRC (bsrc);
+
+  if ((src->fdset = gst_poll_new (TRUE)) == NULL)
+    goto socket_pair;
+
+  spiel_provider_src_update_fd (src);
+
   return TRUE;
+
+  /* ERRORS */
+socket_pair:
+  {
+    GST_ELEMENT_ERROR (src, RESOURCE, OPEN_READ_WRITE, (NULL),
+                       GST_ERROR_SYSTEM);
+    return FALSE;
+  }
 }
 
 static gboolean
 spiel_provider_src_stop (GstBaseSrc *bsrc)
 {
-  // XXX: Do we need this?
+  SpielProviderSrc *src = SPIEL_PROVIDER_SRC (bsrc);
+
+  g_clear_pointer (&src->fdset, gst_poll_free);
   return TRUE;
 }
 
 static gboolean
 spiel_provider_src_unlock (GstBaseSrc *bsrc)
 {
-  // XXX: Do we need this?
+  SpielProviderSrc *src = SPIEL_PROVIDER_SRC (bsrc);
+
+  GST_OBJECT_LOCK (src);
+  gst_poll_set_flushing (src->fdset, TRUE);
+  GST_OBJECT_UNLOCK (src);
   return TRUE;
 }
 
 static gboolean
 spiel_provider_src_unlock_stop (GstBaseSrc *bsrc)
 {
-  // XXX: Do we need this?
+  SpielProviderSrc *src = SPIEL_PROVIDER_SRC (bsrc);
+
+  GST_OBJECT_LOCK (src);
+  gst_poll_set_flushing (src->fdset, FALSE);
+  GST_OBJECT_UNLOCK (src);
   return TRUE;
 }
 
@@ -195,6 +234,35 @@ static GstFlowReturn
 spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
 {
   SpielProviderSrc *src = SPIEL_PROVIDER_SRC (psrc);
+  gboolean try_again;
+
+  do
+    {
+      gint retval = gst_poll_wait (src->fdset, 5 * GST_USECOND);
+      try_again = FALSE;
+
+      if (G_UNLIKELY (retval == -1))
+        {
+          if (errno == EINTR || errno == EAGAIN)
+            {
+              /* retry if interrupted */
+              try_again = TRUE;
+            }
+          else if (errno == EBUSY)
+            {
+              goto stopped;
+            }
+          else
+            {
+              goto poll_error;
+            }
+        }
+      else if (G_UNLIKELY (retval == 0))
+        {
+          try_again = TRUE;
+        }
+    }
+  while (G_UNLIKELY (try_again)); /* retry if interrupted or timeout */
 
   if (!src->got_header)
     {
@@ -249,6 +317,19 @@ spiel_provider_src_create (GstPushSrc *psrc, GstBuffer **outbuf)
     }
 
   return GST_FLOW_OK;
+
+poll_error:
+  {
+    GST_ELEMENT_ERROR (src, RESOURCE, READ, (NULL),
+                       ("poll on file descriptor: %s.", g_strerror (errno)));
+    GST_DEBUG_OBJECT (psrc, "Error during poll");
+    return GST_FLOW_ERROR;
+  }
+stopped:
+  {
+    GST_DEBUG_OBJECT (psrc, "Poll stopped");
+    return GST_FLOW_FLUSHING;
+  }
 }
 
 static gboolean
