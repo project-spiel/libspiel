@@ -1,4 +1,4 @@
-FROM ubuntu:plucky
+FROM ubuntu:noble
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USERNAME=ubuntu
