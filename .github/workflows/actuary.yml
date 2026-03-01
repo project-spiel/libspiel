@@ -1,0 +1,70 @@
+name: Test Suite (Actuary)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (${{ matrix.compiler }}, ${{ matrix.suite }})
+    runs-on: ubuntu-24.04
+
+    strategy:
+      matrix:
+        compiler: [gcc, llvm]
+        suite: [test, asan, analyzer]
+        include:
+          - suite: test
+            setup-args: -Ddocs=false -Dlibspeechprovider:docs=false
+          - suite: asan
+            setup-args: -Ddocs=false -Dlibspeechprovider:docs=false
+          - suite: analyzer
+            setup-args: -Ddocs=false -Dlibspeechprovider:docs=false
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git meson \
+            libgirepository1.0-dev \
+            dbus libdbus-glib-1-dev \
+            python3-dbusmock python3-tap python3-gi \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-good \
+            lcov
+
+      - name: Install LLVM
+        if: matrix.compiler == 'llvm'
+        run: |
+          sudo apt-get install -y clang clang-tools
+
+      - name: Test
+        id: test
+        uses: andyholmes/actuary@main
+        with:
+          suite: ${{ matrix.suite }}
+          compiler: ${{ matrix.compiler }}
+          setup-args: ${{ matrix.setup-args }}
+          test-coverage: ${{ matrix.compiler == 'gcc' && matrix.suite == 'test' }}
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test Logs (${{ matrix.compiler }}, ${{ matrix.suite }})
+          path: ${{ steps.test.outputs.log }}
+
+      - name: Upload coverage
+        if: matrix.compiler == 'gcc' && matrix.suite == 'test'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Coverage Report
+          path: ${{ steps.test.outputs.coverage-html }}
