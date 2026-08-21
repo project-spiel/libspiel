@@ -2,7 +2,7 @@ gnome = import('gnome')
 
 spiel_iface_sources = gnome.gdbus_codegen(
     'spiel-provider-proxy',
-    iface_xml_target,
+    iface_xml,
     interface_prefix: 'org.freedesktop.Speech.',
     namespace: 'Spiel',
     annotations : [
@@ -14,11 +14,15 @@ python_module = import('python')
 python = python_module.find_installation(
   'python3', required : true)
 generate_enums = files(meson.current_source_dir() / 'generate_enums.py')
+# For older Meson, explicitly depend on the iface_xml custom_target
+spiel_dbus_enums_ch_depends = meson.version().version_compare('< 1.14.0') ? [iface_xml_target] : []
+
 spiel_dbus_enums_ch = custom_target(
+    input: iface_xml,
     output: ['spiel-dbus-enums.c', 'spiel-dbus-enums.h'],
-    command: [python, generate_enums, 'spiel', iface_xml, '@OUTPUT@'],
+    command: [python, generate_enums, 'spiel', '@INPUT@', '@OUTPUT@'],
     install: true,
-    depends: iface_xml_target,
+    depends: spiel_dbus_enums_ch_depends,
     install_dir: join_paths(get_option('includedir'), 'spiel')
 )
 

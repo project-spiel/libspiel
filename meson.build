@@ -99,16 +99,24 @@ speechprovider_dep = dependency(
   fallback: ['libspeechprovider', 'speech_provider_lib_dep'],
   default_options: speechprovider_options,
 )
-iface_xml = speechprovider_dep.get_variable('iface_xml')
 
-# Ensure iface_xml is a build target (file index) that can be referenced
-iface_xml_target = custom_target(
-  'iface_xml',
-  input: iface_xml,
-  output: 'org.freedesktop.Speech.Provider.xml',
-  command: ['cp', '@INPUT@', '@OUTPUT@'],
-  build_by_default: true,
-)
+iface_xml_path = speechprovider_dep.get_variable('iface_xml')
+
+# Meson < 1.14.0 requires explicit custom_target to properly track dependencies
+if meson.version().version_compare('< 1.14.0')
+  # Copy the interface file locally so Meson can properly track it
+  iface_xml = custom_target(
+    'iface_xml',
+    output: 'org.freedesktop.Speech.Provider.xml',
+    command: ['cp', meson.project_source_root() / 'subprojects' / 'libspeechprovider' / 'interface' / 'org.freedesktop.Speech.Provider.xml', '@OUTPUT@'],
+    build_by_default: true,
+  )
+else
+  # Meson >= 1.14.0 can handle the path directly
+  iface_xml = iface_xml_path
+endif
+
+iface_xml_target = iface_xml
 
 subdir('libspiel')
 
