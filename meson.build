@@ -101,6 +101,15 @@ speechprovider_dep = dependency(
 )
 iface_xml = speechprovider_dep.get_variable('iface_xml')
 
+# Ensure iface_xml is a build target (file index) that can be referenced
+iface_xml_target = custom_target(
+  'iface_xml',
+  input: iface_xml,
+  output: 'org.freedesktop.Speech.Provider.xml',
+  command: ['cp', '@INPUT@', '@OUTPUT@'],
+  build_by_default: true,
+)
+
 subdir('libspiel')
 
 if get_option('tests')

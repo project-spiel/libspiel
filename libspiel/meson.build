@@ -2,7 +2,7 @@ gnome = import('gnome')
 
 spiel_iface_sources = gnome.gdbus_codegen(
     'spiel-provider-proxy',
-    iface_xml,
+    iface_xml_target,
     interface_prefix: 'org.freedesktop.Speech.',
     namespace: 'Spiel',
     annotations : [
@@ -18,6 +18,7 @@ spiel_dbus_enums_ch = custom_target(
     output: ['spiel-dbus-enums.c', 'spiel-dbus-enums.h'],
     command: [python, generate_enums, 'spiel', iface_xml, '@OUTPUT@'],
     install: true,
+    depends: iface_xml_target,
     install_dir: join_paths(get_option('includedir'), 'spiel')
 )
 
