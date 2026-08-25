@@ -108,7 +108,7 @@ if meson.version().version_compare('< 1.14.0')
   iface_xml = custom_target(
     'iface_xml',
     output: 'org.freedesktop.Speech.Provider.xml',
-    command: ['cp', meson.project_source_root() / 'subprojects' / 'libspeechprovider' / 'interface' / 'org.freedesktop.Speech.Provider.xml', '@OUTPUT@'],
+    command: ['cp', meson.global_source_root() / 'subprojects' / 'libspeechprovider' / 'interface' / 'org.freedesktop.Speech.Provider.xml', '@OUTPUT@'],
     build_by_default: true,
   )
 else
